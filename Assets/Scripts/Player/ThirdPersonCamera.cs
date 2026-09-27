@@ -67,14 +67,28 @@ namespace MageCast
             // The mouse is locked to the game only while there is a player to steer and no menu open.
             // Esc used to toggle the lock directly; it opens the menu now, and the lock follows it.
             bool wantLocked = target != null && !GameInput.MenuOpen;
-            if ((Cursor.lockState == CursorLockMode.Locked) != wantLocked) LockCursor(wantLocked);
+            if (NetSession.IsWeb)
+            {
+                // Asked for again whenever the browser does not actually have it: Unity turns a Locked
+                // request into the browser's pointer lock on the next click, and the browser drops the
+                // lock on Esc without Unity always noticing.
+                if (wantLocked) { if (Cursor.lockState != CursorLockMode.Locked) LockCursor(true); }
+                else if (Cursor.lockState != CursorLockMode.None || WebPointer.IsLocked) LockCursor(false);
+            }
+            else if ((Cursor.lockState == CursorLockMode.Locked) != wantLocked)
+            {
+                LockCursor(wantLocked);
+            }
 
             if (target == null) return;
 
-            if (LookEnabled && !GameInput.MenuOpen && Cursor.lockState == CursorLockMode.Locked)
+            // Only while the mouse is REALLY locked. In a browser, Cursor.lockState can still say Locked
+            // after Esc has freed the pointer, and the camera then swung round under a visible cursor.
+            if (LookEnabled && !GameInput.MenuOpen && WebPointer.IsLocked)
             {
-                Yaw += Input.GetAxisRaw("Mouse X") * aimSensitivity;
-                Pitch = Mathf.Clamp(Pitch - Input.GetAxisRaw("Mouse Y") * aimSensitivity, minPitch, maxPitch);
+                float sensitivity = aimSensitivity * GameSettings.MouseSensitivity;
+                Yaw += Input.GetAxisRaw("Mouse X") * sensitivity;
+                Pitch = Mathf.Clamp(Pitch - Input.GetAxisRaw("Mouse Y") * sensitivity, minPitch, maxPitch);
             }
 
             Quaternion rot = Quaternion.Euler(Pitch, Yaw, 0f);

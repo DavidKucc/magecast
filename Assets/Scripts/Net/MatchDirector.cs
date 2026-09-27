@@ -37,6 +37,14 @@ namespace MageCast
                 manager = NetworkManager.Singleton;
             }
 
+            // The practice dummies are for training. In a real match they are red capsules soaking up
+            // shots meant for the other player. Every machine puts its own copy away -- no network
+            // traffic, nothing for a late joiner to miss -- and with the colliders off, the server's
+            // copy cannot be hit either.
+            if (NetSession.Instance != null && NetSession.Instance.Current != NetSession.Mode.Training)
+                foreach (Combat.TrainingDummy dummy in FindObjectsOfType<Combat.TrainingDummy>())
+                    PutAway(dummy.gameObject);
+
             if (!manager.IsServer) return;
 
             foreach (ulong id in manager.ConnectedClientsIds) SpawnFor(id);
@@ -44,6 +52,15 @@ namespace MageCast
             // Latecomers load the arena after the host is already in it; they are ready for a body
             // once Netcode says their copy of the scene is in step with ours.
             manager.SceneManager.OnSynchronizeComplete += SpawnFor;
+        }
+
+        static void PutAway(GameObject go)
+        {
+            foreach (Renderer r in go.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
+            foreach (Collider c in go.GetComponentsInChildren<Collider>(true)) c.enabled = false;
+            foreach (Canvas c in go.GetComponentsInChildren<Canvas>(true)) c.enabled = false;
+            Combat.HealthBar bar = go.GetComponent<Combat.HealthBar>();
+            if (bar != null) bar.enabled = false;
         }
 
         void OnDestroy()

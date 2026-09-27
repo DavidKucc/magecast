@@ -41,16 +41,38 @@ namespace MageCast
         }
 
         bool wasLocked;
+        float openedAt = -99f;
 
         void Update()
         {
-            if (Input.GetKeyDown(KeyCode.Escape)) GameInput.MenuOpen = !GameInput.MenuOpen;
+            bool locked = WebPointer.IsLocked;
 
-            // In a browser, Esc is taken by the browser itself to release the mouse, and the game may
-            // or may not hear the key. Losing the lock while playing is therefore treated as Esc.
-            bool locked = Cursor.lockState == CursorLockMode.Locked;
-            if (NetSession.IsWeb && wasLocked && !locked && PlayerNet.Local != null) GameInput.MenuOpen = true;
+            if (NetSession.IsWeb)
+            {
+                // In a browser, Esc belongs to the browser: it frees the mouse, and the game may or may
+                // not hear the key as well. So the lock being LOST is what opens the menu -- measured
+                // from the page itself, not from Unity's idea of it. If the key does arrive too, it must
+                // not immediately close the menu it just opened, hence the short grace period.
+                if (wasLocked && !locked && PlayerNet.Local != null && !GameInput.MenuOpen) Open();
+
+                if (Input.GetKeyDown(KeyCode.Escape))
+                {
+                    if (GameInput.MenuOpen) { if (Time.unscaledTime - openedAt > 0.3f) GameInput.MenuOpen = false; }
+                    else if (!locked) Open();
+                }
+            }
+            else if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                if (GameInput.MenuOpen) GameInput.MenuOpen = false; else Open();
+            }
+
             wasLocked = locked;
+        }
+
+        void Open()
+        {
+            GameInput.MenuOpen = true;
+            openedAt = Time.unscaledTime;
         }
 
         void Styles()
@@ -180,7 +202,7 @@ namespace MageCast
             GUI.color = Color.white;
 
             float w = 320f, h = 48f, x = Screen.width * 0.5f - w * 0.5f;
-            float y = Screen.height * 0.5f - 150f;
+            float y = Mathf.Max(90f, Screen.height * 0.5f - 210f);
 
             Shadowed(new Rect(0f, y - 60f, Screen.width, 40f), "PAUSED", big, Color.white);
             Shadowed(new Rect(0f, y - 26f, Screen.width, 24f),
@@ -188,6 +210,10 @@ namespace MageCast
 
             if (GUI.Button(new Rect(x, y, w, h), "Resume", button)) GameInput.MenuOpen = false;
             y += h + 10f;
+
+            // settings live in the pause menu too, so sensitivity can be tuned without leaving a game
+            Box(new Rect(x - 10f, y - 4f, w + 20f, 104f));
+            y = GameSettings.Draw(x, y, w) + 8f;
 
             if (session != null && !string.IsNullOrEmpty(session.JoinCode) && session.Current == NetSession.Mode.Host)
             {

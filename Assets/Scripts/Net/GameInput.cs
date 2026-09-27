@@ -24,7 +24,7 @@ namespace MageCast
             get
             {
 #if UNITY_WEBGL && !UNITY_EDITOR
-                return UnityEngine.Cursor.lockState != UnityEngine.CursorLockMode.Locked;
+                return !WebPointer.IsLocked;
 #else
                 return false;
 #endif

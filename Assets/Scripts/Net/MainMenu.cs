@@ -13,6 +13,7 @@ namespace MageCast
         string code = "";
         string address = "127.0.0.1";
         bool showLan;
+        bool showSettings;
         GUIStyle title, subtitle, label, field, button, status, smallButton;
 
         void Start()
@@ -95,6 +96,11 @@ namespace MageCast
             code = GUI.TextField(new Rect(x, y, w * 0.58f, h), code.ToUpperInvariant(), 8, field);
             if (GUI.Button(new Rect(x + w * 0.62f, y, w * 0.38f, h), "Join", button)) session.JoinOnline(code);
             y += h + 22f;
+
+            if (GUI.Button(new Rect(x, y, w, 34f), showSettings ? "hide settings" : "Settings", smallButton))
+                showSettings = !showSettings;
+            y += 44f;
+            if (showSettings) y = GameSettings.Draw(x, y, w);
 
             // Neither exists in a browser: a web page cannot listen for a LAN connection or close itself.
             if (!NetSession.IsWeb)
