@@ -1,0 +1,244 @@
+# Mage Cast — o čem ta hra je
+
+Stav k 17. 9. 2026.
+
+Dokument je úvod do hry, ne specifikace. Je rozdělený na tři části, protože se snadno slijí do jedné:
+**co je postavené**, **co je rozhodnuté ale nepostavené** a **co je otevřené**. Čísla nejsou odhady —
+pocházejí z nástrojů v `Assets/Editor/`, které jdou pustit znovu.
+
+---
+
+## Jedna věta
+
+Multiplayerová PvP aréna ze třetí osoby, kde se kouzla neseslávají klávesou, ale **nakreslí myší**.
+
+---
+
+## Pravidlo, ze kterého plyne všechno ostatní
+
+**Kreslení tě dělá zranitelným.**
+
+Když kreslíš, kamera stojí, běháš na 60 % rychlosti a nemůžeš sprintovat ani skákat. Půl sekundy až
+sekundu jsi napůl slepý a napůl bezbranný. To je cena za každé kouzlo.
+
+Z toho vyplývá dvojí:
+
+**Balanc se dělá délkou gesta, ne čísly.** Složitější tvar = delší okno = větší riziko. Nemusí se to
+dolaďovat, vyplývá to samo.
+
+**Soupeř tvůj tah vidí.** Kreslená čára se vykresluje ve světě, takže protivník pozná, co chystáš, ještě
+než to vypustíš. Vzniká tím čtení záměru a blafování — a je to ta nejcennější věc v celém návrhu.
+
+---
+
+## Jak se sesílá
+
+```
+1.  držíš pravé tlačítko     → kamera zamrzne, myš se změní na pero
+2.  kreslíš tvar             → tah se vykresluje, soupeř ho vidí
+3.  pustíš pravé             → rozpoznávač tvar vyhodnotí a oznámkuje
+4.  máš 0,9 s                → crosshair se obarví podle kouzla, míříš
+5.  levé tlačítko            → vypustí to tam, kam míří crosshair
+```
+
+Míření je pořád jedno a to samé: z kamery jde paprsek dopředu a kde trefí, tam kouzlo letí.
+
+Místo kroků 4–5 se kouzlo dá **uložit do slotu** (rozhoduje se během kreslení) a vypustit později
+klávesou `1` nebo `2`.
+
+---
+
+## Gesta a kouzla
+
+Symboly jsou **vikingské runy**, kreslené jedním tahem. Význam runy je ta mnemotechnika — hráč se učí
+malou abecedu, ne pět náhodných čmáranic.
+
+| runa | tvar | kouzlo | poškození | rychlost | vlastnost |
+|---|---|---|---|---|---|
+| **Kenaz** (pochodeň) | `<` | oheň | 22 | 26 m/s | běžný útok |
+| **Laguz** (voda) | stonek s větví | led | 30 | 17 m/s | pomalé a tlusté, snadno se uhne |
+| **Sowulo** (slunce) | klikatice | blesk | 12 | 44 m/s | skoro se nedá uhnout, málo ubere |
+| **Ehwaz** (pohyb) | `M` | vzduch | 8 | 30 m/s | odhodí — vytáhne z krytu |
+| kolečko | `O` | bariéra | — | — | zavře směr na 6 s |
+
+Špatně nakreslený tvar dá **misfire** — kouzlo vyletí divoce a slabě. Není to ticho: ticho působí, že tě
+hra odmítla, misfire působí, že sis za to můžeš sám.
+
+V pravém horním rohu je **legenda** se všemi gesty (`F6` ji schová). Kreslí skutečné šablony
+rozpoznávače, ne ručně dělané ikonky, aby nikdy nemohla ukazovat něco jiného, než co hra čeká.
+
+---
+
+## Když kouzlo netrefí člověka
+
+Jedno gesto dává několik efektů — rozhoduje, **do čeho kouzlo dopadne**. Nic nového se neučí: oheň pálí,
+led zpomaluje, blesk se uzemní, vzduch zvedá.
+
+| | do soupeře | do stěny | na zem |
+|---|---|---|---|
+| **oheň** | 22 | odrazí se jednou, zbyde 80 % | hořící plocha — 2,5 m, 3 s, 6/s |
+| **led** | 30 + zpomalení na 50 % na 1,2 s | nic | zpomalující plocha — 3 m, 4 s, 50 % |
+| **blesk** | 12 | nic | nic, uzemní se |
+| **vzduch** | 8 + odhoz + **shodí rozkreslené kouzlo** | výbuch 3 m, odfoukne od stěny | vzdušný proud — 2 m, 2 s, vyhodí ~2 m |
+
+Záměrně nemá každé kouzlo všechno. Dvanáct efektů by byla polévka.
+
+**Proč zrovna tak.** Oheň se odráží, aby šlo trefit někoho za krytem — kolem rohu. Blesk nedělá nic,
+protože se mu skoro nedá uhnout, a jeho cenou je, že musí trefit člověka. Vzduch vyhazuje z krytu
+i do vzduchu, a kdo letí, letí po předvídatelné dráze — tam ho najde blesk. A led je nejzajímavější:
+kreslení tě zpomalí na 60 %, ledová plocha na 50 %, dohromady **30 %**. Ledová plocha je tedy **místo,
+kde se nedá bezpečně kreslit** — napojuje se rovnou na hlavní pravidlo hry.
+
+**Pravidla, aby to drželo:**
+
+- **Plocha nikdy nedá víc než přímý zásah.** Kdo stojí v ohni celé 3 s, dostane 18 — míň než přímých 22.
+  Platí to při každé kvalitě, protože hoření roste se silou tahu stejně jako zásah.
+- **Stěna, nebo zem, rozhoduje sklon povrchu.** Co míří nahoru, je zem; zbytek je stěna. Takže i
+  soupeřova bariéra je stěna a oheň se od ní odrazí.
+- **Plochy zasáhnou i toho, kdo je seslal.** Stejně jako misfire. Oheň pod vlastníma nohama není zadarmo.
+- **Vzdušný proud vyhodí každého jen jednou**, jinak by z dvouvteřinové plochy byla trampolína.
+- **Velikost ploch roste s velikostí glyfu** (0,7–1,4×), stejně jako velikost střely.
+- **Plocha končí na hraně toho, na čem leží.** Dopadne-li kousek od kraje platformy, je u kraje
+  rovně uříznutá a nevisí do vzduchu — a kdo stojí dole pod hranou, toho nezasáhne.
+- **Výbuch u stěny slábne se vzdáleností.** Kdo se o zeď opírá, dostane plnou sílu; kdo stojí dva metry
+  opodál, jen štulec.
+
+**Značka při míření — jen v tréninku.** Dokud držíš nakreslené kouzlo, ukazuje, co se stane tam, kam
+míříš: kruh na zemi velký jako budoucí plocha, na stěně čáru, kudy se oheň odrazí, kruh výbuchu vzduchu
+(leží na zdi, proto je svislý) a šedý kroužek tam, kde kouzlo nic neudělá. Slouží k naučení. **Ve hře
+proti člověku se neukazuje** — odhadnout odraz a dosah z geometrie je součást dovednosti.
+
+Ověřeno měřením: panák v hořící ploše ztratil přesně 18 životů, odraz vyšel zrcadlově na desetinu
+s poškozením 17,6, led zpomalil na 0,50, vzdušný proud vyhodil rychlostí 9,4 m/s a výbuch u stěny
+odhodil hráče směrem od ní.
+
+---
+
+## Kvalita tahu
+
+Jsou to **dvě nezávislé branky** a snadno se pletou.
+
+**Vzdálenost tvaru** rozhoduje, jestli to vůbec vyjde. Měří se v jednotkách, kde 1,0 znamená „tah s
+roztřesením, na které je to nakalibrované" — takže je to číslo nezávislé na tom, který tvar kreslíš.
+
+**Preciznost** rozhoduje, jak silné to je. Skládá se z klidu ruky, ostrosti rohů a u zavřených tvarů
+z toho, jak přesně se tah uzavřel. Síla kouzla jde plynule od **0,25×** za odfláknutý tah po **1,8×**
+za dokonalý — sedminásobný rozdíl.
+
+Odfláknutý blesk tedy dá 3 poškození, dokonalý 21,6.
+
+**Rozpoznávač** je $P na mračno bodů. Je slepý k tomu, kterým směrem tah jel, ale **citlivý na
+natočení** a hledá jen v rozsahu ±25°. U run je to výhoda — zrcadlený Kenaz je jiný symbol — ale
+znamená to, že tolerance se dá povolit u tvaru a nikdy u úhlu.
+
+Změřeno: každý z pěti tvarů se i s roztřesenou rukou a náklonem ±20° pozná jako on sám, a nejbližší
+jiný tvar je nejméně **2,1 jednotky** daleko. Sada drží s rezervou.
+
+---
+
+## Sloty
+
+Dvě kapsy na předcastěná kouzla, klávesy `1` / `+` a `2` / `ě`. Nakreslíš v klidu, vypustíš, když se to
+hodí. Po použití 30 s cooldown.
+
+Uložené kouzlo má **strop kvality 0,84** — slot nikdy nedrží kritický zásah, ten umí jen živý cast.
+
+Jsou to jediné kouzla, která jdou vypustit bez kreslení, takže odpovídají na otázku *co si s sebou
+vezmu* — a jednou z odpovědí má být záchrana, ne jen rána.
+
+---
+
+## Hra ve dvou
+
+**Menu:** jméno, *Training*, *Host a game*, *Join* s kódem. Trénink je ta samá hra, jen bez soupeře —
+všechno jde stejnou cestou jako online, takže co funguje v tréninku, funguje i ve dvou.
+
+**Připojení kódem.** Hostitel klikne *Host a game*, nahoře v aréně uvidí kód (Esc → zkopírovat) a
+pošle ho druhému. Ten ho zadá v menu a je ve hře. Jde to přes Unity Relay, takže nikdo nemusí otevírat
+porty ani znát cizí IP. Když hostitel odejde, hra končí i pro ostatní.
+
+**Co vidí soupeř:**
+- **runu, jak ji kreslíš** — bíle nad tvou hlavou, tak jak ji kreslíš ty (ne zrcadlově). Jakmile ji
+  pustíš a kouzlo držíš, zbarví se barvou kouzla. Tohle je druhá polovina hlavního pravidla: kreslení tě
+  vystavuje, a soupeř to musí *vidět*, aby na to mohl reagovat,
+- **název kouzla ve chvíli, kdy vznikne** — když dokreslíš a kouzlo držíš (nebo ho uložíš do slotu), ne
+  až když ho vypustíš. Od té chvíle má soupeř 0,9 s se schovat. Kritický zásah má vykřičník. Taky FIZZLE,
+  INTERRUPTED, LOST a nádech slotu (FIRE ...),
+- **poškození** jako číslo nad zasaženým. Hoření se sčítá do jednoho rostoucího čísla, ne čtyři za
+  sekundu,
+- tvoje jméno, životy a to, kam se díváš.
+
+**Kdo o čem rozhoduje:**
+
+| co | rozhoduje | proč |
+|---|---|---|
+| pohyb, míření, kreslení | každý sám za sebe | jinak by každý krok čekal na odezvu |
+| jestli kouzlo trefilo, poškození | hostitel, jednou | zásah se počítá právě jednou |
+| odhození, zpomalení, vyhození | tvůj počítač, na pokyn hostitele | tělo je tvoje |
+
+Každý vidí svou kopii každého kouzla (letí, odráží se, bliká stejně), ale ubírá jen ta hostitelova.
+Plocha na zemi je jedna — pošle ji hostitel všem.
+
+**Smrt:** na nule zmizíš, 3 s a jsi zpátky na spawnu co nejdál od ostatních. Nahoře se počítá skóre
+zabití / smrtí. Vlastní misfire nebo vlastní oheň tě zabít může, ale soupeři to nepřipíše.
+
+---
+
+## Rozhodnuté, ale nepostavené
+
+**Běžný zásah trhne rukou.** Do rozkresleného tahu se přimíchá odchylka a zbytek dořeší hodnocení
+kvality. Žádné nové pravidlo, žádné nové UI. Důsledek: pod palbou sešleš slabé kouzlo, v krytu silné.
+*(Postavená je jen polovina: vzduch kresbu shodí celou. Tohle trhnutí rukou u ostatních kouzel zatím ne.
+Ve dvou už to vyzkoušet jde.)* **Už nakreslené a držené kouzlo je
+nedotknutelné** — riziko je v kreslení, ne v držení.
+
+**Dva cooldowny na sloty.** Krátký sdílený (5–10 s) mezi vypuštěním prvního a druhého slotu, a delší na
+doplnění. Bez toho jdou dvě uložená kouzla vysypat naráz za ~96 poškození ze sta, čímž souboj rozhodne
+příprava před ním.
+
+**Úskok jen ze slotu.** Únikové kouzlo, které musíš nejdřív nakreslit, je proti sobě — než ho
+dokreslíš, už tě dostali. Připravená obrana ano, improvizovaná ne.
+
+**Minimální vzdálenost odjištění** (~3 m), aby se nedalo spamovat z bezprostřední blízkosti.
+
+**Obrana napříč cenami:** kolečko jako rychlý panický štít, Othala jako pořádná postavená hradba,
+osobní štít, co pohltí poškození a chodí s tebou, a úskok ze slotu.
+
+---
+
+## Otevřené
+
+**V aréně není o co hrát.** Žádný bod, co se drží, nic, co se sbírá. Plochy z kouzel teď aspoň dělají
+**dočasné území** — místa, kam nechceš vstoupit, a místa, kam soupeře zaháníš — ale jen na pár vteřin.
+Trvalý důvod někde stát pořád chybí, a za mě je to **největší chybějící věc**. S ním naráz dostanou smysl
+kryty, průhledy, plochy i zábrany.
+
+**Blízkost přebíjí všechno ostatní.** Na 10 m se střele uhne, na 6 m ne — doba letu klesá rychleji než
+schopnost uhnout. A hlavně: couvání je nejvýš 5,6 m/s (se Shiftem) proti sprintu vpřed 9,3 m/s, takže **jakmile se k tobě někdo
+dostane, nemůžeš odejít**. To není o obtížnosti, to je chybějící možnost.
+
+**Slovník se hroutí na blízko.** Pod šesti metry není čas na nic delšího než nejrychlejší gesto, takže
+ve vrcholu souboje ti mechanika vypne. Nabízené řešení: nechat hráče volit, jak rychle kreslí —
+rychleji a špinavěji, nebo pomaleji a přesněji.
+
+**Prahy nejsou kalibrované na skutečnou ruku.** Všechny pocházejí ze syntetického roztřesení. Nástroj
+`Calibrate From Cast Log` je hotový a čeká na asi 40 skutečných tahů na symbol.
+
+**Léčení schválně chybí.** V souboji dvou lidí prodlužuje remízy a odměňuje pasivnějšího, což je opak
+toho, na čem hra stojí. Kdyby bylo potřeba, spíš pomalá regenerace bez gesta než kouzlo.
+
+---
+
+## Riziko, které rozhodne o osudu projektu
+
+Malé PvP hry neumírají na špatný koncept, ale na prázdná lobby. Obrana patří do designu, ne do
+marketingu: boti do zápasů od začátku, malé formáty (1v1 a 3v3, ne 5v5), a tréninkový nebo PvE mód, aby
+hra dávala smysl i při nule hráčů online.
+
+**Referenční bod:** Mage Arena (7/2025, hlasové castění, sólo vývojář, Unity) — 119 tis. kopií za první
+týden, ~818 tis. celkem. Vydáno zjevně rozbité a lidem to nevadilo. Neprodalo se to proto, že bylo
+vyladěné, ale proto, že to mělo jednu věc, kterou nikdo jiný neměl — a ta šla natočit na
+třicetisekundový klip.
+
+**Varovný protipříklad:** Arx Fatalis (2002) měl kreslení run myší, kritika ho milovala, komerčně
+propadl. Rozdíl je v tom, že jeho selhání nebyla vtipná.

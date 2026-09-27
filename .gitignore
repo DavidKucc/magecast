@@ -1,0 +1,42 @@
+# --- Unity: generated, rebuilt on open ---
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+*.csproj
+*.sln
+*.suo
+*.user
+*.pidb
+*.booproj
+*.unityproj
+.vs/
+.vscode/
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+crashlytics-build.properties
+
+# --- builds: the web one is published on the gh-pages branch, not kept here ---
+/[Bb]uilds/
+
+# --- Mixamo content: allowed inside the game, not as downloadable files ---
+# The character and its animations stay on the author's disk. The web build carries them baked in,
+# which the Mixamo terms allow; a public repo of the raw FBX would not.
+/Assets/Characters/
+/Assets/Characters.meta
+/Assets/Animation/**/*.fbx
+/Assets/Animation/**/*.fbx.meta
+/Assets/Animation/*.fbx
+/Assets/Animation/*.fbx.meta
+
+# --- local-only ---
+/CastLog.csv
+/Assets/Screenshots/
+/Assets/Screenshots.meta
+/.claude/
+/.mcp.json
