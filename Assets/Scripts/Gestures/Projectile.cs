@@ -160,6 +160,17 @@ namespace MageCast.Gestures
             Health hp = struck != null ? struck.GetComponentInParent<Health>() : null;
             PlayerMotor motor = struck != null ? struck.GetComponentInParent<PlayerMotor>() : null;
 
+            // A barrier stops the shot where it stands and pays for it in durability. No bounce: a
+            // barrier that threw fire back at whoever fired it would be a reward for being shot at.
+            CastShield shield = struck != null ? struck.GetComponentInParent<CastShield>() : null;
+            if (shield != null)
+            {
+                if (authoritative) shield.Wear(BarrierWear());
+                Flash(at, 1.1f, 2.2f);
+                Destroy(gameObject);
+                return true;
+            }
+
             if (hp != null || motor != null)
             {
                 if (authoritative) HitPerson(hp, motor, heading);
@@ -172,9 +183,31 @@ namespace MageCast.Gestures
             return floor ? HitFloor(at) : HitWall(at, normal, centreAtContact, collider);
         }
 
+        /// <summary>
+        /// What this shot takes off a barrier: its damage times how hard its element is on barriers,
+        /// and never less than the element's floor -- air deals no damage but still nudges the count.
+        /// </summary>
+        float BarrierWear()
+        {
+            if (spell == null) return damage;
+            return Mathf.Max(damage * spell.barrierWear, spell.barrierWearFlat);
+        }
+
         void HitPerson(Health hp, PlayerMotor motor, Vector3 heading)
         {
             if (hp != null && damage > 0f) hp.TakeDamage(damage, attacker);
+
+            // Lightning into somebody standing on ice runs through the ice as well: everyone else on
+            // it takes the charge. Them too -- they are touching it.
+            if (spell != null && spell.chargeDamage > 0f && hp != null)
+            {
+                // feet, not the middle: a dummy's origin is at its waist, a player's at its soles
+                Collider body = hp.GetComponentInChildren<Collider>();
+                Vector3 feet = motor != null ? motor.transform.position
+                             : body != null ? new Vector3(hp.transform.position.x, body.bounds.min.y, hp.transform.position.z)
+                             : hp.transform.position;
+                DischargeIceAt(feet, feet + Vector3.up * 1.2f);
+            }
 
             if (motor != null)
             {
@@ -225,8 +258,38 @@ namespace MageCast.Gestures
             return true;
         }
 
+        /// <summary>
+        /// Runs a lightning charge through the ice patch under <paramref name="floorPoint"/>, if there is
+        /// one. Server only; everyone else is shown it. Returns whether there was ice to charge.
+        /// </summary>
+        bool DischargeIceAt(Vector3 floorPoint, Vector3 struck)
+        {
+            if (!authoritative) return false;
+            SpellZone ice = SpellZone.IceAt(floorPoint);
+            if (ice == null) return false;
+
+            // Scaled by how well the lightning was drawn, like every other hit. It is the strongest
+            // combination in the game on purpose: it costs two casts, two windows of being exposed, and
+            // the ice gave the target seconds of warning -- it has to be worth more than two hits.
+            float charge = spell.chargeDamage * power;
+            var victims = ice.Discharge(charge, attacker);
+            ice.ShowDischarge(struck, victims);
+
+            PlayerNet caster = owner != null ? owner.GetComponent<PlayerNet>() : null;
+            if (caster != null && caster.IsSpawned)
+                caster.BroadcastCharge(ice.transform.position, struck, victims.ToArray());
+            return true;
+        }
+
         bool HitFloor(Vector3 at)
         {
+            // Lightning grounds out -- unless the ground is ice, which carries it to everyone on it.
+            if (spell != null && spell.chargeDamage > 0f && DischargeIceAt(at, at))
+            {
+                Destroy(gameObject);
+                return true;
+            }
+
             if (spell != null && spell.groundEffect != GroundEffect.None && !authoritative)
             {
                 // A watcher's copy leaves nothing: the server's patch is sent to everyone, so there is
@@ -243,7 +306,7 @@ namespace MageCast.Gestures
 
                 float zoneRadius = spell.zoneRadius * sizeScale;
                 SpellZone zone = SpellZone.Spawn(at, spell.groundEffect, zoneRadius, spell.zoneLifetime, strength,
-                                                 colour, true, attacker);
+                                                 colour, true, attacker, attacker);
 
                 PlayerNet caster = owner != null ? owner.GetComponent<PlayerNet>() : null;
                 if (caster != null && caster.IsSpawned)
@@ -292,6 +355,12 @@ namespace MageCast.Gestures
 
         /// <summary>A brief glowing burst, <paramref name="size"/> metres across at its widest.</summary>
         void Flash(Vector3 at, float size, float glow)
+        {
+            FlashAt(at, colour, size, glow);
+        }
+
+        /// <summary>A brief glowing burst anywhere -- also how a barrier shows it has broken.</summary>
+        public static void FlashAt(Vector3 at, Color colour, float size, float glow)
         {
             // a projectile that just blinks out reads as a bug, so leave a brief mark
             GameObject flash = GameObject.CreatePrimitive(PrimitiveType.Sphere);

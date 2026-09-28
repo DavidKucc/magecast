@@ -21,7 +21,7 @@ namespace MageCast.Gestures
     {
         None,
         Burn,      // damage per second to anyone standing in it
-        Slow,      // cuts movement speed while you are inside
+        Ice,       // takes your grip away: you slide, and changing direction takes most of a second
         Updraft    // throws whoever walks in upwards, once
     }
 
@@ -80,6 +80,17 @@ namespace MageCast.Gestures
 
         /// <summary>Knocks a glyph out of the target's hand if they are drawing one.</summary>
         public bool interruptsDrawing = false;
+
+        [Header("Combinations")]
+        /// <summary>Lightning into ice: damage to everyone touching the patch, before the power multiplier. 0 = none.</summary>
+        public float chargeDamage = 0f;
+
+        [Header("Against a barrier")]
+        /// <summary>A hit takes damage x this off a barrier -- fire is hard on barriers, lightning is not.</summary>
+        public float barrierWear = 1f;
+
+        /// <summary>...and never less than this, so a spell without damage still counts for something.</summary>
+        public float barrierWearFlat = 0f;
 
         [Header("Barrier")]
         public float barrierWidth = 2.8f;
@@ -181,8 +192,10 @@ namespace MageCast.Gestures
 
         [Header("Spells -- the four runes")]
         // Every area effect below obeys one rule: standing in it for its whole life costs LESS than a
-        // direct hit. Fire's patch does 6/s for 3 s = 18 against a direct 22, at every quality. Aiming
+        // direct hit. Fire's patch does 4/s for 5 s = 20 against a direct 22, at every quality. Aiming
         // at the person has to pay better than aiming next to them, or nobody would aim.
+        //
+        // Patches last 5-6 s and each player may have two down; the third takes the oldest away.
 
         // Kenaz. Bounces once off a wall -- the answer to "how do I hit someone behind cover", round a
         // corner rather than over it. On the floor it leaves a burning patch.
@@ -191,48 +204,58 @@ namespace MageCast.Gestures
             colour = new Color(1f, 0.45f, 0.15f), speed = 26f, radius = 0.38f, lifetime = 4f,
             damage = 22f,
             wallBounces = 1, bounceDamageKeep = 0.8f,
-            groundEffect = GroundEffect.Burn, zoneRadius = 2.5f, zoneLifetime = 3f, zoneStrength = 6f };
+            barrierWear = 1.5f,
+            groundEffect = GroundEffect.Burn, zoneRadius = 2.5f, zoneLifetime = 5f, zoneStrength = 4f };
 
         // Laguz. Slower and fatter than fire, so it hits harder but is far easier to sidestep at range.
-        // Its patch halves speed -- and drawing already costs 40%, so inside it a caster moves at 30%.
-        // That makes an ice patch a place where casting is not safe, which ties it straight to the
-        // central rule of the game instead of adding a new one.
+        // Its patch is slippery rather than slow: you keep your speed and lose your grip -- 12% of the
+        // usual -- so whoever is on it slides on in whatever direction they were going and cannot
+        // sidestep. In a game about dodging, that is control. It is also what lightning is waiting for.
         [SerializeField] Spell ice = new Spell {
             gesture = GestureTemplates.Laguz, displayName = "ICE", kind = SpellKind.Projectile,
             colour = new Color(0.55f, 0.85f, 1f), speed = 17f, radius = 0.55f, lifetime = 4f,
             damage = 30f,
             hitSlow = 0.5f, hitSlowDuration = 1.2f,
-            groundEffect = GroundEffect.Slow, zoneRadius = 3f, zoneLifetime = 4f, zoneStrength = 0.5f };
+            barrierWear = 1f,
+            groundEffect = GroundEffect.Ice, zoneRadius = 3f, zoneLifetime = 6f, zoneStrength = 0.12f };
 
         // Sowulo. Nearly hitscan at arena ranges: 44 m/s crosses a 12 m fight in a quarter second, which
-        // is inside human reaction time. It does NOTHING on a wall or the floor, on purpose: being almost
-        // impossible to dodge is its strength, and the price is that it has to hit a person. It grounds
-        // out -- which is also what anyone would expect lightning to do.
+        // is inside human reaction time. On bare floor or a wall it grounds out and does nothing -- being
+        // almost impossible to dodge is its strength, and the price is that it has to hit a person.
+        //
+        // Except on ice. Into an ice patch, or into somebody standing on one, it charges the whole patch
+        // and hits everyone touching it for 40 x power -- 52 for a clean cast. The strongest combination
+        // in the game, because it costs two casts and the target had seconds to step off the ice.
         [SerializeField] Spell lightning = new Spell {
             gesture = GestureTemplates.Sowulo, displayName = "LIGHTNING", kind = SpellKind.Projectile,
             colour = new Color(0.75f, 0.7f, 1f), speed = 44f, radius = 0.18f, lifetime = 2.5f,
-            damage = 12f };
+            damage = 12f,
+            chargeDamage = 40f,
+            barrierWear = 0.5f };
 
         // Ehwaz. The answer to a dug-in opponent. Into a wall it bursts and blows whoever is leaning on
         // it out into the open; on the floor it leaves an updraft that throws the next person up about
         // 2 m -- onto a predictable arc, which is where a lightning bolt finds them.
+        //
+        // It does NO damage, ever. If it did, it would be the spell for everything and get spammed; as it
+        // is, it never wins a fight on its own and is in every good moment of one -- it is how you
+        // deliver somebody into your fire. It still knocks a glyph out of the hand of anyone drawing.
         [SerializeField] Spell air = new Spell {
             gesture = GestureTemplates.Ehwaz, displayName = "AIR", kind = SpellKind.Projectile,
             colour = new Color(0.8f, 0.95f, 0.9f), speed = 30f, radius = 0.7f, lifetime = 3f,
-            knockback = 12f, damage = 8f,
+            knockback = 12f, damage = 0f,
             interruptsDrawing = true,
             wallBurstRadius = 3f,
+            barrierWear = 0f, barrierWearFlat = 3f,
             // 9.4 m/s against the -22 gravity the motor uses peaks at 2.0 m
-            groundEffect = GroundEffect.Updraft, zoneRadius = 2f, zoneLifetime = 2f, zoneStrength = 9.4f };
+            groundEffect = GroundEffect.Updraft, zoneRadius = 2f, zoneLifetime = 5f, zoneStrength = 9.4f };
 
-        [Header("Misfire")]
-        // A botched gesture must not be silence. Silence reads as "the game ignored me"; a bad spell
-        // reads as "I drew it badly" -- and it is the funnier of the two. It fires immediately: a
-        // misfire is the spell going wrong in your hands, not something you get to aim.
+        [Header("Misfire (retired)")]
+        // Kept only as the fallback for an unknown spell id on the wire. A botched gesture used to fire
+        // this off in a random direction; it now simply fizzles -- see EndDraw.
         [SerializeField] Spell misfire = new Spell {
             gesture = "misfire", displayName = "MISFIRE", colour = new Color(0.55f, 0.55f, 0.6f),
             speed = 11f, radius = 0.3f, lifetime = 2.5f, damage = 5f };
-        [SerializeField] float misfireSpread = 22f;
 
         [Header("Slots")]
         // Bank a drawn spell instead of sending it, then pull it out later. Using a slot empties it and
@@ -384,6 +407,14 @@ namespace MageCast.Gestures
             else if (selectedSlot >= 0 && Input.GetMouseButtonDown(sendButton))
             {
                 BeginWindUp();
+                return;
+            }
+
+            // Changed your mind mid-glyph: the other button throws it away. Nothing is cast and nothing
+            // is spent; the right button has to be pressed again to start over.
+            if (drawing && Input.GetMouseButtonDown(sendButton))
+            {
+                AbortDraw("CANCELLED", StrokeOutcome.Cancelled);
                 return;
             }
 
@@ -693,7 +724,13 @@ namespace MageCast.Gestures
             if (quality != CastQuality.Fizzle && quality != CastQuality.Misfire)
                 quality = PrecisionTier(precision);
 
+            // logged as graded, so the calibration still sees which strokes were nearly something
             LogCast(r, quality, metrics);
+
+            // No more misfire. A stroke that is not clearly one of the shapes simply does not cast: the
+            // tiers of the ones that do are the whole of the reward, and a wild shot flying off in a
+            // random direction was noise on top of it.
+            if (quality == CastQuality.Misfire) quality = CastQuality.Fizzle;
 
             if (quality == CastQuality.Fizzle)
             {
@@ -703,19 +740,6 @@ namespace MageCast.Gestures
                 if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Fizzle, 0);
                 Announce(string.Format(System.Globalization.CultureInfo.InvariantCulture,
                                        "nothing cast (best {0}, excess {1:F2})", r.Name ?? "-", r.Excess));
-                return;
-            }
-
-            if (quality == CastQuality.Misfire)
-            {
-                motor.SprintLocked = false;
-                Vector3 wild = Quaternion.Euler(Random.Range(-misfireSpread, misfireSpread),
-                                                Random.Range(-misfireSpread, misfireSpread), 0f) * ResolveAim();
-                Headline("MISFIRE", FailColour);
-                Announce(id == null ? "no clear direction - drew a diagonal" : "shape too rough");
-                AnnounceCreated(MisfireId, false);
-                if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Sent, MisfireId, false);
-                Cast(misfire, wild, 0.2f, CastQuality.Misfire, metrics);
                 return;
             }
 
@@ -814,6 +838,15 @@ namespace MageCast.Gestures
         {
             // somebody else's player: their own machine has to let go of the glyph
             if (Networked && !net.IsOwner) { net.SendInterrupt(); return; }
+            AbortDraw("INTERRUPTED", StrokeOutcome.Interrupted);
+        }
+
+        /// <summary>
+        /// Drops a glyph in progress with nothing cast. The right button has to be let go and pressed
+        /// again to draw -- until then the mouse is back to aiming, even with the button still held.
+        /// </summary>
+        void AbortDraw(string reason, StrokeOutcome outcome)
+        {
             if (!drawing) return;
 
             // the undo of BeginDraw, minus any grading: there is no stroke left to grade
@@ -829,9 +862,9 @@ namespace MageCast.Gestures
             if (trail != null) trail.Clear();
             if (anim != null) anim.SetDrawing(false);
 
-            Headline("INTERRUPTED", FailColour, 1f);
-            WorldPopups.Word(transform, "INTERRUPTED", FailColour);
-            if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Interrupted, 0);
+            Headline(reason, FailColour, 1f);
+            WorldPopups.Word(transform, reason, FailColour);
+            if (Networked) net.OwnerStrokeEnd(outcome, 0);
         }
 
         // ---------------------------------------------------------------- recognition
@@ -1071,7 +1104,9 @@ namespace MageCast.Gestures
                                  spell.barrierWidth * sizeScale,
                                  spell.barrierHeight,
                                  spell.lifetime * Mathf.Lerp(0.6f, 1.4f, precision),
-                                 colour);
+                                 colour,
+                                 CastShield.BaseDurability * Mathf.Lerp(0.6f, 1.4f, precision),
+                                 attacker, Networked ? net : null, authoritative);
                 return;
             }
 

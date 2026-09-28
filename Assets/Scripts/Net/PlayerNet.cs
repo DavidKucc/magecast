@@ -266,7 +266,7 @@ namespace MageCast
             caster.SpawnCast(data, false);
         }
 
-        /// <summary>Server: a patch landed. Everyone else gets one to see and to be slowed or thrown by.</summary>
+        /// <summary>Server: a patch landed. Everyone else gets one to see and to be slid or thrown by.</summary>
         public void BroadcastZone(Vector3 at, GroundEffect effect, float radius, float lifetime, float strength,
                                   Color colour)
         {
@@ -279,7 +279,39 @@ namespace MageCast
                            Color colour)
         {
             if (IsServer) return;
-            SpellZone.Spawn(at, effect, radius, lifetime, strength, colour, false, Health.NoAttacker);
+            // owned by this player on every machine, so the two-patch limit takes away the same one everywhere
+            SpellZone.Spawn(at, effect, radius, lifetime, strength, colour, false, Health.NoAttacker, OwnerClientId);
+        }
+
+        /// <summary>Server: this player's lightning ran through an ice patch. Everyone sees it happen.</summary>
+        public void BroadcastCharge(Vector3 iceCentre, Vector3 struck, Vector3[] victims)
+        {
+            if (!IsServer) return;
+            ChargeClientRpc(iceCentre, struck, victims);
+        }
+
+        [ClientRpc]
+        void ChargeClientRpc(Vector3 iceCentre, Vector3 struck, Vector3[] victims)
+        {
+            if (IsServer) return;
+            SpellZone ice = SpellZone.IceAt(iceCentre);
+            if (ice != null) ice.ShowDischarge(struck, new List<Vector3>(victims));
+            else foreach (Vector3 v in victims) ChargeArc.Spawn(struck, v);
+        }
+
+        /// <summary>Server: this player's barrier took a hit; this much of it is left.</summary>
+        public void BroadcastBarrierWear(float fraction)
+        {
+            if (!IsServer) return;
+            BarrierWearClientRpc(fraction);
+        }
+
+        [ClientRpc]
+        void BarrierWearClientRpc(float fraction)
+        {
+            if (IsServer) return;
+            CastShield shield = CastShield.Of(OwnerClientId);
+            if (shield != null) shield.SetWear(fraction);
         }
 
         // ---------------------------------------------------------------- server -> the body's owner

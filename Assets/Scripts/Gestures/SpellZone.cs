@@ -5,7 +5,7 @@ using UnityEngine;
 namespace MageCast.Gestures
 {
     /// <summary>
-    /// A patch a spell leaves on the floor: fire burns, ice slows, air throws you up.
+    /// A patch a spell leaves on the floor: fire burns, ice takes your grip away, air throws you up.
     ///
     /// These are what give the arena temporary territory. It has no objectives, so until now there was
     /// nowhere worth being and nowhere to avoid -- movement was only ever about dodging. A patch is a
@@ -35,6 +35,20 @@ namespace MageCast.Gestures
         Color colour;
 
         readonly HashSet<PlayerMotor> launched = new HashSet<PlayerMotor>();
+
+        /// <summary>Every patch on this machine, oldest first.</summary>
+        static readonly List<SpellZone> all = new List<SpellZone>();
+
+        /// <summary>
+        /// Patches one player may have down at once. The third takes the oldest away -- the rule that
+        /// keeps a busy arena from turning into a floor nobody can read.
+        /// </summary>
+        public const int MaxPerPlayer = 2;
+
+        /// <summary>Who laid it, for the per-player limit. Known on every machine, unlike who it hurts.</summary>
+        ulong owner = Health.NoAttacker;
+
+        float flashUntil = -1f;
 
         /// <summary>
         /// The server's patch deals the damage. Being slowed or thrown is done by each player's own
@@ -160,8 +174,14 @@ namespace MageCast.Gestures
 
         public static SpellZone Spawn(Vector3 at, GroundEffect effect, float radius, float lifetime,
                                       float strength, Color colour,
-                                      bool authoritative = true, ulong attacker = Health.NoAttacker)
+                                      bool authoritative = true, ulong attacker = Health.NoAttacker,
+                                      ulong owner = Health.NoAttacker)
         {
+            // The per-player limit, applied the same way on every machine: they all see the same patches
+            // arrive in the same order, so they all take away the same oldest one.
+            var mine = all.FindAll(z => z != null && z.owner == owner);
+            for (int i = 0; i <= mine.Count - MaxPerPlayer; i++) mine[i].Remove();
+
             // no collider at all: a patch must never block a projectile
             GameObject go = new GameObject("SpellZone_" + effect);
 
@@ -197,12 +217,68 @@ namespace MageCast.Gestures
             z.colour = colour;
             z.authoritative = authoritative;
             z.attacker = attacker;
+            z.owner = owner;
             z.reach = reach;
+            all.Add(z);
             return z;
+        }
+
+        void Remove()
+        {
+            all.Remove(this);
+            Destroy(gameObject);
+        }
+
+        /// <summary>The ice patch under a point on the floor, or null.</summary>
+        public static SpellZone IceAt(Vector3 point)
+        {
+            for (int i = all.Count - 1; i >= 0; i--)
+            {
+                SpellZone z = all[i];
+                if (z == null || z.effect != GroundEffect.Ice) continue;
+                if (z.Contains(point, 0.6f)) return z;
+            }
+            return null;
+        }
+
+        bool Contains(Vector3 point, float verticalSlack)
+        {
+            Vector3 offset = point - transform.position;
+            if (Mathf.Abs(offset.y) > verticalSlack) return false;
+            return new Vector2(offset.x, offset.z).magnitude <= ReachTowards(reach, offset);
+        }
+
+        /// <summary>
+        /// Lightning into ice: the whole patch carries the charge, and everyone TOUCHING it takes the hit
+        /// -- standing on it, not jumping over it. The caster's own ice included; it is their risk.
+        ///
+        /// Server only; everyone else is sent the picture (PlayerNet.BroadcastCharge). Returns where the
+        /// victims were, for that picture.
+        /// </summary>
+        public List<Vector3> Discharge(float damage, ulong byWhom)
+        {
+            var hit = new List<Vector3>();
+            foreach (Target t in Occupants())
+            {
+                if (!t.Touching) continue;
+                if (t.Health != null && authoritative) t.Health.TakeDamage(damage, byWhom);
+                hit.Add(t.Root.position + Vector3.up * 1f);
+            }
+            return hit;
+        }
+
+        /// <summary>The visible half of a discharge: the patch flares, arcs run to whoever it caught.</summary>
+        public void ShowDischarge(Vector3 struck, List<Vector3> victims)
+        {
+            flashUntil = Time.time + 0.45f;
+            Vector3 centre = transform.position + Vector3.up * 0.05f;
+            ChargeArc.Spawn(struck, centre);
+            foreach (Vector3 v in victims) ChargeArc.Spawn(centre, v);
         }
 
         void OnDestroy()
         {
+            all.Remove(this);
             MeshFilter f = GetComponent<MeshFilter>();
             if (f != null && f.sharedMesh != null) Destroy(f.sharedMesh);
         }
@@ -211,9 +287,13 @@ namespace MageCast.Gestures
         {
             remaining -= Time.deltaTime;
 
-            // Dims over its last second so it never vanishes mid-fight without warning.
+            // Dims over its last second so it never vanishes mid-fight without warning. Flares white
+            // for a moment when lightning runs through it.
             float alpha = Mathf.Clamp01(remaining);
-            material.SetColor("_EmissionColor", colour * (0.35f + 0.75f * alpha));
+            if (Time.time < flashUntil)
+                material.SetColor("_EmissionColor", Color.Lerp(colour, Color.white, 0.7f) * 3.5f);
+            else
+                material.SetColor("_EmissionColor", colour * (0.35f + 0.75f * alpha));
 
             if (remaining <= 0f) { Destroy(gameObject); return; }
 
@@ -228,11 +308,13 @@ namespace MageCast.Gestures
                         if (authoritative && t.Health != null) t.Health.TakeDamage(strength * TickInterval, attacker);
                         break;
 
-                    case GroundEffect.Slow:
-                        // re-applied every tick for a little longer than a tick, so it holds while you
-                        // stand in it and lets go almost as soon as you step out
-                        if (t.Motor != null && t.Motor.IsLocallyControlled)
-                            t.Motor.ApplySlow(strength, TickInterval + 0.15f);
+                    case GroundEffect.Ice:
+                        // Grip, not speed. You keep whatever you were doing when you stepped on, and
+                        // changing it takes most of a second -- which in a game about sidestepping is the
+                        // thing that matters. Re-applied each tick for a little longer than a tick, so
+                        // it holds while you are on it and lets go almost as you step off.
+                        if (t.Motor != null && t.Motor.IsLocallyControlled && t.Touching)
+                            t.Motor.ApplySlippery(strength, TickInterval + 0.15f);
                         break;
 
                     case GroundEffect.Updraft:
@@ -254,6 +336,9 @@ namespace MageCast.Gestures
             public Transform Root;
             public Health Health;
             public PlayerMotor Motor;
+
+            /// <summary>Feet on the patch, as opposed to above it in a jump.</summary>
+            public bool Touching;
         }
 
         /// <summary>
@@ -284,9 +369,23 @@ namespace MageCast.Gestures
                 if (flat > ReachTowards(reach, offset)) continue;
                 if (offset.y < -0.4f || offset.y > Height) continue;
 
-                found.Add(new Target { Root = root, Health = hp, Motor = motor });
+                found.Add(new Target { Root = root, Health = hp, Motor = motor, Touching = IsTouching(c, motor, centre) });
             }
             return found;
+        }
+
+        /// <summary>
+        /// Standing on the patch. For a player that is their grounded flag -- read off the network for
+        /// somebody else's body, whose motor is not running here -- and feet at the patch's height. A
+        /// dummy has no motor and never leaves the floor.
+        /// </summary>
+        static bool IsTouching(Collider c, PlayerMotor motor, Vector3 centre)
+        {
+            if (motor == null) return Mathf.Abs(c.bounds.min.y - centre.y) < 0.35f;
+
+            PlayerNet net = motor.GetComponent<PlayerNet>();
+            bool grounded = net != null && net.IsRemote ? net.Grounded.Value : motor.IsGrounded;
+            return grounded && Mathf.Abs(motor.transform.position.y - centre.y) < 0.35f;
         }
     }
 }

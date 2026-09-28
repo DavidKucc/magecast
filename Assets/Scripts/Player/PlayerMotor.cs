@@ -212,6 +212,25 @@ namespace MageCast
 
         public float CurrentSlow { get { return Time.time < slowUntil ? slowMultiplier : 1f; } }
 
+        float grip = 1f;
+        float gripUntil = -99f;
+
+        /// <summary>
+        /// Takes the grip away -- an ice patch. Top speed is untouched; what goes is the ability to CHANGE
+        /// it: speeding up, braking and turning all run at this share of normal. You keep sliding the
+        /// way you were going, which is exactly what a player needs in order to be hit.
+        /// The least grip active wins.
+        /// </summary>
+        public void ApplySlippery(float gripMultiplier, float duration)
+        {
+            if (!IsLocallyControlled) return;     // a patch applies itself on the body's own machine
+            bool active = Time.time < gripUntil;
+            if (!active || gripMultiplier < grip) grip = gripMultiplier;
+            gripUntil = Mathf.Max(active ? gripUntil : 0f, Time.time + duration);
+        }
+
+        public float CurrentGrip { get { return Time.time < gripUntil ? grip : 1f; } }
+
         /// <summary>
         /// Throws the character straight up, as a proper jump would -- not through the external impulse,
         /// which bleeds off exponentially and would make a launch float instead of arc.
@@ -238,6 +257,7 @@ namespace MageCast
             velocity = Vector3.zero;
             external = Vector3.zero;
             slowUntil = -99f;
+            gripUntil = -99f;
         }
 
         void Awake()
@@ -297,7 +317,7 @@ namespace MageCast
                 // speeding up (or turning) uses the acceleration, only letting go uses the braking
                 float rate = wanted.sqrMagnitude > flat.sqrMagnitude * 0.99f ? groundAcceleration
                                                                               : groundDeceleration;
-                flat = Vector3.MoveTowards(flat, wanted, rate * paceOverAnimation * Time.deltaTime);
+                flat = Vector3.MoveTowards(flat, wanted, rate * paceOverAnimation * CurrentGrip * Time.deltaTime);
                 velocity.x = flat.x;
                 velocity.z = flat.z;
                 if (velocity.y < 0f) velocity.y = -2f;   // keep it pinned down so isGrounded stays honest

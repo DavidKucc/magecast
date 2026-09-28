@@ -46,6 +46,9 @@ Míření je pořád jedno a to samé: z kamery jde paprsek dopředu a kde tref�
 Místo kroků 4–5 se kouzlo dá **uložit do slotu** (rozhoduje se během kreslení) a vypustit později
 klávesou `1` nebo `2`.
 
+**Zrušit kreslení** jde kdykoli **levým tlačítkem** — nic se nesešle a nic se nespotřebuje. Pak je potřeba
+pravé pustit a stisknout znovu. Stejně skončí kreslení, když tě trefí vzduch.
+
 ---
 
 ## Gesta a kouzla
@@ -58,11 +61,14 @@ malou abecedu, ne pět náhodných čmáranic.
 | **Kenaz** (pochodeň) | `<` | oheň | 22 | 26 m/s | běžný útok |
 | **Laguz** (voda) | stonek s větví | led | 30 | 17 m/s | pomalé a tlusté, snadno se uhne |
 | **Sowulo** (slunce) | klikatice | blesk | 12 | 44 m/s | skoro se nedá uhnout, málo ubere |
-| **Ehwaz** (pohyb) | `M` | vzduch | 8 | 30 m/s | odhodí — vytáhne z krytu |
-| kolečko | `O` | bariéra | — | — | zavře směr na 6 s |
+| **Ehwaz** (pohyb) | `M` | vzduch | **0** | 30 m/s | odhodí — vytáhne z krytu, shodí rozkreslené kouzlo |
+| kolečko | `O` | bariéra | — | — | zavře směr na 6 s, dokud ji zásahy neprorazí |
 
-Špatně nakreslený tvar dá **misfire** — kouzlo vyletí divoce a slabě. Není to ticho: ticho působí, že tě
-hra odmítla, misfire působí, že sis za to můžeš sám.
+**Vzduch nedává poškození, nikdy.** Kdyby dával, stal by se kouzlem na všechno. Takhle sám nikdy
+nevyhraje, ale je u všech dobrých momentů — je to kouzlo, kterým soupeře **doručíš do svého ohně**.
+
+Špatně nakreslený tvar prostě **nevyjde (fizzle)**. Dřív z něj létal náhodný „misfire“; ten je pryč —
+odměnou za kreslení jsou jen tiery těch tvarů, které vyjdou.
 
 V pravém horním rohu je **legenda** se všemi gesty (`F6` ji schová). Kreslí skutečné šablony
 rozpoznávače, ne ručně dělané ikonky, aby nikdy nemohla ukazovat něco jiného, než co hra čeká.
@@ -72,31 +78,50 @@ rozpoznávače, ne ručně dělané ikonky, aby nikdy nemohla ukazovat něco jin
 ## Když kouzlo netrefí člověka
 
 Jedno gesto dává několik efektů — rozhoduje, **do čeho kouzlo dopadne**. Nic nového se neučí: oheň pálí,
-led zpomaluje, blesk se uzemní, vzduch zvedá.
+led klouže, blesk se uzemní, vzduch zvedá.
 
 | | do soupeře | do stěny | na zem |
 |---|---|---|---|
-| **oheň** | 22 | odrazí se jednou, zbyde 80 % | hořící plocha — 2,5 m, 3 s, 6/s |
-| **led** | 30 + zpomalení na 50 % na 1,2 s | nic | zpomalující plocha — 3 m, 4 s, 50 % |
-| **blesk** | 12 | nic | nic, uzemní se |
-| **vzduch** | 8 + odhoz + **shodí rozkreslené kouzlo** | výbuch 3 m, odfoukne od stěny | vzdušný proud — 2 m, 2 s, vyhodí ~2 m |
+| **oheň** | 22 | odrazí se jednou, zbyde 80 % | hořící plocha — 2,5 m, 5 s, 4/s |
+| **led** | 30 + zpomalení na 50 % na 1,2 s | nic | **kluzká plocha** — 3 m, 6 s |
+| **blesk** | 12 | nic | nic, uzemní se — **kromě ledu** |
+| **vzduch** | odhoz + **shodí rozkreslené kouzlo** | výbuch 3 m, odfoukne od stěny | vzdušný proud — 2 m, 5 s, vyhodí ~2 m |
+
+**Led je kluzký, ne pomalý.** Rychlost zůstává, mizí přilnavost: rozběhnout se, zabrzdit i zatočit jde na
+12 % obvyklého. Kdo na led vběhne, klouže dál tím směrem, kterým šel — z plného běhu zastaví za 0,9 s
+místo 0,1 s. Ve hře o uhýbání je to kontrola: na ledu se neuhýbá.
+
+## Kombinace
+
+Kombinace vznikají **postupně**: jedno kouzlo leží na zemi, druhé do něj přiletí. Žádné dvojité
+seslání — ta prodleva mezi dvěma casty je ta dovednost, soupeř vidí plochu, vidí tě kreslit a má čas odejít.
+
+**Blesk do ledu** — celá ledová plocha se nabije a každý, **kdo se jí dotýká**, dostane **40 × síla
+tahu** (čistě nakreslený blesk 52). Stačí trefit led, nebo někoho, kdo na ledu stojí. Kdo zrovna
+vyskočil, tomu se nic nestane. Platí i pro toho, kdo led položil. Je to nejsilnější kombinace ve hře
+schválně: stojí dva casty, dvě zranitelná okna, a cíl měl vteřiny na to z ledu slézt.
+
+*Ověřeno měřením: panák na ledu dostal přesně 53,4 (40 × 1,335).*
+
+Další kombinace (oheň do ledu = voda, vzduch rozfouká oheň, vzduch na ledu = katapult) jsou rozhodnuté,
+ale zatím nepostavené.
 
 Záměrně nemá každé kouzlo všechno. Dvanáct efektů by byla polévka.
 
 **Proč zrovna tak.** Oheň se odráží, aby šlo trefit někoho za krytem — kolem rohu. Blesk nedělá nic,
-protože se mu skoro nedá uhnout, a jeho cenou je, že musí trefit člověka. Vzduch vyhazuje z krytu
-i do vzduchu, a kdo letí, letí po předvídatelné dráze — tam ho najde blesk. A led je nejzajímavější:
-kreslení tě zpomalí na 60 %, ledová plocha na 50 %, dohromady **30 %**. Ledová plocha je tedy **místo,
-kde se nedá bezpečně kreslit** — napojuje se rovnou na hlavní pravidlo hry.
+protože se mu skoro nedá uhnout, a jeho cenou je, že musí trefit člověka — nebo led. Vzduch vyhazuje
+z krytu i do vzduchu, a kdo letí, letí po předvídatelné dráze — tam ho najde blesk. A led bere
+schopnost uhýbat, takže kdo na něm kreslí, je terč; a je to plocha, na kterou blesk čeká.
 
 **Pravidla, aby to drželo:**
 
-- **Plocha nikdy nedá víc než přímý zásah.** Kdo stojí v ohni celé 3 s, dostane 18 — míň než přímých 22.
+- **Plocha nikdy nedá víc než přímý zásah.** Kdo stojí v ohni celých 5 s, dostane 20 — míň než přímých 22.
   Platí to při každé kvalitě, protože hoření roste se silou tahu stejně jako zásah.
-- **Stěna, nebo zem, rozhoduje sklon povrchu.** Co míří nahoru, je zem; zbytek je stěna. Takže i
-  soupeřova bariéra je stěna a oheň se od ní odrazí.
-- **Plochy zasáhnou i toho, kdo je seslal.** Stejně jako misfire. Oheň pod vlastníma nohama není zadarmo.
-- **Vzdušný proud vyhodí každého jen jednou**, jinak by z dvouvteřinové plochy byla trampolína.
+- **Plochy žijí 5–6 s a každý hráč smí mít dole nejvýš dvě.** Třetí smaže tu nejstarší — aby se
+  aréna za půl minuty nezměnila v kaši, kde nikdo neví, na čem stojí.
+- **Stěna, nebo zem, rozhoduje sklon povrchu.** Co míří nahoru, je zem; zbytek je stěna.
+- **Plochy zasáhnou i toho, kdo je seslal.** Oheň pod vlastníma nohama není zadarmo.
+- **Vzdušný proud vyhodí každého jen jednou**, jinak by z plochy byla trampolína.
 - **Velikost ploch roste s velikostí glyfu** (0,7–1,4×), stejně jako velikost střely.
 - **Plocha končí na hraně toho, na čem leží.** Dopadne-li kousek od kraje platformy, je u kraje
   rovně uříznutá a nevisí do vzduchu — a kdo stojí dole pod hranou, toho nezasáhne.
@@ -108,8 +133,29 @@ míříš: kruh na zemi velký jako budoucí plocha, na stěně čáru, kudy se 
 (leží na zdi, proto je svislý) a šedý kroužek tam, kde kouzlo nic neudělá. Slouží k naučení. **Ve hře
 proti člověku se neukazuje** — odhadnout odraz a dosah z geometrie je součást dovednosti.
 
-Ověřeno měřením: panák v hořící ploše ztratil přesně 18 životů, odraz vyšel zrcadlově na desetinu
-s poškozením 17,6, led zpomalil na 0,50, vzdušný proud vyhodil rychlostí 9,4 m/s a výbuch u stěny
+## Bariéra
+
+Deska krytu postavená ve směru míření. **Blokuje z obou stran**, i vlastní kouzla. Střely se o ni
+**zastaví, neodráží se** — bariéra, která by vracela oheň střelci, by byla odměna za to, že na tebe
+někdo střílí.
+
+**Opotřebovává se.** Každý zásah ubere tolik, kolik by dal hráči, krát podle prvku:
+
+| prvek | krát | čistý zásah ubere |
+|---|---|---|
+| oheň | 1,5 | 44 |
+| led | 1,0 | 39 |
+| blesk | 0,5 | 8 |
+| vzduch | vždy 3 | 3 |
+
+Výdrž je **60** krát 0,6–1,4 podle přesnosti kreslení (36–84). Běžná bariéra tedy vydrží jeden oheň a
+druhý ji prorazí, blesků snese kolem sedmi, vzduch ji skoro nepoškodí. Jak ubývá, bledne — soupeř vidí,
+že ještě jeden oheň a je pryč. **Jedna na hráče**: nová zruší starou.
+
+*Ověřeno: čistá bariéra po jednom ohni 27 %, druhý ji rozbil.*
+
+Ověřeno měřením (dřívější čísla): odraz vyšel zrcadlově na desetinu s poškozením 17,6, vzdušný proud
+vyhodil rychlostí 9,4 m/s a výbuch u stěny
 odhodil hráče směrem od ní.
 
 ---
@@ -180,7 +226,7 @@ Každý vidí svou kopii každého kouzla (letí, odráží se, bliká stejně),
 Plocha na zemi je jedna — pošle ji hostitel všem.
 
 **Smrt:** na nule zmizíš, 3 s a jsi zpátky na spawnu co nejdál od ostatních. Nahoře se počítá skóre
-zabití / smrtí. Vlastní misfire nebo vlastní oheň tě zabít může, ale soupeři to nepřipíše.
+zabití / smrtí. Vlastní oheň nebo vlastní výboj v ledu tě zabít může, ale soupeři to nepřipíše.
 
 ---
 
