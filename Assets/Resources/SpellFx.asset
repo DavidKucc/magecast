@@ -21,3 +21,19 @@ MonoBehaviour:
     castScale: 0.22
     impactScale: 0.5
     castTurn: {x: 0, y: -90, z: 0}
+  - spell: ICE
+    cast: {fileID: 8114927945569760447, guid: 7bb06fd48ad0c284e8dcc35a1fd6b53d, type: 3}
+    projectile: {fileID: 1771704844123445069, guid: 802822d3553f52b44b96bec3e623625f, type: 3}
+    impact: {fileID: 5213359654510746434, guid: 3c604f0562297d7458fe30545d03f467, type: 3}
+    projectileScale: 1
+    castScale: 0.22
+    impactScale: 0.5
+    castTurn: {x: 0, y: -90, z: 0}
+  - spell: LIGHTNING
+    cast: {fileID: 1658496247936348207, guid: 0c4373b17a0eaa54e8bb49fa3838916e, type: 3}
+    projectile: {fileID: 1319398647745027786, guid: 1666ed9b00dcf034b90f74315296e143, type: 3}
+    impact: {fileID: 6589385767113089740, guid: e63b73db5999f90439bfa92f5b6a556d, type: 3}
+    projectileScale: 2
+    castScale: 0.22
+    impactScale: 0.5
+    castTurn: {x: 0, y: -90, z: 0}
