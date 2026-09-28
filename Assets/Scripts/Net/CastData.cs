@@ -21,6 +21,12 @@ namespace MageCast.Gestures
         public Vector3 Direction;
         public Vector3 Feet;        // where the caster stood -- a barrier is planted from here
 
+        /// <summary>
+        /// When it was cast, in network (server) time. Everybody else receives it some time later, and
+        /// moves their copy on by that much so it is where the caster's own shot already is.
+        /// </summary>
+        public double SentAt;
+
         public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
         {
             s.SerializeValue(ref Spell);
@@ -30,6 +36,7 @@ namespace MageCast.Gestures
             s.SerializeValue(ref Muzzle);
             s.SerializeValue(ref Direction);
             s.SerializeValue(ref Feet);
+            s.SerializeValue(ref SentAt);
         }
     }
 

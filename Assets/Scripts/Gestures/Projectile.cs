@@ -117,19 +117,53 @@ namespace MageCast.Gestures
             return p;
         }
 
+        /// <summary>Gone: hit something for good, or ran out of time. Destroy only takes effect later.</summary>
+        bool ended;
+
+        void End()
+        {
+            ended = true;
+            Destroy(gameObject);
+        }
+
+        /// <summary>The most a copy is moved on to make up for the time its cast spent on the network.</summary>
+        public const float MaxCatchUp = 0.4f;
+
+        /// <summary>
+        /// Moves a copy on by the time its cast spent reaching this machine, in small steps that still
+        /// hit whatever lies on the way -- so it flies where the caster's own shot is now, instead of
+        /// setting off from the hand a ping late and landing (and hitting, and sounding) a ping late.
+        /// </summary>
+        public void CatchUp(float seconds)
+        {
+            seconds = Mathf.Min(seconds, MaxCatchUp);
+            const float Slice = 1f / 60f;
+            while (seconds > 1e-4f && !ended)
+            {
+                float dt = Mathf.Min(Slice, seconds);
+                Step(dt);
+                seconds -= dt;
+            }
+        }
+
         void Update()
+        {
+            if (!ended) Step(Time.deltaTime);
+        }
+
+        void Step(float dt)
         {
             // Integrated as a velocity rather than a fixed heading so the same component covers both
             // a flat bolt and a lob, and so a bounce is just a change of velocity.
-            if (gravity != 0f) velocity += Vector3.up * (gravity * Time.deltaTime);
+            if (gravity != 0f) velocity += Vector3.up * (gravity * dt);
 
             // Over an updraft the rising air bends the shot upwards and it sails over whoever stood
             // behind it -- a screen you can put down, not a mirror. Every shot, whoever cast it and
             // whoever laid the draft; a fast one is only nudged, a slow one is lifted clean away.
             if (SpellZone.DraftAt(transform.position) != null)
-                velocity += Vector3.up * (DraftLift * Time.deltaTime);
+                velocity += Vector3.up * (DraftLift * dt);
 
-            Vector3 step = velocity * Time.deltaTime;
+            Vector3 step = velocity * dt;
             float distance = step.magnitude;
             if (distance > 1e-5f)
             {
@@ -198,8 +232,8 @@ namespace MageCast.Gestures
                 if (gravity != 0f) transform.forward = heading;
             }
 
-            remaining -= Time.deltaTime;
-            if (remaining <= 0f) Destroy(gameObject);
+            remaining -= dt;
+            if (remaining <= 0f) End();
         }
 
         /// <summary>
@@ -245,7 +279,7 @@ namespace MageCast.Gestures
                 shield.Struck(at, BarrierWear() / 30f);
                 if (authoritative) shield.Wear(BarrierWear());
                 Flash(at, 1.1f, 2.2f);
-                Destroy(gameObject);
+                End();
                 return true;
             }
 
@@ -253,7 +287,7 @@ namespace MageCast.Gestures
             {
                 if (authoritative) HitPerson(hp, motor, heading);
                 Flash(at, 1.4f, 2.5f);
-                Destroy(gameObject);
+                End();
                 return true;
             }
 
@@ -333,7 +367,7 @@ namespace MageCast.Gestures
             else
                 Flash(at, 1.4f, 2.5f);
 
-            Destroy(gameObject);
+            End();
             return true;
         }
 
@@ -463,13 +497,13 @@ namespace MageCast.Gestures
             // Lightning grounds out -- unless the ground is ice or water, which carries it to everyone on it.
             if (spell != null && spell.chargeDamage > 0f && DischargeIceAt(at, at))
             {
-                Destroy(gameObject);
+                End();
                 return true;
             }
 
             if (Combine(at))
             {
-                Destroy(gameObject);
+                End();
                 return true;
             }
 
@@ -506,7 +540,7 @@ namespace MageCast.Gestures
                 Flash(at, 1.4f, 2.5f);
             }
 
-            Destroy(gameObject);
+            End();
             return true;
         }
 

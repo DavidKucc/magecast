@@ -1105,7 +1105,8 @@ namespace MageCast.Gestures
                 SizeScale = SizeScale(metrics),
                 Muzzle = Muzzle(),
                 Direction = direction,
-                Feet = transform.position
+                Feet = transform.position,
+                SentAt = Networked ? Unity.Netcode.NetworkManager.Singleton.ServerTime.Time : 0.0
             };
 
             if (Networked) net.RequestCast(data);
@@ -1174,7 +1175,7 @@ namespace MageCast.Gestures
                              null, false);
 
             bool ballistic = spell.kind == SpellKind.Ballistic;
-            Projectile.Spawn(data.Muzzle, direction,
+            Projectile shot = Projectile.Spawn(data.Muzzle, direction,
                              spell.speed,
                              spell.radius * sizeScale,
                              spell.lifetime, colour, transform, power,
@@ -1184,6 +1185,15 @@ namespace MageCast.Gestures
                              spell.knockback * Mathf.Lerp(0.7f, 1.3f, precision),
                              dealt,
                              spell, sizeScale, authoritative, attacker);
+
+            // A cast that arrived over the network is as old as its trip here: the copy is moved on by
+            // that much, so it flies -- and lands, and hits -- where the caster's own shot is, instead of
+            // leaving the hand a ping late. The server's copy too, which is the one that decides hits.
+            if (shot != null && Networked && data.SentAt > 0.0)
+            {
+                float late = (float)(Unity.Netcode.NetworkManager.Singleton.ServerTime.Time - data.SentAt);
+                if (late > 0.005f) shot.CatchUp(late);
+            }
         }
 
         Vector3 Muzzle()
