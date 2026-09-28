@@ -62,13 +62,15 @@ malou abecedu, ne pět náhodných čmáranic.
 | **Laguz** (voda) | stonek s větví | led | 30 | 17 m/s | pomalé a tlusté, snadno se uhne |
 | **Sowulo** (slunce) | klikatice | blesk | 12 | 44 m/s | skoro se nedá uhnout, málo ubere |
 | **Ehwaz** (pohyb) | `M` | vzduch | **0** | 30 m/s | odhodí — vytáhne z krytu, shodí rozkreslené kouzlo |
-| kolečko | `O` | bariéra | — | — | zavře směr na 6 s, dokud ji zásahy neprorazí |
+| **Uruz** (síla, vytrvalost) | brána `∩` se šikmou střechou | bariéra | — | — | zavře směr na 6 s, dokud ji zásahy neprorazí |
 
 **Vzduch nedává poškození, nikdy.** Kdyby dával, stal by se kouzlem na všechno. Takhle sám nikdy
 nevyhraje, ale je u všech dobrých momentů — je to kouzlo, kterým soupeře **doručíš do svého ohně**.
 
 Špatně nakreslený tvar prostě **nevyjde (fizzle)**. Dřív z něj létal náhodný „misfire“; ten je pryč —
 odměnou za kreslení jsou jen tiery těch tvarů, které vyjdou.
+
+Všechno jsou runy — kolečko pro bariéru nahradila Uruz, aby byla celá abeceda runová.
 
 V pravém horním rohu je **legenda** se všemi gesty (`F6` ji schová). Kreslí skutečné šablony
 rozpoznávače, ne ručně dělané ikonky, aby nikdy nemohla ukazovat něco jiného, než co hra čeká.
@@ -193,12 +195,20 @@ za dokonalý — sedminásobný rozdíl.
 
 Odfláknutý blesk tedy dá 3 poškození, dokonalý 21,6.
 
-**Rozpoznávač** je $P na mračno bodů. Je slepý k tomu, kterým směrem tah jel, ale **citlivý na
-natočení** a hledá jen v rozsahu ±25°. U run je to výhoda — zrcadlený Kenaz je jiný symbol — ale
-znamená to, že tolerance se dá povolit u tvaru a nikdy u úhlu.
+**Rozpoznávač čte runu po čarách.** Tah se zjednoduší na rohy a čáry mezi nimi se porovnají **úhlem**
+s čarami každé runy. Nezáleží, odkud začneš (každá runa se zkouší z obou konců), zrcadlená runa je ale
+pořád jiná runa. Roh je skutečná změna směru (aspoň 36°): mírný ohyb je pořád jedna čára, zakulacený
+roh se počítá jako jeden roh, cuknutí na začátku nebo na konci se zahodí. Čára víc než **35°** od své
+čáry v runě = jiná čára, kouzlo nevyjde.
 
-Změřeno: každý z pěti tvarů se i s roztřesenou rukou a náklonem ±20° pozná jako on sám, a nejbližší
-jiný tvar je nejméně **2,1 jednotky** daleko. Sada drží s rezervou.
+**Tier** počítá z toho, jak přesně úhly seděly (nejvíc), jak rovné čáry byly a jak odpovídá poměr jejich
+délek. Hotové čáry se hned kreslí **narovnané** — ve stopě i v runě nad hlavou, kterou vidí soupeř.
+
+Změřeno na stovkách strojově „ručně“ kreslených run (`Tools/Arena/Rune Recognition Bench`): pečlivě
+100 %, průměrně 98–100 %, odfláknutě 78–89 % (zbytek většinou fizzle). Kolečka nevyjdou nikdy, náhodné
+klikyháky v 6 %. Perfect dá jen pečlivá kresba.
+
+Původní $P (mračno bodů) zůstává v tréninku na `F7` pro porovnání.
 
 ---
 

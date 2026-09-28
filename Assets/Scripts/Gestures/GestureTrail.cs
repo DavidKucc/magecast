@@ -20,6 +20,7 @@ namespace MageCast.Gestures
         [SerializeField] Color idleColour = new Color(0.85f, 0.87f, 0.95f, 0.75f);
 
         readonly List<Vector2> points = new List<Vector2>();
+        readonly List<Vector2> shown = new List<Vector2>();
         Color strokeColour;
 
         protected override void Awake()
@@ -60,21 +61,31 @@ namespace MageCast.Gestures
             vh.Clear();
             if (points.Count < 2) return;
 
+            // Lines already finished are drawn straight, corner to corner: the rune forms cleanly under
+            // the hand however the hand wobbled, and the line still being drawn follows it.
+            List<Vector2> draw = points;
+            if (RuneSegments.Enabled)
+            {
+                RuneSegments.Straighten(points, shown, false);
+                draw = shown;
+            }
+            if (draw.Count < 2) return;
+
             // The canvas is ScreenSpaceOverlay at constant pixel size and this rect is stretched to
             // fill it, so local space is screen space shifted by half the screen.
             Vector2 half = rectTransform.rect.size * 0.5f;
 
-            for (int i = 1; i < points.Count; i++)
+            for (int i = 1; i < draw.Count; i++)
             {
-                Vector2 a = points[i - 1] - half;
-                Vector2 b = points[i] - half;
+                Vector2 a = draw[i - 1] - half;
+                Vector2 b = draw[i] - half;
                 Vector2 delta = b - a;
                 if (delta.sqrMagnitude < 1e-4f) continue;
 
                 Vector2 normal = new Vector2(-delta.y, delta.x).normalized * (thickness * 0.5f);
 
                 // fade the oldest part of the stroke so the head of the line reads as "now"
-                float age = i / (float)points.Count;
+                float age = i / (float)draw.Count;
                 Color c = strokeColour;
                 c.a *= Mathf.Lerp(0.35f, 1f, age);
 

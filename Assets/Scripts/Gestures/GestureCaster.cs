@@ -147,6 +147,9 @@ namespace MageCast.Gestures
         [SerializeField] float aimWindow = 0.9f;
 
         [Header("Recognition")]
+        // Runes by their lines and angles (RuneSegments) rather than as a $P point cloud. F7 in
+        // training switches between the two, so they can be compared on the same hand.
+        [SerializeField] bool segmentRecognition = true;
         [SerializeField] float minMargin = 0.001f;
         [SerializeField] float tiltTolerance = 25f;
 
@@ -191,7 +194,7 @@ namespace MageCast.Gestures
         [Header("Spells -- circle")]
         // The only closed shape, and the only defensive one. Easy to remember for that reason alone.
         [SerializeField] Spell barrier = new Spell {
-            gesture = GestureTemplates.Circle, displayName = "BARRIER", kind = SpellKind.Barrier,
+            gesture = GestureTemplates.Uruz, displayName = "BARRIER", kind = SpellKind.Barrier,
             colour = new Color(1f, 0.85f, 0.4f), lifetime = 6f, damage = 0f };
 
         [Header("Spells -- the four runes")]
@@ -346,6 +349,9 @@ namespace MageCast.Gestures
         CastQuality heldQuality;
         float heldPrecision;
         StrokeMetrics heldMetrics;
+
+        /// <summary>The last stroke's lines, errors and precision, for the diagnostics line.</summary>
+        string lastSegments = "";
         float heldUntil;
 
         string lastResult = "";
@@ -431,7 +437,13 @@ namespace MageCast.Gestures
         // must never sit on top of something you press mid-fight.
         void ReadPracticeTarget()
         {
-            if (Input.GetKeyDown(KeyCode.F1)) practiceTarget = GestureTemplates.Circle;
+            if (Input.GetKeyDown(KeyCode.F1)) practiceTarget = GestureTemplates.Uruz;
+            if (Input.GetKeyDown(KeyCode.F7) && !drawing)
+            {
+                segmentRecognition = !segmentRecognition;
+                Headline("RECOGNIZER: " + (segmentRecognition ? "LINES + ANGLES" : "$P SHAPE"), Color.white, 1.5f);
+            }
+            RuneSegments.Enabled = segmentRecognition;
             if (Input.GetKeyDown(KeyCode.F2)) practiceTarget = GestureTemplates.Kenaz;
             if (Input.GetKeyDown(KeyCode.F3)) practiceTarget = GestureTemplates.Laguz;
             if (Input.GetKeyDown(KeyCode.F4)) practiceTarget = GestureTemplates.Sowulo;
@@ -688,6 +700,13 @@ namespace MageCast.Gestures
         {
             if (stroke.Count < 8 || strokeLength < minStrokeLength) { trail.SetPreview(null); return; }
 
+            if (segmentRecognition)
+            {
+                RuneSegments.Match m = RuneSegments.Recognise(stroke);
+                trail.SetPreview(m.Name == null ? (Color?)null : PreviewColour(m.Name, PrecisionTier(m.Precision)));
+                return;
+            }
+
             RecognitionResult r = Recognise();
             CastQuality q = Grade(r);
             string id = ResolveGestureId(r);
@@ -715,21 +734,50 @@ namespace MageCast.Gestures
                 return;
             }
 
-            RecognitionResult r = Recognise();
-            CastQuality quality = Grade(r);
-            StrokeMetrics metrics = StrokeMetrics.Compute(stroke, TemplateFor(r.Name));
-            float precision = Precision(metrics);
-            string id = ResolveGestureId(r);
+            RecognitionResult r;
+            CastQuality quality;
+            StrokeMetrics metrics;
+            float precision;
+            string id;
 
-            // A line drawn on the diagonal is not "probably up". It is a stroke whose author did not
-            // commit, and guessing would occasionally cast fire when they wanted air.
-            if (id == null && quality != CastQuality.Fizzle) quality = CastQuality.Misfire;
+            if (segmentRecognition)
+            {
+                // Lines and angles: the rune is whichever one the lines follow, and how closely they
+                // follow it is the precision. See RuneSegments.
+                RuneSegments.Match m = RuneSegments.Recognise(stroke);
+                id = m.Name;
+                metrics = StrokeMetrics.Compute(stroke, TemplateFor(id));
+                precision = m.Precision;
+                quality = id == null ? CastQuality.Fizzle : PrecisionTier(precision);
+                // in the log's terms: "excess" is the mean angle error, "margin" the gap to the next rune
+                r = new RecognitionResult { Name = id, Excess = m.MeanError, Distance = m.MeanError,
+                                            Runner = m.RunnerUp != null ? m.RunnerUpError : 999f, Accepted = id != null };
+                LogCast(r, quality, metrics);
+                lastSegments = string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    "{0} lines, angle err {1:F0} (worst {2:F0}), straight {3:F2}, lengths {4:F2}, precision {5:F2}{6}",
+                    m.Lines, m.MeanError > 900f ? 0f : m.MeanError, m.WorstError > 900f ? 0f : m.WorstError,
+                    m.Straightness, m.LengthError, m.Precision,
+                    m.RunnerUp != null ? "   next: " + m.RunnerUp + " " + m.RunnerUpError.ToString("F0") : "");
+            }
+            else
+            {
+                r = Recognise();
+                quality = Grade(r);
+                metrics = StrokeMetrics.Compute(stroke, TemplateFor(r.Name));
+                precision = Precision(metrics);
+                id = ResolveGestureId(r);
 
-            if (quality != CastQuality.Fizzle && quality != CastQuality.Misfire)
-                quality = PrecisionTier(precision);
+                // A line drawn on the diagonal is not "probably up". It is a stroke whose author did not
+                // commit, and guessing would occasionally cast fire when they wanted air.
+                if (id == null && quality != CastQuality.Fizzle) quality = CastQuality.Misfire;
 
-            // logged as graded, so the calibration still sees which strokes were nearly something
-            LogCast(r, quality, metrics);
+                if (quality != CastQuality.Fizzle && quality != CastQuality.Misfire)
+                    quality = PrecisionTier(precision);
+
+                // logged as graded, so the calibration still sees which strokes were nearly something
+                LogCast(r, quality, metrics);
+                lastSegments = "";
+            }
 
             // No more misfire. A stroke that is not clearly one of the shapes simply does not cast: the
             // tiers of the ones that do are the whole of the reward, and a wild shot flying off in a
@@ -742,8 +790,10 @@ namespace MageCast.Gestures
                 Headline("FIZZLE", FailColour);
                 WorldPopups.Word(transform, "FIZZLE", FailColour);
                 if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Fizzle, 0);
-                Announce(string.Format(System.Globalization.CultureInfo.InvariantCulture,
-                                       "nothing cast (best {0}, excess {1:F2})", r.Name ?? "-", r.Excess));
+                Announce(segmentRecognition
+                         ? "nothing cast - " + lastSegments
+                         : string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                                         "nothing cast (best {0}, excess {1:F2})", r.Name ?? "-", r.Excess));
                 return;
             }
 
@@ -772,7 +822,11 @@ namespace MageCast.Gestures
             AnnounceCreated(IndexOf(heldSpell), crit);
             if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Held, IndexOf(heldSpell), crit);
 
-            Announce(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+            if (segmentRecognition)
+                Announce(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                                       "{0}  {1}   dmg {2:F0}   {3}", quality, id,
+                                       heldSpell.damage * Mathf.Lerp(weakPower, perfectPower, precision), lastSegments));
+            else Announce(string.Format(System.Globalization.CultureInfo.InvariantCulture,
                                    "{0}  {1}   excess {2:F2}   power {3:F2}   dmg {4:F0}{5}   " +
                                    "steady {6:F2} def {7:F2}{8}",
                                    quality, id, r.Excess,
@@ -889,7 +943,6 @@ namespace MageCast.Gestures
             // Every shape in the vocabulary now names its own spell. The lines needed a second step
             // because $P cannot tell left-to-right from right-to-left, so four spells shared one
             // template; runes are told apart by shape, so there is nothing left to resolve.
-            if (r.Name == GestureTemplates.Circle) return GestureTemplates.Circle;
             if (GestureTemplates.IsRune(r.Name)) return r.Name;
             return null;
         }
@@ -951,7 +1004,7 @@ namespace MageCast.Gestures
 
         Spell SpellFor(string gestureId)
         {
-            if (gestureId == GestureTemplates.Circle) return barrier;
+            if (gestureId == GestureTemplates.Uruz) return barrier;
             if (gestureId == GestureTemplates.Kenaz) return fire;
             if (gestureId == GestureTemplates.Laguz) return ice;
             if (gestureId == GestureTemplates.Sowulo) return lightning;
@@ -974,7 +1027,7 @@ namespace MageCast.Gestures
         {
             var list = new List<VocabularyEntry>();
             string[] ids = { GestureTemplates.Kenaz, GestureTemplates.Laguz, GestureTemplates.Sowulo,
-                             GestureTemplates.Ehwaz, GestureTemplates.Circle };
+                             GestureTemplates.Ehwaz, GestureTemplates.Uruz };
             foreach (string id in ids)
             {
                 Spell s = SpellFor(id);
@@ -1235,7 +1288,8 @@ namespace MageCast.Gestures
             if (logCasts)
                 GUI.Label(new Rect(16f, 104f, 900f, 20f),
                           "practice target: " + practiceTarget +
-                          "   (F1 circle  F2 kenaz/fire  F3 laguz/ice  F4 sowulo/lightning  F5 ehwaz/air)",
+                          "   (F1 uruz/barrier  F2 kenaz/fire  F3 laguz/ice  F4 sowulo/lightning  F5 ehwaz/air" +
+                          "   F7 recognizer: " + (segmentRecognition ? "lines+angles" : "$P") + ")",
                           smallStyle);
 
             DrawSlots();

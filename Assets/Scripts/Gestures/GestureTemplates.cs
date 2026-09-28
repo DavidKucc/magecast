@@ -37,6 +37,10 @@ namespace MageCast.Gestures
         public const string Sowulo = "sowulo";
         public const string Ehwaz = "ehwaz";
 
+        // Uruz (aurochs: strength, endurance) -> the barrier. It took the circle's place so the whole
+        // vocabulary is runes, and it reads as what it makes: a gate, up, over and down.
+        public const string Uruz = "uruz";
+
         /// <summary>
         /// The corner points of each rune, in a -1..1 box, as one continuous stroke.
         ///
@@ -60,15 +64,28 @@ namespace MageCast.Gestures
                 return new[] { new Vector2(-0.8f, -1f), new Vector2(-0.8f, 1f), new Vector2(0f, -0.1f),
                                new Vector2(0.8f, 1f), new Vector2(0.8f, -1f) };
 
+            if (name == Uruz)                         // gate: up the tall side, slanting over, down the short side
+                return new[] { new Vector2(-0.6f, -1f), new Vector2(-0.6f, 1f), new Vector2(0.6f, 0.4f),
+                               new Vector2(0.6f, -1f) };
+
             return null;
         }
 
         public static bool IsRune(string name)
         {
-            return name == Kenaz || name == Laguz || name == Sowulo || name == Ehwaz;
+            return name == Kenaz || name == Laguz || name == Sowulo || name == Ehwaz || name == Uruz;
         }
 
-        static readonly string[] RuneNames = { Kenaz, Laguz, Sowulo, Ehwaz };
+        static readonly string[] RuneNames = { Kenaz, Laguz, Sowulo, Ehwaz, Uruz };
+
+        /// <summary>Every rune in the vocabulary.</summary>
+        public static IList<string> Runes { get { return RuneNames; } }
+
+        /// <summary>A rune's corner points (-1..1 box, y up), in the order it is drawn; null if not a rune.</summary>
+        public static Vector2[] Corners(string name)
+        {
+            return CornersFor(name);
+        }
 
         /// <summary>Walks a corner list into evenly spaced points, the way a hand draws it.</summary>
         public static List<Vector2> RunePoints(string name, int count)
@@ -127,16 +144,9 @@ namespace MageCast.Gestures
             {
                 if (cached == null)
                 {
-                    var list = new List<GestureTemplate>
-                    {
-                        new GestureTemplate(Circle, PDollarRecognizer.Normalise(CirclePoints(96), PDollarRecognizer.SampleCount, true))
-                        {
-                            ExpectedTurning = 360f,   // any closed convex loop
-                            IsClosed = true,
-                            AlignToChord = false,     // a circle is rotation-symmetric anyway
-                            NormaliseAspect = true,   // an oval is a circle as far as the player meant
-                        },
-                    };
+                    // The circle is gone from the vocabulary: the barrier is a rune now (Uruz), like
+                    // everything else. CirclePoints stays for the older editor tests.
+                    var list = new List<GestureTemplate>();
 
                     // Each rune stands on its own shape, so it is matched at the angle it was authored
                     // at -- AlignToChord would make a rune match any rotation and collapse mirrored

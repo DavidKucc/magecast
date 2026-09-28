@@ -27,7 +27,10 @@ namespace MageCast
 
         Transform holder;
         LineRenderer line;
+        readonly List<Vector2> raw = new List<Vector2>();
+        readonly List<Vector2> shown = new List<Vector2>();
         readonly List<Vector3> points = new List<Vector3>();
+        bool finished;
         Color colour = Forming;
         float fadeFrom = -1f;
 
@@ -51,7 +54,9 @@ namespace MageCast
 
         public void Begin()
         {
+            raw.Clear();
             points.Clear();
+            finished = false;
             colour = Forming;
             fadeFrom = -1f;
             Apply(1f);
@@ -60,7 +65,8 @@ namespace MageCast
         public void Add(Vector2[] batch)
         {
             if (fadeFrom >= 0f) return;      // a straggler from a draw that has already ended
-            foreach (Vector2 p in batch) points.Add(new Vector3(p.x * Scale, p.y * Scale, 0f));
+            raw.AddRange(batch);
+            Rebuild();
             Apply(1f);
         }
 
@@ -72,14 +78,18 @@ namespace MageCast
                     return;                  // not about a stroke at all
 
                 case StrokeOutcome.Held:
-                    // stays up in the spell's colour until it is sent or lost
+                    // stays up in the spell's colour until it is sent or lost -- as the clean rune
                     colour = spellColour;
+                    finished = true;
+                    Rebuild();
                     Apply(1f);
                     return;
 
                 case StrokeOutcome.Sent:
                 case StrokeOutcome.Banked:
                     colour = spellColour;
+                    finished = true;
+                    Rebuild();
                     break;
 
                 default:
@@ -87,6 +97,22 @@ namespace MageCast
                     break;
             }
             fadeFrom = Time.time;
+        }
+
+        /// <summary>
+        /// The glyph as its author sees it: finished lines straight (see RuneSegments), so the rune an
+        /// opponent reads is the rune, not the wobble -- reading it in time is their skill.
+        /// </summary>
+        void Rebuild()
+        {
+            points.Clear();
+            List<Vector2> from = raw;
+            if (RuneSegments.Enabled)
+            {
+                RuneSegments.Straighten(raw, shown, finished);
+                from = shown;
+            }
+            foreach (Vector2 p in from) points.Add(new Vector3(p.x * Scale, p.y * Scale, 0f));
         }
 
         void Apply(float alpha)
@@ -105,7 +131,7 @@ namespace MageCast
             if (fadeFrom >= 0f)
             {
                 float t = (Time.time - fadeFrom) / FadeSeconds;
-                if (t >= 1f) { points.Clear(); fadeFrom = -1f; Apply(0f); return; }
+                if (t >= 1f) { points.Clear(); raw.Clear(); fadeFrom = -1f; Apply(0f); return; }
                 Apply(1f - t);
             }
 
