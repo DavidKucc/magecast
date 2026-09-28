@@ -53,17 +53,37 @@ namespace MageCast.EditorTools
 
             // Air: the pack has no wind attack, but its "sound" set -- rings and pressure waves -- reads as a
             // gust once it is the colour of air, and the AoE pack's air sounds replace its own.
+            //
+            // Sounds picked by their shape, not their name. The AoE pack's air burst swells for 0.6 s before
+            // it peaks -- it is timed for a telegraphed area -- so it is used from just before its peak,
+            // and the gust leaving the hands is a short whoosh with its attack at the very start.
             string[] gust = new string[3];
             AudioClip[] gustSounds = {
-                AreaSound("Air", "Area_Cast_01"),      // the gust leaving the hands
-                AreaSound("Air", "Area_Loop_01"),      // wind while it flies
-                AreaSound("Air", "Burst_01") };        // the burst where it lands
+                null,                                                        // the circle in the hands is silent
+                AreaSound("Air", "Area_Loop_01"),                            // wind while it flies
+                Trim(AreaSound("Air", "Burst_01"), 0.42f, "Air_Burst_Impact") };   // the burst where it lands
             for (int i = 0; i < 3; i++)
                 gust[i] = Recolour(Magic + "Sound/VFX_Sound_Magic_" + parts[i] + ".prefab", AirHue, AirSaturation, gustSounds[i],
                                    // what makes it music rather than wind: the notes, the staff lines, the emblem
                                    "PS_VFX_Notes", "PS_VFX_Rings", "PS_VFX_Flare_Black");
             Set(fx, "AIR", gust[0], gust[1], gust[2], projectileScale: 0.8f, castScale: 0.22f, impactScale: 0.6f,
                 castTurn: new Vector3(0f, -90f, 0f));
+            fx.entries.Find(x => x.spell == "AIR").launch =
+                AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Vefects/Anime Stylized VFX/Sounds/WAV/SFX_Dash.wav");
+
+            // Barrier: the energy wall is a shader of our own (EnergyWall); from the packs it takes its
+            // sounds and, for breaking, the ice hit's shards turned the barrier's gold.
+            SpellFx.Entry wall = fx.entries.Find(x => x.spell == "BARRIER");
+            if (wall == null) { wall = new SpellFx.Entry { spell = "BARRIER" }; fx.entries.Add(wall); }
+            string shards = Recolour(Magic + "Ice/VFX_Ice_Magic_Hit.prefab", BarrierHue, BarrierSaturation, null);
+            wall.impact = AssetDatabase.LoadAssetAtPath<GameObject>(shards ?? "");
+            wall.impactScale = 0.16f;   // a flash behind the shards, not a blinding one
+            const string Anime = "Assets/Vefects/Anime Stylized VFX/Sounds/WAV/";
+            wall.raise = AssetDatabase.LoadAssetAtPath<AudioClip>(Anime + "SFX_Heal_Cast.wav");        // a shimmer with its attack up front
+            wall.hum = AreaSound("Light", "Area_Loop_01");                                            // low, steady
+            wall.struck = AssetDatabase.LoadAssetAtPath<AudioClip>(Anime + "SFX_Arrow_Shot_Hit.wav");  // one short crack
+            wall.shatter = AssetDatabase.LoadAssetAtPath<AudioClip>(Anime + "SFX_Explosion_Ice.wav");  // glassy, all at once
+            EnsureWallMaterial();
 
             // Patches: the AoE pack's area effects, with its area sounds (a start, a loop, an end).
             SetZone(fx, "FIRE", "Fire");
@@ -107,7 +127,9 @@ namespace MageCast.EditorTools
             e.zone = AssetDatabase.LoadAssetAtPath<GameObject>(Area + "VFX/" + element + "/Particles/VFX_" + element + "_Area_01.prefab");
             e.zoneAuthoredRadius = 3f;
             e.zoneLeadIn = 2f;
-            e.zoneStart = AreaSound(element, "Area_Cast_01");
+            // No start sound: the pack's swell for 1.5 s up to an impact that, here, has already happened
+            // -- the landing's own impact sound is the start.
+            e.zoneStart = null;
             e.zoneLoop = AreaSound(element, "Area_Loop_01");
             e.zoneEnd = AreaSound(element, "Area_End_01");
 
@@ -148,6 +170,10 @@ namespace MageCast.EditorTools
         /// <summary>Electric yellow: a warm yellow, a little paler than pure, so the cores still read white-hot.</summary>
         const float LightningHue = 0.14f;
         const float LightningSaturation = 0.85f;
+
+        /// <summary>The barrier's gold (its spell colour, 1 / 0.85 / 0.4).</summary>
+        const float BarrierHue = 0.12f;
+        const float BarrierSaturation = 0.9f;
 
         /// <summary>Air: the spell's own pale mint, kept pale -- wind is barely coloured.</summary>
         const float AirHue = 0.43f;
@@ -347,6 +373,55 @@ namespace MageCast.EditorTools
                     return r;
             }
             return m;
+        }
+
+        const string WallMaterialPath = "Assets/Resources/RuntimeMaterials/EnergyWall.mat";
+
+        /// <summary>The barrier's material, so the shader is in every build (Shader.Find alone is not).</summary>
+        static void EnsureWallMaterial()
+        {
+            if (AssetDatabase.LoadAssetAtPath<Material>(WallMaterialPath) != null) return;
+            Shader shader = Shader.Find("MageCast/EnergyWall");
+            if (shader == null) { Debug.LogWarning("[SpellFx] MageCast/EnergyWall shader not found"); return; }
+            AssetDatabase.CreateAsset(new Material(shader) { name = "EnergyWall" }, WallMaterialPath);
+        }
+
+        /// <summary>
+        /// A copy of a clip that starts <paramref name="from"/> seconds in, with a few milliseconds' fade so
+        /// it does not click -- for a sound whose peak is where it should start. Saved as a WAV next to the
+        /// recoloured effects (it is the pack's sound, so it stays out of the repository with it).
+        /// </summary>
+        static AudioClip Trim(AudioClip source, float from, string name)
+        {
+            if (source == null) return null;
+            int channels = source.channels, rate = source.frequency;
+            var all = new float[source.samples * channels];
+            if (!source.GetData(all, 0)) return source;
+
+            int skip = Mathf.Clamp(Mathf.RoundToInt(from * rate), 0, source.samples - 1) * channels;
+            int count = all.Length - skip;
+            int fade = Mathf.RoundToInt(0.008f * rate) * channels;
+
+            var bytes = new byte[44 + count * 2];
+            using (var w = new System.IO.BinaryWriter(new System.IO.MemoryStream(bytes)))
+            {
+                w.Write(System.Text.Encoding.ASCII.GetBytes("RIFF")); w.Write(36 + count * 2);
+                w.Write(System.Text.Encoding.ASCII.GetBytes("WAVEfmt ")); w.Write(16);
+                w.Write((short)1); w.Write((short)channels); w.Write(rate); w.Write(rate * channels * 2);
+                w.Write((short)(channels * 2)); w.Write((short)16);
+                w.Write(System.Text.Encoding.ASCII.GetBytes("data")); w.Write(count * 2);
+                for (int i = 0; i < count; i++)
+                {
+                    float v = all[skip + i] * (i < fade ? i / (float)fade : 1f);
+                    w.Write((short)Mathf.Clamp(Mathf.RoundToInt(v * 32767f), -32768, 32767));
+                }
+            }
+
+            EnsureFolder(Recoloured + "/Audio");
+            string path = Recoloured + "/Audio/" + name + ".wav";
+            System.IO.File.WriteAllBytes(path, bytes);
+            AssetDatabase.ImportAsset(path);
+            return AssetDatabase.LoadAssetAtPath<AudioClip>(path);
         }
 
         static void EnsureFolder(string path)

@@ -266,28 +266,33 @@ namespace MageCast.Gestures
             loop = GetComponent<AudioSource>();
             if (loop != null) { loop.Stop(); loop.clip = null; }
 
-            if (e.zoneStart != null) OneShot(e.zoneStart);
+            // A start sound is only for an area that begins after its spell has landed; the landing
+            // already has the impact's sound (the builder leaves it empty for that reason).
+            if (e.zoneStart != null) SpellFx.OneShot(e.zoneStart, centre);
             if (e.zoneLoop != null)
             {
                 if (loop == null) { loop = gameObject.AddComponent<AudioSource>(); SpellFx.MakeSpatial(loop); }
                 loop.clip = e.zoneLoop;
                 loop.loop = true;
-                loop.volume = 0.7f;
+                loop.volume = LoopVolume;
                 loop.Play();
             }
             endClip = e.zoneEnd;
         }
 
-        void OneShot(AudioClip clip)
-        {
-            var go = new GameObject("ZoneSound");
-            go.transform.position = centre;
-            AudioSource a = go.AddComponent<AudioSource>();
-            SpellFx.MakeSpatial(a);
-            a.clip = clip;
-            a.Play();
-            Destroy(go, clip.length + 0.1f);
-        }
+        /// <summary>
+        /// The loop sits under the fight rather than on top of it -- a patch is there for seconds and
+        /// should be heard as a place, not as an event.
+        /// </summary>
+        const float LoopVolume = 0.45f;
+
+        /// <summary>
+        /// The end sound starts as the patch starts to go, a little before it is gone, and is cut to
+        /// about as long as the fade: the pack's end sounds ring for four seconds after a patch that
+        /// has visibly finished.
+        /// </summary>
+        const float EndLead = 1.1f;
+        const float EndLongest = 1.8f;
 
         /// <summary>The patch went early -- replaced, or over the limit: let go of it where it is.</summary>
         public void Fade()
@@ -305,15 +310,16 @@ namespace MageCast.Gestures
 
             if (loop != null && loop.isPlaying)
             {
-                float left = (fading ? 0f : lifetime) - age;
-                if (fading) loop.volume = Mathf.MoveTowards(loop.volume, 0f, Time.deltaTime * 2f);
-                else if (left < 0.6f) loop.volume = 0.7f * Mathf.Clamp01(left / 0.6f);
+                // down with the patch's own dimming, gone as it goes
+                float left = lifetime - 0.2f - age;
+                if (fading) loop.volume = Mathf.MoveTowards(loop.volume, 0f, Time.deltaTime * 3f);
+                else if (left < EndLead) loop.volume = LoopVolume * Mathf.Clamp01(left / EndLead);
                 if (loop.volume <= 0.001f) loop.Stop();
             }
-            if (!fading && !endPlayed && endClip != null && age >= lifetime - 0.3f)
+            if (!fading && !endPlayed && endClip != null && age >= lifetime - EndLead)
             {
                 endPlayed = true;
-                OneShot(endClip);
+                SpellFx.OneShot(endClip, centre, 0.7f, EndLongest);
             }
 
             // everything has had time to fade by now

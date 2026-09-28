@@ -112,6 +112,7 @@ namespace MageCast.Gestures
                 r.enabled = false;
                 p.fx = SpellFx.Play(p.fxEntry.projectile, origin, Quaternion.LookRotation(direction),
                                     p.fxEntry.projectileScale * radius, go.transform);
+                SpellFx.OneShot(p.fxEntry.launch, origin);
             }
             return p;
         }
@@ -240,6 +241,8 @@ namespace MageCast.Gestures
             CastShield shield = struck != null ? struck.GetComponentInParent<CastShield>() : null;
             if (shield != null)
             {
+                // the ripple first: a hit that breaks it should still be seen landing
+                shield.Struck(at, BarrierWear() / 30f);
                 if (authoritative) shield.Wear(BarrierWear());
                 Flash(at, 1.1f, 2.2f);
                 Destroy(gameObject);

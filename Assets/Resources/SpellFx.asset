@@ -21,12 +21,17 @@ MonoBehaviour:
     castScale: 0.22
     impactScale: 0.5
     castTurn: {x: 0, y: -90, z: 0}
+    launch: {fileID: 0}
     zone: {fileID: 4748681987041982144, guid: dd5b5df89b4ca004ab1376a4cbbf6ee2, type: 3}
     zoneAuthoredRadius: 3
     zoneLeadIn: 2
-    zoneStart: {fileID: 8300000, guid: f44fca91b91f37e40b3dafdd0383caef, type: 3}
+    zoneStart: {fileID: 0}
     zoneLoop: {fileID: 8300000, guid: 4518b496fbddcc04f99197a24a8974b4, type: 3}
     zoneEnd: {fileID: 8300000, guid: ad70aa54bc5c0014da0dd61091f3807c, type: 3}
+    raise: {fileID: 0}
+    hum: {fileID: 0}
+    struck: {fileID: 0}
+    shatter: {fileID: 0}
   - spell: ICE
     cast: {fileID: 8114927945569760447, guid: 7bb06fd48ad0c284e8dcc35a1fd6b53d, type: 3}
     projectile: {fileID: 1771704844123445069, guid: 802822d3553f52b44b96bec3e623625f, type: 3}
@@ -35,37 +40,71 @@ MonoBehaviour:
     castScale: 0.22
     impactScale: 0.5
     castTurn: {x: 0, y: -90, z: 0}
+    launch: {fileID: 0}
     zone: {fileID: 4748681987041982144, guid: e23e5aa08e555484593eec3ba5eede8e, type: 3}
     zoneAuthoredRadius: 3
     zoneLeadIn: 2
-    zoneStart: {fileID: 8300000, guid: 98a3b4286b933214199f6ac562304b4f, type: 3}
+    zoneStart: {fileID: 0}
     zoneLoop: {fileID: 8300000, guid: dee48350db6c72446b7d68f451a71695, type: 3}
     zoneEnd: {fileID: 8300000, guid: 0fdfdc6b1eb767e45bc9049237ac390f, type: 3}
+    raise: {fileID: 0}
+    hum: {fileID: 0}
+    struck: {fileID: 0}
+    shatter: {fileID: 0}
   - spell: LIGHTNING
-    cast: {fileID: 1658496247936348207, guid: 7738d81faebd8a7408bb04c15050ca80, type: 3}
-    projectile: {fileID: 1319398647745027786, guid: 3ef45b4e1622ac7409634e4f0d2b3368, type: 3}
-    impact: {fileID: 6589385767113089740, guid: ebdaa288ccd286544bc75a93048fa529, type: 3}
+    cast: {fileID: 1658496247936348207, guid: bb0165cb4d130fd45a8c73567bcecfcc, type: 3}
+    projectile: {fileID: 1319398647745027786, guid: 8a8df2508b25cb3489902aefd0f03cce, type: 3}
+    impact: {fileID: 6589385767113089740, guid: 3fc38d36e3d0d63499e0e4119034c2f4, type: 3}
     projectileScale: 2
     castScale: 0.22
     impactScale: 0.5
     castTurn: {x: 0, y: -90, z: 0}
+    launch: {fileID: 0}
     zone: {fileID: 0}
     zoneAuthoredRadius: 3
     zoneLeadIn: 2
     zoneStart: {fileID: 0}
     zoneLoop: {fileID: 0}
     zoneEnd: {fileID: 0}
+    raise: {fileID: 0}
+    hum: {fileID: 0}
+    struck: {fileID: 0}
+    shatter: {fileID: 0}
   - spell: AIR
-    cast: {fileID: 1708297399293405800, guid: 496141465c13a044e93135d8e3e3bded, type: 3}
-    projectile: {fileID: 6475832785224247900, guid: ee94f292bd541b24d94d64bbd9c0df60, type: 3}
-    impact: {fileID: 3002614074438278360, guid: fe87983b18557d548b21217d4a9f8515, type: 3}
+    cast: {fileID: 1708297399293405800, guid: a30a6c832569d4946865460fefbb523d, type: 3}
+    projectile: {fileID: 6475832785224247900, guid: 408a400a3997ed04f991f9952b4acd09, type: 3}
+    impact: {fileID: 3002614074438278360, guid: a700cbab38d95db4f940232303efb205, type: 3}
     projectileScale: 0.8
     castScale: 0.22
     impactScale: 0.6
     castTurn: {x: 0, y: -90, z: 0}
+    launch: {fileID: 8300000, guid: fb276463bd6b0464ab1822cc7937587d, type: 3}
     zone: {fileID: 4748681987041982144, guid: 17d553f8d4894f04aaeb705b46c348e7, type: 3}
     zoneAuthoredRadius: 3
     zoneLeadIn: 2
-    zoneStart: {fileID: 8300000, guid: e8e3c7d9148876e438c89d4d73c794ad, type: 3}
+    zoneStart: {fileID: 0}
     zoneLoop: {fileID: 8300000, guid: e7a9b613aa1c36f49b37e6fe670a9958, type: 3}
     zoneEnd: {fileID: 8300000, guid: c92473b6f35ad9e49baf3c55e69251d4, type: 3}
+    raise: {fileID: 0}
+    hum: {fileID: 0}
+    struck: {fileID: 0}
+    shatter: {fileID: 0}
+  - spell: BARRIER
+    cast: {fileID: 0}
+    projectile: {fileID: 0}
+    impact: {fileID: 5213359654510746434, guid: 6533ef44eace64848a4ef6926e5b82cb, type: 3}
+    projectileScale: 1
+    castScale: 1
+    impactScale: 0.16
+    castTurn: {x: 0, y: 0, z: 0}
+    launch: {fileID: 0}
+    zone: {fileID: 0}
+    zoneAuthoredRadius: 3
+    zoneLeadIn: 2
+    zoneStart: {fileID: 0}
+    zoneLoop: {fileID: 0}
+    zoneEnd: {fileID: 0}
+    raise: {fileID: 8300000, guid: 944fc21edac9d7b47b9c38f0c6ae4671, type: 3}
+    hum: {fileID: 8300000, guid: e53a5d8793b496344a3100d535e09685, type: 3}
+    struck: {fileID: 8300000, guid: 0594f86f76c8df14caf73629192aab26, type: 3}
+    shatter: {fileID: 8300000, guid: 15c4c05e917ae594d997d4d93fedea31, type: 3}

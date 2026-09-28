@@ -40,6 +40,12 @@ namespace MageCast.Gestures
             /// </summary>
             public Vector3 castTurn;
 
+            /// <summary>
+            /// Played once where a projectile leaves the hands, for a spell whose flying effect has no
+            /// sound with an attack of its own. The circle in the hands is silent: it is only the aim.
+            /// </summary>
+            public AudioClip launch;
+
             [Header("Patch on the floor")]
             public GameObject zone;          // an area effect; see ZoneFx for how it is fitted to a patch
             /// <summary>The radius the area effect was made for; it is scaled from this to the patch's.</summary>
@@ -49,6 +55,12 @@ namespace MageCast.Gestures
             public AudioClip zoneStart;
             public AudioClip zoneLoop;
             public AudioClip zoneEnd;
+
+            [Header("Barrier")]
+            public AudioClip raise;          // the wall going up
+            public AudioClip hum;            // while it stands, quietly
+            public AudioClip struck;         // a spell hitting it, on top of the spell's own impact
+            public AudioClip shatter;        // worn through
         }
 
         /// <summary>The spell whose look a patch of this kind wears -- water has none of its own yet.</summary>
@@ -74,7 +86,7 @@ namespace MageCast.Gestures
             return spell == null ? null : ByName(spell.displayName);
         }
 
-        static Entry ByName(string name)
+        public static Entry ByName(string name)
         {
             if (!tried)
             {
@@ -92,7 +104,8 @@ namespace MageCast.Gestures
         /// which would make a fireball on the far side of the arena as loud as your own. Removed by
         /// itself once its particles are done.
         /// </summary>
-        public static GameObject Play(GameObject prefab, Vector3 at, Quaternion rotation, float scale, Transform parent = null)
+        public static GameObject Play(GameObject prefab, Vector3 at, Quaternion rotation, float scale, Transform parent = null,
+                                      bool sound = true)
         {
             if (prefab == null) return null;
             GameObject go = Instantiate(prefab, at, rotation, parent);
@@ -100,6 +113,8 @@ namespace MageCast.Gestures
             float inherited = parent != null ? Mathf.Max(0.0001f, parent.lossyScale.x) : 1f;
             go.transform.localScale = prefab.transform.localScale * (scale / inherited);
             Tame(go);
+            if (!sound)
+                foreach (AudioSource a in go.GetComponentsInChildren<AudioSource>(true)) Destroy(a);
 
             if (parent == null) Destroy(go, Lifetime(go));
             return go;
@@ -149,8 +164,33 @@ namespace MageCast.Gestures
             effect.transform.SetParent(null, true);
             foreach (ParticleSystem ps in effect.GetComponentsInChildren<ParticleSystem>(true))
                 ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-            foreach (AudioSource a in effect.GetComponentsInChildren<AudioSource>(true)) a.Stop();
+            // eased out rather than cut: the impact's own sound takes over in that moment
+            foreach (AudioSource a in effect.GetComponentsInChildren<AudioSource>(true)) SoundFade.Out(a, 0f, 0.12f);
             Destroy(effect, 2f);
+        }
+
+        /// <summary>
+        /// A sound once, in the world. <paramref name="longest"/> cuts a long tail short -- with a fade, so
+        /// a clip made for a slower moment does not ring on after what it belongs to is over.
+        /// </summary>
+        public static AudioSource OneShot(AudioClip clip, Vector3 at, float volume = 1f, float longest = 0f)
+        {
+            if (clip == null) return null;
+            var go = new GameObject("Sound_" + clip.name);
+            go.transform.position = at;
+            AudioSource a = go.AddComponent<AudioSource>();
+            MakeSpatial(a);
+            a.clip = clip;
+            a.volume = volume;
+            a.Play();
+            float length = clip.length;
+            if (longest > 0f && longest < length)
+            {
+                SoundFade.Out(a, longest - 0.4f, 0.4f);
+                length = longest;
+            }
+            Destroy(go, length + 0.1f);
+            return a;
         }
 
         static float Lifetime(GameObject go)

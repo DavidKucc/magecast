@@ -38,6 +38,21 @@ namespace MageCast.Gestures
         PlayerNet ownerNet;           // the caster's network side, for telling everyone about wear
         bool authoritative = true;
 
+        // The energy wall: drawn on a quad in front of the (hidden) collider box. Null when the shader's
+        // template material is missing, and the plain translucent slab is used instead.
+        Material wall;
+        float age;
+        SpellFx.Entry fx;
+        AudioSource hum;
+
+        /// <summary>The last few hits, for the ripples: where (UV), when, how hard.</summary>
+        readonly Vector4[] hits = { new Vector4(0, 0, -100, 0), new Vector4(0, 0, -100, 0),
+                                    new Vector4(0, 0, -100, 0), new Vector4(0, 0, -100, 0) };
+        int nextHit;
+
+        /// <summary>How long it takes to rise out of the floor.</summary>
+        const float RiseTime = 0.35f;
+
         public float DurabilityFraction { get { return maxDurability > 0f ? durability / maxDurability : 0f; } }
 
         public static CastShield Spawn(Vector3 at, Vector3 facing, float width, float height,
@@ -59,6 +74,7 @@ namespace MageCast.Gestures
             go.GetComponent<Renderer>().material = m;
 
             CastShield s = go.AddComponent<CastShield>();
+            s.BuildWall(width, height, colour);
             s.remaining = lifetime;
             s.total = lifetime;
             s.durability = durability;
@@ -70,6 +86,126 @@ namespace MageCast.Gestures
             s.authoritative = authoritative;
             byOwner[owner] = s;
             return s;
+        }
+
+        void BuildWall(float width, float height, Color c)
+        {
+            fx = SpellFx.ByName("BARRIER");
+            Vector3 middle = transform.position;
+            if (fx != null)
+            {
+                SpellFx.OneShot(fx.raise, middle, 0.9f);
+                if (fx.hum != null)
+                {
+                    hum = gameObject.AddComponent<AudioSource>();
+                    SpellFx.MakeSpatial(hum);
+                    hum.clip = fx.hum;
+                    hum.loop = true;
+                    hum.volume = HumVolume;
+                    hum.Play();
+                }
+            }
+
+            Material template = Resources.Load<Material>("RuntimeMaterials/EnergyWall");
+            if (template == null) return;
+
+            GetComponent<Renderer>().enabled = false;
+            GameObject quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            Destroy(quad.GetComponent<Collider>());
+            quad.name = "EnergyWall";
+            quad.transform.SetParent(transform, false);   // the box is scaled to the wall; the quad follows
+            Renderer r = quad.GetComponent<Renderer>();
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            wall = new Material(template);
+            wall.SetColor("_Color", c);
+            wall.SetVector("_Size", new Vector4(width, height, 0f, 0f));
+            wall.SetFloat("_Rise", 0f);
+            wall.SetVectorArray("_Hits", hits);
+            r.material = wall;
+        }
+
+        /// <summary>
+        /// Tiles of the wall, in its own material, thrown out both ways and falling as they fade.
+        /// Made here rather than taken from a pack: nothing there breaks like a pane of energy.
+        /// </summary>
+        void Shatter()
+        {
+            Vector3 size = transform.localScale;
+            var go = new GameObject("BarrierShards");
+            go.transform.SetPositionAndRotation(transform.position, transform.rotation);
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+            var main = ps.main;
+            main.duration = 0.1f;
+            main.loop = false;
+            main.playOnAwake = false;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.6f, 1.2f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(1.5f, 4.5f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.14f, 0.34f);
+            main.startRotation3D = true;
+            main.startRotationX = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.startRotationY = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.startRotationZ = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.gravityModifier = 0.7f;
+            main.maxParticles = 80;
+
+            var emission = ps.emission;
+            emission.rateOverTime = 0f;
+            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)Mathf.Clamp(size.x * size.y * 9f, 30f, 70f)) });
+
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(size.x, size.y, 0.05f);
+            shape.randomDirectionAmount = 1f;
+
+            var spin = ps.rotationOverLifetime;
+            spin.enabled = true;
+            spin.separateAxes = true;
+            spin.x = new ParticleSystem.MinMaxCurve(-8f, 8f);
+            spin.y = new ParticleSystem.MinMaxCurve(-8f, 8f);
+            spin.z = new ParticleSystem.MinMaxCurve(-8f, 8f);
+
+            var fade = ps.colorOverLifetime;
+            fade.enabled = true;
+            var g = new Gradient();
+            g.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                      new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0.8f, 0.5f), new GradientAlphaKey(0f, 1f) });
+            fade.color = g;
+
+            var renderer = go.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Mesh;
+            renderer.mesh = Resources.GetBuiltinResource<Mesh>("Quad.fbx");
+            renderer.alignment = ParticleSystemRenderSpace.World;
+            var m = new Material(wall);
+            m.SetVector("_Size", new Vector4(0.3f, 0.3f, 0f, 0f));
+            m.SetFloat("_Strength", 1f);
+            m.SetFloat("_Rise", 1f);
+            m.SetFloat("_UseVertexColor", 1f);
+            renderer.material = m;
+
+            ps.Play();
+            Destroy(go, 1.6f);
+            Destroy(m, 1.7f);
+        }
+
+        /// <summary>Under the fight, not over it: a barrier stands for seconds.</summary>
+        const float HumVolume = 0.25f;
+
+        /// <summary>
+        /// A spell has hit it here -- on every machine, the copies of shots included, since this is only
+        /// the picture: a ripple from the point and a crack of sound.
+        /// </summary>
+        public void Struck(Vector3 point, float howHard)
+        {
+            Vector3 local = transform.InverseTransformPoint(point);
+            hits[nextHit] = new Vector4(Mathf.Clamp01(local.x + 0.5f), Mathf.Clamp01(local.y + 0.5f),
+                                        Time.timeSinceLevelLoad, Mathf.Clamp(howHard, 0.3f, 1f));
+            nextHit = (nextHit + 1) % hits.Length;
+            if (wall != null) wall.SetVectorArray("_Hits", hits);
+            if (fx != null) SpellFx.OneShot(fx.struck, point, 0.55f);
         }
 
         /// <summary>The current barrier of a player on this machine, or null.</summary>
@@ -102,12 +238,20 @@ namespace MageCast.Gestures
 
         void Break()
         {
-            Projectile.FlashAt(transform.position, colour, 2.4f, 2.2f);
+            // shattered: the wall flies apart into pieces of itself, with a flash and the sound of it
+            if (wall != null) Shatter();
+            if (fx != null && fx.impact != null)
+                SpellFx.Play(fx.impact, transform.position, transform.rotation, fx.impactScale * transform.localScale.x,
+                             null, false);
+            else
+                Projectile.FlashAt(transform.position, colour, 2.4f, 2.2f);
+            if (fx != null) SpellFx.OneShot(fx.shatter, transform.position, 1f);
             Destroy(gameObject);
         }
 
         void OnDestroy()
         {
+            if (wall != null) Destroy(wall);
             CastShield current;
             if (byOwner.TryGetValue(owner, out current) && current == this) byOwner.Remove(owner);
         }
@@ -131,11 +275,21 @@ namespace MageCast.Gestures
         void Update()
         {
             remaining -= Time.deltaTime;
+            age += Time.deltaTime;
             if (remaining <= 0f) { Destroy(gameObject); return; }
 
             // Visibly weakening -- by time AND by damage, whichever is further gone -- so the opponent
             // can see one more fireball will do it, and the caster knows when to move.
             float t = Mathf.Min(remaining / Mathf.Max(0.01f, total), DurabilityFraction);
+
+            if (hum != null) hum.volume = HumVolume * Mathf.Clamp01(remaining / 0.5f);
+            if (wall != null)
+            {
+                wall.SetFloat("_Strength", t);
+                wall.SetFloat("_Rise", Mathf.Clamp01(age / RiseTime));
+                return;
+            }
+
             Color c = material.color;
             c.a = Mathf.Lerp(0.1f, 0.42f, t);
             material.color = c;
