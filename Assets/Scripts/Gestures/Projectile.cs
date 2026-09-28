@@ -56,6 +56,10 @@ namespace MageCast.Gestures
         /// </summary>
         Collider ignoreOnce;
 
+        SpellFx.Entry fxEntry;     // this spell's real effects, or null for the placeholder look
+        GameObject fx;             // the flying effect, riding on this object
+        bool impactShown;
+
         /// <summary>
         /// How hard an updraft pushes a shot upwards, m/s^2. Across a 4 m draft lightning (44 m/s) gains
         /// about 6 m/s of climb, fire about 10, ice about 16 -- enough that none of them arrive where
@@ -99,6 +103,16 @@ namespace MageCast.Gestures
             p.bouncesLeft = spell != null ? spell.wallBounces : 0;
             p.authoritative = authoritative;
             p.attacker = attacker;
+
+            // The real effect, where the spell has one: the sphere stays as the thing that collides and
+            // stops being the thing you see. Sized with the sphere, so a big draw still looks big.
+            p.fxEntry = SpellFx.For(spell);
+            if (p.fxEntry != null && p.fxEntry.projectile != null)
+            {
+                r.enabled = false;
+                p.fx = SpellFx.Play(p.fxEntry.projectile, origin, Quaternion.LookRotation(direction),
+                                    p.fxEntry.projectileScale * radius, go.transform);
+            }
             return p;
         }
 
@@ -179,6 +193,7 @@ namespace MageCast.Gestures
                 }
 
                 transform.position += step;
+                if (fx != null) fx.transform.rotation = Quaternion.LookRotation(heading);
                 if (gravity != 0f) transform.forward = heading;
             }
 
@@ -301,8 +316,9 @@ namespace MageCast.Gestures
                 transform.position = centreAtContact + normal * 0.03f;
                 ignoreOnce = collider;
 
-                // a small spark, so a bounce is seen as a bounce and not as the shot changing its mind
-                Flash(at, 0.8f, 2f);
+                // a small spark, so a bounce is seen as a bounce and not as the shot changing its mind --
+                // never the full impact, which would read as the spell having ended there
+                FlashAt(at, colour, 0.8f, 2f);
                 return false;
             }
 
@@ -471,6 +487,7 @@ namespace MageCast.Gestures
                 float zoneRadius = spell.zoneRadius * sizeScale;
                 SpellZone zone = SpellZone.Spawn(at, spell.groundEffect, zoneRadius, spell.zoneLifetime, strength,
                                                  colour, true, attacker, attacker);
+                ShowImpact(at);
 
                 PlayerNet caster = owner != null ? owner.GetComponent<PlayerNet>() : null;
                 if (caster != null && caster.IsSpawned)
@@ -520,7 +537,26 @@ namespace MageCast.Gestures
         /// <summary>A brief glowing burst, <paramref name="size"/> metres across at its widest.</summary>
         void Flash(Vector3 at, float size, float glow)
         {
+            // a spell with a real impact effect shows that instead of the placeholder sphere
+            if (ShowImpact(at)) return;
             FlashAt(at, colour, size, glow);
+        }
+
+        /// <summary>The spell's impact effect and its sound, once per projectile. False if it has none.</summary>
+        bool ShowImpact(Vector3 at)
+        {
+            if (fxEntry == null || fxEntry.impact == null) return false;
+            if (impactShown) return true;
+            impactShown = true;
+            SpellFx.Play(fxEntry.impact, at, Quaternion.LookRotation(-velocity.normalized + Vector3.up * 0.001f),
+                         fxEntry.impactScale * sizeScale);
+            return true;
+        }
+
+        void OnDestroy()
+        {
+            // the flying effect fades where it is rather than blinking out with the projectile
+            SpellFx.Release(fx);
         }
 
         /// <summary>A brief glowing burst anywhere -- also how a barrier shows it has broken.</summary>

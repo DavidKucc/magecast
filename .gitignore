@@ -34,6 +34,10 @@ crashlytics-build.properties
 /Assets/Animation/*.fbx
 /Assets/Animation/*.fbx.meta
 
+# --- bought effect packs: used inside the builds, never redistributed as files ---
+/Assets/Vefects/
+/Assets/Vefects.meta
+
 # --- local-only ---
 /CastLog.csv
 /Assets/Screenshots/
