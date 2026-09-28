@@ -223,22 +223,91 @@ namespace MageCast.Gestures
             return z;
         }
 
-        void Remove()
+        /// <summary>The newest patch of one kind under a point on the floor, or null.</summary>
+        public static SpellZone At(Vector3 point, GroundEffect kind)
+        {
+            for (int i = all.Count - 1; i >= 0; i--)
+            {
+                SpellZone z = all[i];
+                if (z == null || z.effect != kind) continue;
+                if (z.Contains(point, 0.6f)) return z;
+            }
+            return null;
+        }
+
+        /// <summary>A patch that carries lightning -- ice or water -- under a point, or null.</summary>
+        public static SpellZone ConductorAt(Vector3 point)
+        {
+            SpellZone ice = At(point, GroundEffect.Ice);
+            SpellZone water = At(point, GroundEffect.Water);
+            if (ice == null) return water;
+            if (water == null) return ice;
+            return all.IndexOf(ice) > all.IndexOf(water) ? ice : water;   // the newer one
+        }
+
+        /// <summary>
+        /// The same patch on another machine: every copy of a patch sits at the same centre, because the
+        /// server sends the centre its own copy settled on. Used to change or remove it everywhere.
+        /// </summary>
+        public static SpellZone Find(Vector3 centre, GroundEffect kind)
+        {
+            SpellZone best = null;
+            float bestDistance = 0.5f;
+            foreach (SpellZone z in all)
+            {
+                if (z == null || z.effect != kind) continue;
+                float d = Vector3.Distance(z.transform.position, centre);
+                if (d < bestDistance) { bestDistance = d; best = z; }
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// An updraft that a projectile at <paramref name="point"/> is flying through, or null. The air
+        /// column over the patch reaches <see cref="DraftHeight"/> up.
+        /// </summary>
+        public static SpellZone DraftAt(Vector3 point)
+        {
+            foreach (SpellZone z in all)
+            {
+                if (z == null || z.effect != GroundEffect.Updraft) continue;
+                Vector3 offset = point - z.transform.position;
+                if (offset.y < 0f || offset.y > DraftHeight) continue;
+                if (new Vector2(offset.x, offset.z).magnitude <= ReachTowards(z.reach, offset)) return z;
+            }
+            return null;
+        }
+
+        /// <summary>How high the updraft rises -- high enough to catch a shot aimed at somebody's head.</summary>
+        public const float DraftHeight = 4f;
+
+        public ulong Owner { get { return owner; } }
+        public ulong Attacker { get { return attacker; } }
+        public float Remaining { get { return remaining; } }
+        public float Strength { get { return strength; } }
+        public Color Colour { get { return colour; } }
+
+        /// <summary>A fire already fanned by air cannot be fanned again -- one push, then it stays put.</summary>
+        public bool Fanned { get; private set; }
+        public void MarkFanned() { Fanned = true; }
+
+        /// <summary>Takes this patch away, on this machine.</summary>
+        public void Remove()
         {
             all.Remove(this);
             Destroy(gameObject);
         }
 
-        /// <summary>The ice patch under a point on the floor, or null.</summary>
-        public static SpellZone IceAt(Vector3 point)
+        /// <summary>
+        /// Everybody standing on the patch, by their motor -- the ones air can send sliding across ice.
+        /// Dummies have no motor and stay where they are.
+        /// </summary>
+        public List<PlayerMotor> MotorsTouching()
         {
-            for (int i = all.Count - 1; i >= 0; i--)
-            {
-                SpellZone z = all[i];
-                if (z == null || z.effect != GroundEffect.Ice) continue;
-                if (z.Contains(point, 0.6f)) return z;
-            }
-            return null;
+            var found = new List<PlayerMotor>();
+            foreach (Target t in Occupants())
+                if (t.Touching && t.Motor != null) found.Add(t.Motor);
+            return found;
         }
 
         bool Contains(Vector3 point, float verticalSlack)

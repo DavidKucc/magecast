@@ -103,8 +103,24 @@ schválně: stojí dva casty, dvě zranitelná okna, a cíl měl vteřiny na to 
 
 *Ověřeno měřením: panák na ledu dostal přesně 53,4 (40 × 1,335).*
 
-Další kombinace (oheň do ledu = voda, vzduch rozfouká oheň, vzduch na ledu = katapult) jsou rozhodnuté,
-ale zatím nepostavené.
+Ostatní kombinace — vždy jedno kouzlo leží, druhé do něj přiletí:
+
+| co leží | co přiletí | výsledek |
+|---|---|---|
+| led | oheň | **voda** — nekluže, nepálí, ale **vede blesk** úplně stejně jako led |
+| oheň | led | **voda** (led oheň uhasí) |
+| voda | oheň | oheň zhasne, voda zůstane |
+| voda | led | voda **zase zmrzne** na led |
+| voda | blesk | nabije se jako led |
+| oheň | vzduch | oheň se **rozfouká**: 1,5× širší a posunutý po větru, hoří aspoň 3 s. **Jen jednou** — pak je zafixovaný |
+| led | vzduch | kdo stojí na ledu, **odletí po něm** ve směru větru, až za jeho kraj |
+
+Voda vzniká jen takhle, žádná runa ji nedělá. Kombinace spočítá hostitel a ostatním pošle, jak teď
+vypadá zem.
+
+**Vzdušná plocha je clona.** Střely, které letí nad ní (do výšky 4 m), stočí nahoru a minou — všechny,
+i vlastní. Rychlý blesk jen trochu, pomalý led úplně. *Ověřeno: oheň přes vzdušnou plochu panáka minul,
+stejná rána bez ní ubrala 29,4.*
 
 Záměrně nemá každé kouzlo všechno. Dvanáct efektů by byla polévka.
 

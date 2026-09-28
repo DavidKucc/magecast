@@ -56,6 +56,13 @@ namespace MageCast.Gestures
         /// </summary>
         Collider ignoreOnce;
 
+        /// <summary>
+        /// How hard an updraft pushes a shot upwards, m/s^2. Across a 4 m draft lightning (44 m/s) gains
+        /// about 6 m/s of climb, fire about 10, ice about 16 -- enough that none of them arrive where
+        /// they were aimed, and the slower the shot, the more completely it is thrown off.
+        /// </summary>
+        const float DraftLift = 70f;
+
         public static Projectile Spawn(Vector3 origin, Vector3 direction, float speed, float radius,
                                        float lifetime, Color colour, Transform owner, float power = 1f,
                                        float gravity = 0f, float areaRadius = 0f, float areaLifetime = 0f,
@@ -100,6 +107,12 @@ namespace MageCast.Gestures
             // Integrated as a velocity rather than a fixed heading so the same component covers both
             // a flat bolt and a lob, and so a bounce is just a change of velocity.
             if (gravity != 0f) velocity += Vector3.up * (gravity * Time.deltaTime);
+
+            // Over an updraft the rising air bends the shot upwards and it sails over whoever stood
+            // behind it -- a screen you can put down, not a mirror. Every shot, whoever cast it and
+            // whoever laid the draft; a fast one is only nudged, a slow one is lifted clean away.
+            if (SpellZone.DraftAt(transform.position) != null)
+                velocity += Vector3.up * (DraftLift * Time.deltaTime);
 
             Vector3 step = velocity * Time.deltaTime;
             float distance = step.magnitude;
@@ -265,7 +278,7 @@ namespace MageCast.Gestures
         bool DischargeIceAt(Vector3 floorPoint, Vector3 struck)
         {
             if (!authoritative) return false;
-            SpellZone ice = SpellZone.IceAt(floorPoint);
+            SpellZone ice = SpellZone.ConductorAt(floorPoint);
             if (ice == null) return false;
 
             // Scaled by how well the lightning was drawn, like every other hit. It is the strongest
@@ -281,10 +294,114 @@ namespace MageCast.Gestures
             return true;
         }
 
+        static readonly Color WaterColour = new Color(0.2f, 0.45f, 0.95f);
+
+        /// <summary>
+        /// A spell landing in a patch that already lies there. Combinations happen one after the other --
+        /// something is on the ground, something else arrives -- never as two shots at once.
+        ///
+        ///   fire into ice, ice into fire   water: nothing happens standing in it, but it carries lightning
+        ///   fire into water                put out, nothing left
+        ///   ice into water                 freezes back to ice
+        ///   air into fire                  fanned: the fire grows and moves the way the wind blew, once
+        ///   air into ice                   whoever stands on the ice is blown across it
+        ///
+        /// Server only: the server decides and tells everyone what the ground now looks like. Returns
+        /// whether something combined, in which case the spell's own effect does not happen.
+        /// </summary>
+        bool Combine(Vector3 at)
+        {
+            if (!authoritative || spell == null) return false;
+            PlayerNet caster = owner != null ? owner.GetComponent<PlayerNet>() : null;
+            Vector3 wind = new Vector3(velocity.x, 0f, velocity.z);
+            wind = wind.sqrMagnitude > 0.01f ? wind.normalized : Vector3.forward;
+
+            switch (spell.groundEffect)
+            {
+                case GroundEffect.Burn:
+                {
+                    SpellZone ice = SpellZone.At(at, GroundEffect.Ice);
+                    if (ice != null) { ReplaceZone(caster, ice, GroundEffect.Water, ice.transform.position, ice.Radius, 6f, 0f, WaterColour, attacker, false); return true; }
+
+                    SpellZone water = SpellZone.At(at, GroundEffect.Water);
+                    if (water != null) { Flash(at, 1.2f, 1.2f); return true; }     // put out
+                    return false;
+                }
+
+                case GroundEffect.Ice:
+                {
+                    SpellZone fire = SpellZone.At(at, GroundEffect.Burn);
+                    if (fire != null) { ReplaceZone(caster, fire, GroundEffect.Water, fire.transform.position, fire.Radius, 6f, 0f, WaterColour, attacker, false); return true; }
+
+                    SpellZone water = SpellZone.At(at, GroundEffect.Water);
+                    if (water != null) { ReplaceZone(caster, water, GroundEffect.Ice, water.transform.position, water.Radius, spell.zoneLifetime, spell.zoneStrength, spell.colour, attacker, false); return true; }
+                    return false;
+                }
+
+                case GroundEffect.Updraft:
+                {
+                    SpellZone fire = SpellZone.At(at, GroundEffect.Burn);
+                    if (fire != null)
+                    {
+                        if (!fire.Fanned)
+                        {
+                            // Half again as wide and pushed the way the wind blew, so it still covers
+                            // most of where it was and now reaches further. It burns a little longer for
+                            // the stirring. Still the owner's fire -- the air only moved it.
+                            Vector3 moved = fire.transform.position + wind * fire.Radius * 0.6f;
+                            ReplaceZone(caster, fire, GroundEffect.Burn, moved, fire.Radius * 1.5f,
+                                      Mathf.Max(fire.Remaining, 3f), fire.Strength, fire.Colour, fire.Owner, true,
+                                      fire.Attacker);
+                        }
+                        Flash(at, 1.4f, 1.6f);
+                        return true;
+                    }
+
+                    SpellZone ice = SpellZone.At(at, GroundEffect.Ice);
+                    if (ice != null)
+                    {
+                        // No grip to stop you: a shove that would carry somebody a metre on dry floor
+                        // takes them the length of the patch.
+                        foreach (PlayerMotor m in ice.MotorsTouching()) m.Slide(wind * IceBlast);
+                        Flash(at, 1.4f, 1.6f);
+                        return true;
+                    }
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>How hard air throws people along ice, m/s. With the ice's grip that is about ten metres.</summary>
+        const float IceBlast = 12f;
+
+        static void ReplaceZone(PlayerNet caster, SpellZone old, GroundEffect kind, Vector3 at, float radius,
+                              float lifetime, float strength, Color colour, ulong zoneOwner, bool fanned,
+                              ulong damageBy = Health.NoAttacker)
+        {
+            Vector3 oldCentre = old.transform.position;
+            GroundEffect oldKind = old.Effect;
+            old.Remove();
+
+            ulong hurts = damageBy != Health.NoAttacker ? damageBy : zoneOwner;
+            SpellZone z = SpellZone.Spawn(at, kind, radius, lifetime, strength, colour, true, hurts, zoneOwner);
+            if (fanned) z.MarkFanned();
+
+            if (caster != null && caster.IsSpawned)
+                caster.BroadcastReplace(oldCentre, oldKind, z.transform.position, kind, radius, lifetime, strength,
+                                        colour, zoneOwner, fanned);
+        }
+
         bool HitFloor(Vector3 at)
         {
-            // Lightning grounds out -- unless the ground is ice, which carries it to everyone on it.
+            // Lightning grounds out -- unless the ground is ice or water, which carries it to everyone on it.
             if (spell != null && spell.chargeDamage > 0f && DischargeIceAt(at, at))
+            {
+                Destroy(gameObject);
+                return true;
+            }
+
+            if (Combine(at))
             {
                 Destroy(gameObject);
                 return true;

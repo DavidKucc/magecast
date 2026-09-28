@@ -171,6 +171,18 @@ namespace MageCast
             external += impulse;
         }
 
+        /// <summary>
+        /// A push along the ground that friction has to stop -- unlike AddImpulse, which fades by itself
+        /// whatever you stand on. On dry floor it is gone in a fifth of a second; on ice, with the grip
+        /// gone, it carries you the length of the patch. That is air blowing across ice.
+        /// </summary>
+        public void Slide(Vector3 push)
+        {
+            if (!IsLocallyControlled) { if (net != null) net.SendSlide(push); return; }
+            velocity.x += push.x;
+            velocity.z += push.z;
+        }
+
         PlayerNet net;
 
         /// <summary>

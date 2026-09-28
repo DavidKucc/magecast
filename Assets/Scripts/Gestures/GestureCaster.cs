@@ -22,7 +22,11 @@ namespace MageCast.Gestures
         None,
         Burn,      // damage per second to anyone standing in it
         Ice,       // takes your grip away: you slide, and changing direction takes most of a second
-        Updraft    // throws whoever walks in upwards, once
+        Updraft,   // throws whoever walks in upwards, once
+
+        // Appended, never inserted: Unity stores these as numbers in every serialized spell, and a new
+        // value slipped in ahead of Updraft turned every air spell into water.
+        Water      // fire and ice together: harmless to walk in, but it carries lightning like ice does
     }
 
     [System.Serializable]

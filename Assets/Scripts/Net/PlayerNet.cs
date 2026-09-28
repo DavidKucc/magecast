@@ -283,6 +283,30 @@ namespace MageCast
             SpellZone.Spawn(at, effect, radius, lifetime, strength, colour, false, Health.NoAttacker, OwnerClientId);
         }
 
+        /// <summary>
+        /// Server: a patch turned into another -- fire and ice into water, a fire fanned by air. Everyone
+        /// takes their own copy of the old one away and puts down the new one, owned by the same player.
+        /// </summary>
+        public void BroadcastReplace(Vector3 oldCentre, GroundEffect oldKind, Vector3 at, GroundEffect kind,
+                                     float radius, float lifetime, float strength, Color colour, ulong zoneOwner,
+                                     bool fanned)
+        {
+            if (!IsServer) return;
+            ReplaceClientRpc(oldCentre, oldKind, at, kind, radius, lifetime, strength, colour, zoneOwner, fanned);
+        }
+
+        [ClientRpc]
+        void ReplaceClientRpc(Vector3 oldCentre, GroundEffect oldKind, Vector3 at, GroundEffect kind,
+                              float radius, float lifetime, float strength, Color colour, ulong zoneOwner, bool fanned)
+        {
+            if (IsServer) return;
+            SpellZone old = SpellZone.Find(oldCentre, oldKind);
+            if (old != null) old.Remove();
+            if (kind == GroundEffect.None) return;
+            SpellZone z = SpellZone.Spawn(at, kind, radius, lifetime, strength, colour, false, Health.NoAttacker, zoneOwner);
+            if (fanned) z.MarkFanned();
+        }
+
         /// <summary>Server: this player's lightning ran through an ice patch. Everyone sees it happen.</summary>
         public void BroadcastCharge(Vector3 iceCentre, Vector3 struck, Vector3[] victims)
         {
@@ -294,7 +318,7 @@ namespace MageCast
         void ChargeClientRpc(Vector3 iceCentre, Vector3 struck, Vector3[] victims)
         {
             if (IsServer) return;
-            SpellZone ice = SpellZone.IceAt(iceCentre);
+            SpellZone ice = SpellZone.ConductorAt(iceCentre);
             if (ice != null) ice.ShowDischarge(struck, new List<Vector3>(victims));
             else foreach (Vector3 v in victims) ChargeArc.Spawn(struck, v);
         }
@@ -325,6 +349,10 @@ namespace MageCast
         public void SendSlow(float multiplier, float duration) { if (IsServer) SlowClientRpc(multiplier, duration, ToOwner()); }
         public void SendLaunch(float upSpeed) { if (IsServer) LaunchClientRpc(upSpeed, ToOwner()); }
         public void SendInterrupt() { if (IsServer) InterruptClientRpc(ToOwner()); }
+        public void SendSlide(Vector3 push) { if (IsServer) SlideClientRpc(push, ToOwner()); }
+
+        [ClientRpc]
+        void SlideClientRpc(Vector3 push, ClientRpcParams p = default) { if (IsOwner) motor.Slide(push); }
 
         [ClientRpc]
         void ImpulseClientRpc(Vector3 impulse, ClientRpcParams p = default) { if (IsOwner) motor.AddImpulse(impulse); }
