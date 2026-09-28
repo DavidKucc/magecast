@@ -50,6 +50,10 @@ namespace MageCast.Gestures
 
         float flashUntil = -1f;
 
+        /// <summary>The pack's area effect on top of the outline, where the spell has one.</summary>
+        ZoneFx fx;
+        MeshRenderer outline;
+
         /// <summary>
         /// The server's patch deals the damage. Being slowed or thrown is done by each player's own
         /// copy of the patch to their own body -- the body is theirs to move, and waiting on the server
@@ -137,7 +141,7 @@ namespace MageCast.Gestures
         }
 
         /// <summary>The patch's reach towards a point, read off the nearest spokes.</summary>
-        static float ReachTowards(float[] reach, Vector3 offset)
+        public static float ReachTowards(float[] reach, Vector3 offset)
         {
             float a = Mathf.Atan2(offset.z, offset.x);
             if (a < 0f) a += Mathf.PI * 2f;
@@ -219,6 +223,10 @@ namespace MageCast.Gestures
             z.attacker = attacker;
             z.owner = owner;
             z.reach = reach;
+            z.fx = ZoneFx.Play(SpellFx.ForZone(effect), go.transform.position, radius, lifetime, reach);
+            // Under a real effect the plain outline would only wash it out; it stays for the flash.
+            z.outline = renderer;
+            if (z.fx != null) renderer.enabled = false;
             all.Add(z);
             return z;
         }
@@ -353,6 +361,8 @@ namespace MageCast.Gestures
         void OnDestroy()
         {
             all.Remove(this);
+            // taken away before its time -- over the limit, or turned into something else
+            if (fx != null && remaining > 0.3f) fx.Fade();
             MeshFilter f = GetComponent<MeshFilter>();
             if (f != null && f.sharedMesh != null) Destroy(f.sharedMesh);
         }
@@ -364,6 +374,7 @@ namespace MageCast.Gestures
             // Dims over its last second so it never vanishes mid-fight without warning. Flares white
             // for a moment when lightning runs through it.
             float alpha = Mathf.Clamp01(remaining);
+            if (fx != null) outline.enabled = Time.time < flashUntil;
             if (Time.time < flashUntil)
                 material.SetColor("_EmissionColor", Color.Lerp(colour, Color.white, 0.7f) * 3.5f);
             else

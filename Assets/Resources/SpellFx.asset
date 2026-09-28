@@ -21,6 +21,12 @@ MonoBehaviour:
     castScale: 0.22
     impactScale: 0.5
     castTurn: {x: 0, y: -90, z: 0}
+    zone: {fileID: 4748681987041982144, guid: dd5b5df89b4ca004ab1376a4cbbf6ee2, type: 3}
+    zoneAuthoredRadius: 3
+    zoneLeadIn: 2
+    zoneStart: {fileID: 8300000, guid: f44fca91b91f37e40b3dafdd0383caef, type: 3}
+    zoneLoop: {fileID: 8300000, guid: 4518b496fbddcc04f99197a24a8974b4, type: 3}
+    zoneEnd: {fileID: 8300000, guid: ad70aa54bc5c0014da0dd61091f3807c, type: 3}
   - spell: ICE
     cast: {fileID: 8114927945569760447, guid: 7bb06fd48ad0c284e8dcc35a1fd6b53d, type: 3}
     projectile: {fileID: 1771704844123445069, guid: 802822d3553f52b44b96bec3e623625f, type: 3}
@@ -29,11 +35,37 @@ MonoBehaviour:
     castScale: 0.22
     impactScale: 0.5
     castTurn: {x: 0, y: -90, z: 0}
+    zone: {fileID: 4748681987041982144, guid: e23e5aa08e555484593eec3ba5eede8e, type: 3}
+    zoneAuthoredRadius: 3
+    zoneLeadIn: 2
+    zoneStart: {fileID: 8300000, guid: 98a3b4286b933214199f6ac562304b4f, type: 3}
+    zoneLoop: {fileID: 8300000, guid: dee48350db6c72446b7d68f451a71695, type: 3}
+    zoneEnd: {fileID: 8300000, guid: 0fdfdc6b1eb767e45bc9049237ac390f, type: 3}
   - spell: LIGHTNING
-    cast: {fileID: 1658496247936348207, guid: 0c4373b17a0eaa54e8bb49fa3838916e, type: 3}
-    projectile: {fileID: 1319398647745027786, guid: 1666ed9b00dcf034b90f74315296e143, type: 3}
-    impact: {fileID: 6589385767113089740, guid: e63b73db5999f90439bfa92f5b6a556d, type: 3}
+    cast: {fileID: 1658496247936348207, guid: 7738d81faebd8a7408bb04c15050ca80, type: 3}
+    projectile: {fileID: 1319398647745027786, guid: 3ef45b4e1622ac7409634e4f0d2b3368, type: 3}
+    impact: {fileID: 6589385767113089740, guid: ebdaa288ccd286544bc75a93048fa529, type: 3}
     projectileScale: 2
     castScale: 0.22
     impactScale: 0.5
     castTurn: {x: 0, y: -90, z: 0}
+    zone: {fileID: 0}
+    zoneAuthoredRadius: 3
+    zoneLeadIn: 2
+    zoneStart: {fileID: 0}
+    zoneLoop: {fileID: 0}
+    zoneEnd: {fileID: 0}
+  - spell: AIR
+    cast: {fileID: 1708297399293405800, guid: 496141465c13a044e93135d8e3e3bded, type: 3}
+    projectile: {fileID: 6475832785224247900, guid: ee94f292bd541b24d94d64bbd9c0df60, type: 3}
+    impact: {fileID: 3002614074438278360, guid: fe87983b18557d548b21217d4a9f8515, type: 3}
+    projectileScale: 0.8
+    castScale: 0.22
+    impactScale: 0.6
+    castTurn: {x: 0, y: -90, z: 0}
+    zone: {fileID: 4748681987041982144, guid: 17d553f8d4894f04aaeb705b46c348e7, type: 3}
+    zoneAuthoredRadius: 3
+    zoneLeadIn: 2
+    zoneStart: {fileID: 8300000, guid: e8e3c7d9148876e438c89d4d73c794ad, type: 3}
+    zoneLoop: {fileID: 8300000, guid: e7a9b613aa1c36f49b37e6fe670a9958, type: 3}
+    zoneEnd: {fileID: 8300000, guid: c92473b6f35ad9e49baf3c55e69251d4, type: 3}

@@ -51,6 +51,25 @@ namespace MageCast.EditorTools
             Set(fx, "LIGHTNING", bolt[0], bolt[1], bolt[2], projectileScale: 2f, castScale: 0.22f, impactScale: 0.5f,
                 castTurn: new Vector3(0f, -90f, 0f));
 
+            // Air: the pack has no wind attack, but its "sound" set -- rings and pressure waves -- reads as a
+            // gust once it is the colour of air, and the AoE pack's air sounds replace its own.
+            string[] gust = new string[3];
+            AudioClip[] gustSounds = {
+                AreaSound("Air", "Area_Cast_01"),      // the gust leaving the hands
+                AreaSound("Air", "Area_Loop_01"),      // wind while it flies
+                AreaSound("Air", "Burst_01") };        // the burst where it lands
+            for (int i = 0; i < 3; i++)
+                gust[i] = Recolour(Magic + "Sound/VFX_Sound_Magic_" + parts[i] + ".prefab", AirHue, AirSaturation, gustSounds[i],
+                                   // what makes it music rather than wind: the notes, the staff lines, the emblem
+                                   "PS_VFX_Notes", "PS_VFX_Rings", "PS_VFX_Flare_Black");
+            Set(fx, "AIR", gust[0], gust[1], gust[2], projectileScale: 0.8f, castScale: 0.22f, impactScale: 0.6f,
+                castTurn: new Vector3(0f, -90f, 0f));
+
+            // Patches: the AoE pack's area effects, with its area sounds (a start, a loop, an end).
+            SetZone(fx, "FIRE", "Fire");
+            SetZone(fx, "ICE", "Ice");
+            SetZone(fx, "AIR", "Air");
+
             EditorUtility.SetDirty(fx);
             AssetDatabase.SaveAssets();
             Debug.Log("[SpellFx] assigned: " + fx.entries.Count + " spell(s) with effects");
@@ -74,11 +93,65 @@ namespace MageCast.EditorTools
                 Debug.LogWarning("[SpellFx] " + spell + ": some effects are missing - is the Vefects pack in Assets/Vefects?");
         }
 
+        const string Area = "Assets/Vefects/Stylized AoE VFX/";
+
+        /// <summary>
+        /// A spell's patch: VFX/{element}/Particles/VFX_{element}_Area_01 and its three sounds. The sounds
+        /// sit in one of two folders, by who made them, so both are tried.
+        /// </summary>
+        static void SetZone(SpellFx fx, string spell, string element)
+        {
+            SpellFx.Entry e = fx.entries.Find(x => x.spell == spell);
+            if (e == null) { e = new SpellFx.Entry { spell = spell }; fx.entries.Add(e); }
+
+            e.zone = AssetDatabase.LoadAssetAtPath<GameObject>(Area + "VFX/" + element + "/Particles/VFX_" + element + "_Area_01.prefab");
+            e.zoneAuthoredRadius = 3f;
+            e.zoneLeadIn = 2f;
+            e.zoneStart = AreaSound(element, "Area_Cast_01");
+            e.zoneLoop = AreaSound(element, "Area_Loop_01");
+            e.zoneEnd = AreaSound(element, "Area_End_01");
+
+            if (e.zone == null) Debug.LogWarning("[SpellFx] " + spell + ": no area effect - is the Stylized AoE pack in Assets/Vefects?");
+            else MakeMeshesReadable(e.zone);
+        }
+
+        /// <summary>
+        /// ZoneFx reshapes the area effects' rings and discs to follow a patch cut short by an edge, which
+        /// needs their vertices at runtime. The pack imports its meshes unreadable; this turns that on
+        /// for the ones an area effect uses.
+        /// </summary>
+        static void MakeMeshesReadable(GameObject prefab)
+        {
+            foreach (ParticleSystemRenderer r in prefab.GetComponentsInChildren<ParticleSystemRenderer>(true))
+            {
+                if (r.renderMode != ParticleSystemRenderMode.Mesh || r.mesh == null || r.mesh.isReadable) continue;
+                var importer = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(r.mesh)) as ModelImporter;
+                if (importer == null || importer.isReadable) continue;
+                importer.isReadable = true;
+                importer.SaveAndReimport();
+            }
+        }
+
+        static AudioClip AreaSound(string element, string part)
+        {
+            foreach (string who in new[] { "Chinchi", "Sergi" })
+            {
+                var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(
+                    Area + "Audio/WAV/" + who + "/SFX_Vefects_Stylized_AoE_" + element + "_" + part + ".wav");
+                if (clip != null) return clip;
+            }
+            return null;
+        }
+
         // ---------------------------------------------------------------- recolouring
 
         /// <summary>Electric yellow: a warm yellow, a little paler than pure, so the cores still read white-hot.</summary>
         const float LightningHue = 0.14f;
         const float LightningSaturation = 0.85f;
+
+        /// <summary>Air: the spell's own pale mint, kept pale -- wind is barely coloured.</summary>
+        const float AirHue = 0.43f;
+        const float AirSaturation = 0.35f;
 
         /// <summary>
         /// Recoloured copies live inside the pack's folder: they are the pack's art, so they stay out of the
@@ -93,7 +166,7 @@ namespace MageCast.EditorTools
         /// transparency and anything already grey or white are kept, so it still glows the same way.
         /// Rerunnable: the copies are simply made again. Returns the copy's path, or null.
         /// </summary>
-        static string Recolour(string sourcePath, float hue, float saturation)
+        static string Recolour(string sourcePath, float hue, float saturation, AudioClip sound = null, params string[] drop)
         {
             if (AssetDatabase.LoadAssetAtPath<GameObject>(sourcePath) == null) return null;
 
@@ -107,6 +180,11 @@ namespace MageCast.EditorTools
             GameObject root = PrefabUtility.LoadPrefabContents(target);
             try
             {
+                // parts that do not belong to the spell this is being made into
+                foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+                    if (t != null && t != root.transform && System.Array.IndexOf(drop, t.name) >= 0)
+                        Object.DestroyImmediate(t.gameObject);
+
                 foreach (ParticleSystem ps in root.GetComponentsInChildren<ParticleSystem>(true))
                 {
                     var main = ps.main;
@@ -127,6 +205,8 @@ namespace MageCast.EditorTools
                     if (r.trailMaterial != null) r.trailMaterial = CopyMaterial(r.trailMaterial, folder, hue, saturation, materials);
                 }
                 foreach (Light l in root.GetComponentsInChildren<Light>(true)) l.color = Shift(l.color, hue, saturation);
+                if (sound != null)
+                    foreach (AudioSource a in root.GetComponentsInChildren<AudioSource>(true)) a.clip = sound;
                 foreach (TrailRenderer t in root.GetComponentsInChildren<TrailRenderer>(true)) t.colorGradient = Shift(t.colorGradient, hue, saturation);
                 foreach (LineRenderer l in root.GetComponentsInChildren<LineRenderer>(true)) l.colorGradient = Shift(l.colorGradient, hue, saturation);
 
@@ -178,7 +258,7 @@ namespace MageCast.EditorTools
         static Texture2D RecolourTexture(Texture2D tex, float hue, float saturation)
         {
             if (tex == null) return null;
-            string path = Recoloured + "/Textures/" + tex.name + "_Recoloured.png";
+            string path = Recoloured + "/Textures/" + tex.name + "_Hue" + Mathf.RoundToInt(hue * 100f) + "_Sat" + Mathf.RoundToInt(saturation * 100f) + ".png";
             Texture2D existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
             if (existing != null) return existing;
 

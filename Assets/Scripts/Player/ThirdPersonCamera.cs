@@ -47,6 +47,11 @@ namespace MageCast
         {
             currentDistance = distance;
             if (target != null) Yaw = target.eulerAngles.y;
+
+            // The spell effects fade their smoke and floor glows into the ground by the scene's depth;
+            // without it those parts are simply not drawn.
+            Camera cam = GetComponent<Camera>();
+            if (cam != null) cam.depthTextureMode |= DepthTextureMode.Depth;
         }
 
         /// <summary>

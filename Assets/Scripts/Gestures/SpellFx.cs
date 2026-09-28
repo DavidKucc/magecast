@@ -39,6 +39,29 @@ namespace MageCast.Gestures
             /// comes it is seen edge-on from behind the caster.
             /// </summary>
             public Vector3 castTurn;
+
+            [Header("Patch on the floor")]
+            public GameObject zone;          // an area effect; see ZoneFx for how it is fitted to a patch
+            /// <summary>The radius the area effect was made for; it is scaled from this to the patch's.</summary>
+            public float zoneAuthoredRadius = 3f;
+            /// <summary>Seconds of warning the area effect plays before its impact; a patch has none.</summary>
+            public float zoneLeadIn = 2f;
+            public AudioClip zoneStart;
+            public AudioClip zoneLoop;
+            public AudioClip zoneEnd;
+        }
+
+        /// <summary>The spell whose look a patch of this kind wears -- water has none of its own yet.</summary>
+        public static Entry ForZone(GroundEffect effect)
+        {
+            switch (effect)
+            {
+                case GroundEffect.Burn: return ByName("FIRE");
+                case GroundEffect.Ice: return ByName("ICE");
+                case GroundEffect.Updraft: return ByName("AIR");
+                case GroundEffect.Water: return ByName("WATER");
+            }
+            return null;
         }
 
         public List<Entry> entries = new List<Entry>();
@@ -48,7 +71,11 @@ namespace MageCast.Gestures
 
         public static Entry For(Spell spell)
         {
-            if (spell == null) return null;
+            return spell == null ? null : ByName(spell.displayName);
+        }
+
+        static Entry ByName(string name)
+        {
             if (!tried)
             {
                 tried = true;
@@ -56,7 +83,7 @@ namespace MageCast.Gestures
             }
             if (loaded == null) return null;
             foreach (Entry e in loaded.entries)
-                if (e != null && e.spell == spell.displayName) return e;
+                if (e != null && e.spell == name) return e;
             return null;
         }
 
@@ -72,7 +99,18 @@ namespace MageCast.Gestures
             // scale is meant in the world; under a scaled parent it has to be divided back out
             float inherited = parent != null ? Mathf.Max(0.0001f, parent.lossyScale.x) : 1f;
             go.transform.localScale = prefab.transform.localScale * (scale / inherited);
+            Tame(go);
 
+            if (parent == null) Destroy(go, Lifetime(go));
+            return go;
+        }
+
+        /// <summary>
+        /// Makes a freshly placed effect the game's to run: no demo scripts or colliders of its own,
+        /// particles that follow its scale, and sounds that sit in the world.
+        /// </summary>
+        public static void Tame(GameObject go)
+        {
             // The packs' demo scripts move, collide and destroy their own copies; here the game does all
             // of that, so they go -- at once, not at the end of the frame: the fire projectile's script
             // fired its trigger in the frame it was created and threw, which pauses the editor. Their
@@ -90,9 +128,6 @@ namespace MageCast.Gestures
             }
 
             foreach (AudioSource a in go.GetComponentsInChildren<AudioSource>(true)) MakeSpatial(a);
-
-            if (parent == null) Destroy(go, Lifetime(go));
-            return go;
         }
 
         public static void MakeSpatial(AudioSource a)
