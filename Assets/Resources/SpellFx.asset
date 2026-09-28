@@ -20,3 +20,4 @@ MonoBehaviour:
     projectileScale: 1
     castScale: 0.22
     impactScale: 0.5
+    castTurn: {x: 0, y: -90, z: 0}

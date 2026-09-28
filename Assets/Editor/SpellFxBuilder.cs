@@ -30,7 +30,9 @@ namespace MageCast.EditorTools
             // Fire: the Vefects fire magic set -- a pentacle flare in the hands, a trailing fireball and a
             // burst, each carrying its own sound (cast, a flight loop, the hit).
             Set(fx, "FIRE", Magic + "Fire/VFX_Fire_Magic_Cast.prefab", Magic + "Fire/VFX_Fire_Magic_Projectile.prefab",
-                Magic + "Fire/VFX_Fire_Magic_Hit.prefab", projectileScale: 1f, castScale: 0.22f, impactScale: 0.5f);
+                Magic + "Fire/VFX_Fire_Magic_Hit.prefab", projectileScale: 1f, castScale: 0.22f, impactScale: 0.5f,
+                // the pentacle is a plane facing its local X; turned so it faces along the shot, toward the camera
+                castTurn: new Vector3(0f, -90f, 0f));
 
             EditorUtility.SetDirty(fx);
             AssetDatabase.SaveAssets();
@@ -38,7 +40,7 @@ namespace MageCast.EditorTools
         }
 
         static void Set(SpellFx fx, string spell, string cast, string projectile, string impact,
-                        float projectileScale, float castScale, float impactScale)
+                        float projectileScale, float castScale, float impactScale, Vector3 castTurn = default(Vector3))
         {
             SpellFx.Entry e = fx.entries.Find(x => x.spell == spell);
             if (e == null) { e = new SpellFx.Entry { spell = spell }; fx.entries.Add(e); }
@@ -49,6 +51,7 @@ namespace MageCast.EditorTools
             e.projectileScale = projectileScale;
             e.castScale = castScale;
             e.impactScale = impactScale;
+            e.castTurn = castTurn;
 
             if (e.cast == null || e.projectile == null || e.impact == null)
                 Debug.LogWarning("[SpellFx] " + spell + ": some effects are missing - is the Vefects pack in Assets/Vefects?");

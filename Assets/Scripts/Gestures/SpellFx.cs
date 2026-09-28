@@ -32,6 +32,13 @@ namespace MageCast.Gestures
             public float projectileScale = 1f;
             public float castScale = 1f;
             public float impactScale = 1f;
+
+            /// <summary>
+            /// Turn applied on top of "facing the way the spell goes". Packs author their pieces facing
+            /// whichever way their own demo needed -- the fire pentacle faces sideways, and aimed as it
+            /// comes it is seen edge-on from behind the caster.
+            /// </summary>
+            public Vector3 castTurn;
         }
 
         public List<Entry> entries = new List<Entry>();

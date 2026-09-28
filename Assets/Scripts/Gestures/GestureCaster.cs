@@ -1117,7 +1117,7 @@ namespace MageCast.Gestures
             // the flash in the hands as it leaves, with its sound, for everyone watching
             SpellFx.Entry fx = SpellFx.For(spell);
             if (fx != null && fx.cast != null)
-                SpellFx.Play(fx.cast, data.Muzzle, Quaternion.LookRotation(direction), fx.castScale);
+                SpellFx.Play(fx.cast, data.Muzzle, Quaternion.LookRotation(direction) * Quaternion.Euler(fx.castTurn), fx.castScale);
 
             bool ballistic = spell.kind == SpellKind.Ballistic;
             Projectile.Spawn(data.Muzzle, direction,
