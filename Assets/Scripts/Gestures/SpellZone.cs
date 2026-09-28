@@ -223,14 +223,19 @@ namespace MageCast.Gestures
             return z;
         }
 
-        /// <summary>The newest patch of one kind under a point on the floor, or null.</summary>
-        public static SpellZone At(Vector3 point, GroundEffect kind)
+        /// <summary>
+        /// The newest patch of one kind under a point on the floor, or null. <paramref name="reachOut"/>
+        /// widens the test by the size of whatever landed: a spell is a ball, not a point, and one whose
+        /// edge falls in the patch has landed in it -- a big gust of air aimed at a fire lands touching
+        /// it long before its centre does.
+        /// </summary>
+        public static SpellZone At(Vector3 point, GroundEffect kind, float reachOut = 0f)
         {
             for (int i = all.Count - 1; i >= 0; i--)
             {
                 SpellZone z = all[i];
                 if (z == null || z.effect != kind) continue;
-                if (z.Contains(point, 0.6f)) return z;
+                if (z.Contains(point, 0.6f, reachOut)) return z;
             }
             return null;
         }
@@ -310,11 +315,11 @@ namespace MageCast.Gestures
             return found;
         }
 
-        bool Contains(Vector3 point, float verticalSlack)
+        bool Contains(Vector3 point, float verticalSlack, float reachOut = 0f)
         {
             Vector3 offset = point - transform.position;
             if (Mathf.Abs(offset.y) > verticalSlack) return false;
-            return new Vector2(offset.x, offset.z).magnitude <= ReachTowards(reach, offset);
+            return new Vector2(offset.x, offset.z).magnitude <= ReachTowards(reach, offset) + reachOut;
         }
 
         /// <summary>

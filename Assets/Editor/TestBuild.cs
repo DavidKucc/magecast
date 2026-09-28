@@ -13,6 +13,14 @@ namespace MageCast.EditorTools
     public static class TestBuild
     {
         public const string OutputFolder = "Builds/MageCast";
+
+        /// <summary>Stamps the build time into Resources/BuildInfo.txt, which the menus show.</summary>
+        static void StampBuildInfo()
+        {
+            string path = "Assets/Resources/BuildInfo.txt";
+            System.IO.File.WriteAllText(path, System.DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+        }
         public const string ExeName = "MageCast.exe";
 
         [MenuItem("Tools/Arena/Build Windows Test")]
@@ -33,6 +41,7 @@ namespace MageCast.EditorTools
             PlayerSettings.forceSingleInstance = false;
             PlayerSettings.usePlayerLog = true;
             PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.Mono2x);
+            StampBuildInfo();
 
             string[] scenes = System.Array.ConvertAll(
                 System.Array.FindAll(EditorBuildSettings.scenes, s => s.enabled), s => s.path);
@@ -86,7 +95,10 @@ namespace MageCast.EditorTools
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
             PlayerSettings.WebGL.decompressionFallback = true;
             PlayerSettings.WebGL.dataCaching = true;
-            PlayerSettings.WebGL.nameFilesAsHashes = false;
+            // Named by content, so a new build is a new file the browser has never seen. With fixed names
+            // a browser could keep serving the previous build from its cache for a while after publishing.
+            PlayerSettings.WebGL.nameFilesAsHashes = true;
+            StampBuildInfo();
             PlayerSettings.WebGL.template = "PROJECT:MageCast";     // Assets/WebGLTemplates/MageCast
             PlayerSettings.SetManagedStrippingLevel(BuildTargetGroup.WebGL, ManagedStrippingLevel.Minimal);
 

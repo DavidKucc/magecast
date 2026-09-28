@@ -135,6 +135,11 @@ namespace MageCast.Gestures
                     if (owner != null && (t == owner || t.IsChildOf(owner))) continue;
                     if (ignoreOnce != null && hits[i].collider == ignoreOnce) continue;
 
+                    // The floor is not found by the ball's edge -- see below. That includes the ball
+                    // already dipping into the floor: a sweep that starts overlapping reports no normal at
+                    // all, and read as a wall it bounced a fire straight back off the ground.
+                    if (!IsTarget(hits[i].collider) && IsFloorContact(hits[i])) continue;
+
                     if (hits[i].distance < nearest)
                     {
                         nearest = hits[i].distance;
@@ -143,6 +148,23 @@ namespace MageCast.Gestures
                     }
                 }
                 ignoreOnce = null;
+
+                // Where a spell lands on the floor is where its CENTRE meets it, not where the edge of the
+                // ball first grazes it. A fat spell aimed at the floor a few metres off at a shallow angle
+                // used to touch down two to four metres short -- a gust of air aimed into a fire came down
+                // beside it instead, and the combination never happened. People, walls and barriers are
+                // still hit by the whole ball.
+                RaycastHit ground;
+                if (Physics.Raycast(transform.position, heading, out ground, distance, ~0, QueryTriggerInteraction.Ignore)
+                    && ground.normal.y > FloorNormal && !IsTarget(ground.collider)
+                    && ground.transform != transform
+                    && (owner == null || !(ground.transform == owner || ground.transform.IsChildOf(owner)))
+                    && ground.distance < nearest)
+                {
+                    nearest = ground.distance;
+                    best = ground;
+                    hitSomething = true;
+                }
 
                 if (hitSomething)
                 {
@@ -162,6 +184,31 @@ namespace MageCast.Gestures
 
             remaining -= Time.deltaTime;
             if (remaining <= 0f) Destroy(gameObject);
+        }
+
+        /// <summary>
+        /// Whether a sweep hit is the ball touching the floor. A normal hit says so by its normal; a hit
+        /// the sweep STARTED inside has no normal, so the floor is recognised by lying under the centre.
+        /// </summary>
+        bool IsFloorContact(RaycastHit hit)
+        {
+            if (hit.normal.sqrMagnitude > 0.01f && hit.distance > 0f) return hit.normal.y > FloorNormal;
+
+            // Whatever tops out at or below the centre is underfoot. Asked of the bounds because at the
+            // moment of landing the centre sits ON the surface, where the closest point is the centre
+            // itself and has no direction -- read as a wall there, a fire bounced straight back up.
+            if (hit.collider.bounds.max.y <= transform.position.y + 0.05f) return true;
+
+            Vector3 closest = hit.collider.ClosestPoint(transform.position);
+            Vector3 up = transform.position - closest;
+            return up.sqrMagnitude > 1e-6f && up.normalized.y > FloorNormal;
+        }
+
+        /// <summary>Something a spell hits with its whole body: a person, a dummy, a barrier.</summary>
+        static bool IsTarget(Collider c)
+        {
+            return c.GetComponentInParent<Health>() != null || c.GetComponentInParent<PlayerMotor>() != null
+                   || c.GetComponentInParent<CastShield>() != null;
         }
 
         /// <summary>Resolves a hit. Returns true if the projectile is finished, false if it bounced on.</summary>
@@ -320,27 +367,27 @@ namespace MageCast.Gestures
             {
                 case GroundEffect.Burn:
                 {
-                    SpellZone ice = SpellZone.At(at, GroundEffect.Ice);
+                    SpellZone ice = SpellZone.At(at, GroundEffect.Ice, radius);
                     if (ice != null) { ReplaceZone(caster, ice, GroundEffect.Water, ice.transform.position, ice.Radius, 6f, 0f, WaterColour, attacker, false); return true; }
 
-                    SpellZone water = SpellZone.At(at, GroundEffect.Water);
+                    SpellZone water = SpellZone.At(at, GroundEffect.Water, radius);
                     if (water != null) { Flash(at, 1.2f, 1.2f); return true; }     // put out
                     return false;
                 }
 
                 case GroundEffect.Ice:
                 {
-                    SpellZone fire = SpellZone.At(at, GroundEffect.Burn);
+                    SpellZone fire = SpellZone.At(at, GroundEffect.Burn, radius);
                     if (fire != null) { ReplaceZone(caster, fire, GroundEffect.Water, fire.transform.position, fire.Radius, 6f, 0f, WaterColour, attacker, false); return true; }
 
-                    SpellZone water = SpellZone.At(at, GroundEffect.Water);
+                    SpellZone water = SpellZone.At(at, GroundEffect.Water, radius);
                     if (water != null) { ReplaceZone(caster, water, GroundEffect.Ice, water.transform.position, water.Radius, spell.zoneLifetime, spell.zoneStrength, spell.colour, attacker, false); return true; }
                     return false;
                 }
 
                 case GroundEffect.Updraft:
                 {
-                    SpellZone fire = SpellZone.At(at, GroundEffect.Burn);
+                    SpellZone fire = SpellZone.At(at, GroundEffect.Burn, radius);
                     if (fire != null)
                     {
                         if (!fire.Fanned)
@@ -357,7 +404,7 @@ namespace MageCast.Gestures
                         return true;
                     }
 
-                    SpellZone ice = SpellZone.At(at, GroundEffect.Ice);
+                    SpellZone ice = SpellZone.At(at, GroundEffect.Ice, radius);
                     if (ice != null)
                     {
                         // No grip to stop you: a shove that would carry somebody a metre on dry floor

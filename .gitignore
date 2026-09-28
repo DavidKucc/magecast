@@ -40,3 +40,7 @@ crashlytics-build.properties
 /Assets/Screenshots.meta
 /.claude/
 /.mcp.json
+
+# stamped by every build
+/Assets/Resources/BuildInfo.txt
+/Assets/Resources/BuildInfo.txt.meta

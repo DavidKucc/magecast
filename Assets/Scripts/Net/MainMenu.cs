@@ -65,6 +65,7 @@ namespace MageCast
         void OnGUI()
         {
             Styles();
+            BuildInfo.DrawCorner();
             NetSession session = NetSession.Instance;
             bool busy = session == null || session.Busy;
 

@@ -136,6 +136,10 @@ schopnost uhýbat, takže kdo na něm kreslí, je terč; a je to plocha, na kter
 - **Plochy žijí 5–6 s a každý hráč smí mít dole nejvýš dvě.** Třetí smaže tu nejstarší — aby se
   aréna za půl minuty nezměnila v kaši, kde nikdo neví, na čem stojí.
 - **Stěna, nebo zem, rozhoduje sklon povrchu.** Co míří nahoru, je zem; zbytek je stěna.
+- **Na zem kouzlo dopadne tam, kam míří jeho střed** — tedy tam, kam míří crosshair. Dřív velké kouzlo
+  (hlavně vzduch) škrtlo okrajem o zem o 2–4 m dřív a do cíle nedoletělo. Lidi, zdi a bariéry dál zasahuje
+  celou šířkou.
+- **Kombinace stačí, když se kouzlo plochy dotkne** okrajem, nemusí trefit středem.
 - **Plochy zasáhnou i toho, kdo je seslal.** Oheň pod vlastníma nohama není zadarmo.
 - **Vzdušný proud vyhodí každého jen jednou**, jinak by z plochy byla trampolína.
 - **Velikost ploch roste s velikostí glyfu** (0,7–1,4×), stejně jako velikost střely.

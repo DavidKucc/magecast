@@ -95,7 +95,7 @@ namespace MageCast
             TopBar(session, nm);
             KillFeed();
             DeathOverlay();
-            if (GameInput.MenuOpen) Menu(session, nm);
+            if (GameInput.MenuOpen) { Menu(session, nm); BuildInfo.DrawCorner(); }
             else ClickToPlay();
         }
 
