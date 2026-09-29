@@ -50,6 +50,9 @@ Rozdíl mezi kliknutím a podržením je **0,45 s**; při držení se vlevo naho
 plný, puštění kouzlo zahodí. Dokud kouzlo držíš, **nejde sprint** — buď máš připravené kouzlo, nebo jsi
 rychlý, ne obojí.
 
+Kouzlo letí **z ruky na straně, kam kamera kouká přes rameno** — výchozí je pravá. **Kliknutí kolečkem
+myši** přehodí kameru přes druhé rameno a kouzla pak letí z levé ruky (animace je zrcadlená).
+
 **Zrušit kreslení** jde kdykoli **pravým tlačítkem** — nic se nesešle a nic se nespotřebuje. Stejně skončí
 kreslení, když tě trefí vzduch.
 

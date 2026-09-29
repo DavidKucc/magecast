@@ -237,6 +237,7 @@ namespace MageCast.EditorTools
             ctrl.AddParameter("Drawing", AnimatorControllerParameterType.Bool);
             ctrl.AddParameter("Send", AnimatorControllerParameterType.Trigger);
             ctrl.AddParameter("Defensive", AnimatorControllerParameterType.Bool);
+            ctrl.AddParameter("LeftHand", AnimatorControllerParameterType.Bool);   // mirrors the send
 
             var sm = ctrl.layers[0].stateMachine;
 
@@ -1452,6 +1453,10 @@ namespace MageCast.EditorTools
         {
             var s = sm.AddState(name);
             s.motion = clip;
+            // Mirrored when the camera sits over the left shoulder: the clips throw with the right hand,
+            // and a humanoid clip mirrored throws with the left.
+            s.mirrorParameterActive = true;
+            s.mirrorParameter = "LeftHand";
 
             var enter = sm.AddAnyStateTransition(s);
             enter.AddCondition(AnimatorConditionMode.If, 0f, "Send");

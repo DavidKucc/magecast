@@ -71,6 +71,7 @@ namespace MageCast
             "3.  Klikni levým - kouzlo letí tam, kam míříš.\n" +
             "     Podrž levé a pusť - kouzlo zahodíš a ruku máš prázdnou.\n\n" +
             "Pravé tlačítko během kreslení - zruší rozkreslenou runu.\n" +
+            "Kliknutí kolečkem myši - kamera přeskočí přes druhé rameno a kouzla letí z druhé ruky (výchozí je pravá).\n" +
             "S kouzlem v ruce se nedá sprintovat.\n\n" +
             "<b>Ostatní</b>\n" +
             "Esc - menu (nastavení, nápověda, odchod)\n" +

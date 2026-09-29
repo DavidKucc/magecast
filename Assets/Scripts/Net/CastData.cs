@@ -27,6 +27,9 @@ namespace MageCast.Gestures
         /// </summary>
         public double SentAt;
 
+        /// <summary>Thrown with the left hand (camera over the left shoulder), for the mirrored animation.</summary>
+        public bool LeftHand;
+
         public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
         {
             s.SerializeValue(ref Spell);
@@ -37,6 +40,7 @@ namespace MageCast.Gestures
             s.SerializeValue(ref Direction);
             s.SerializeValue(ref Feet);
             s.SerializeValue(ref SentAt);
+            s.SerializeValue(ref LeftHand);
         }
     }
 

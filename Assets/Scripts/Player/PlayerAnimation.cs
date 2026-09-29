@@ -32,6 +32,7 @@ namespace MageCast
 
         static readonly int DrawingHash = Animator.StringToHash("Drawing");
         static readonly int SendHash = Animator.StringToHash("Send");
+        static readonly int LeftHandHash = Animator.StringToHash("LeftHand");
         static readonly int DefensiveHash = Animator.StringToHash("Defensive");
         static readonly int SpeedHash = Animator.StringToHash("Speed");
         static readonly int DirXHash = Animator.StringToHash("DirX");
@@ -167,9 +168,10 @@ namespace MageCast
         /// <summary>
         /// Plays the cast-release animation. Two of them: a barrier is put up, everything else is thrown.
         /// </summary>
-        public void PlaySend(bool defensive)
+        public void PlaySend(bool defensive, bool leftHand = false)
         {
             if (animator == null) return;
+            animator.SetBool(LeftHandHash, leftHand);      // mirrored: the left hand throws
             animator.SetBool(DefensiveHash, defensive);   // set BEFORE the trigger, or the transition
             animator.SetTrigger(SendHash);                // is evaluated against last cast's value
             sendUntil = Time.time + sendHold;

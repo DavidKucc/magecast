@@ -901,7 +901,8 @@ namespace MageCast.Gestures
                 Muzzle = Muzzle(),
                 Direction = direction,
                 Feet = transform.position,
-                SentAt = Networked ? Unity.Netcode.NetworkManager.Singleton.ServerTime.Time : 0.0
+                SentAt = Networked ? Unity.Netcode.NetworkManager.Singleton.ServerTime.Time : 0.0,
+                LeftHand = LeftHanded
             };
 
             if (Networked) net.RequestCast(data);
@@ -927,7 +928,7 @@ namespace MageCast.Gestures
             float sizeScale = data.SizeScale;
             Vector3 direction = data.Direction;
 
-            if (anim != null) anim.PlaySend(spell.kind == SpellKind.Barrier);
+            if (anim != null) anim.PlaySend(spell.kind == SpellKind.Barrier, data.LeftHand);
             bool crit = quality == CastQuality.Perfect;
 
             // Damage comes from how precisely the shape was drawn. Size comes from how BIG it was
@@ -1002,10 +1003,22 @@ namespace MageCast.Gestures
             }
         }
 
+        /// <summary>The camera sits over the left shoulder, so spells go from the left hand.</summary>
+        bool LeftHanded { get { return cam != null && cam.LeftShoulder; } }
+
+        /// <summary>
+        /// Where a spell leaves from: the throwing hand, on the side the camera looks past -- the right
+        /// by default, the left after a click of the mouse wheel. Not the middle of the chest: the
+        /// crosshair sits off to that side, and a shot starting from the chest crosses the line of sight.
+        /// </summary>
         Vector3 Muzzle()
         {
-            return transform.position + Vector3.up * 1.4f + transform.forward * 0.6f;
+            float hand = LeftHanded ? -1f : 1f;
+            return transform.position + Vector3.up * 1.35f + transform.forward * 0.5f + transform.right * (HandOffset * hand);
         }
+
+        /// <summary>How far out to the side the throwing hand is, in metres.</summary>
+        const float HandOffset = 0.35f;
 
         /// <summary>
         /// Aim from the muzzle at whatever the camera centre is looking at, not straight down camera

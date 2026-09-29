@@ -36,6 +36,16 @@ namespace MageCast
         /// <summary>False freezes the camera without freezing the player. The cast mechanic drives this.</summary>
         public bool LookEnabled = true;
 
+        /// <summary>
+        /// Over the left shoulder instead of the right -- a click of the mouse wheel swaps. Spells then
+        /// leave from the left hand, on the side the crosshair looks past.
+        /// </summary>
+        public bool LeftShoulder { get; private set; }
+
+        /// <summary>-1 left .. +1 right, easing towards the chosen side so the swap is a move, not a cut.</summary>
+        float side = 1f;
+        const float SideSwapSpeed = 7f;
+
         public float Yaw { get; private set; }
         public float Pitch { get; private set; }
         public Vector3 AimOrigin { get { return transform.position; } }
@@ -97,7 +107,9 @@ namespace MageCast
             }
 
             Quaternion rot = Quaternion.Euler(Pitch, Yaw, 0f);
-            Vector3 pivot = target.position + Vector3.up * pivotHeight + rot * Vector3.right * shoulderOffset;
+            if (!GameInput.Blocked && Input.GetMouseButtonDown(2)) LeftShoulder = !LeftShoulder;
+            side = Mathf.MoveTowards(side, LeftShoulder ? -1f : 1f, SideSwapSpeed * Time.deltaTime);
+            Vector3 pivot = target.position + Vector3.up * pivotHeight + rot * Vector3.right * (shoulderOffset * side);
             Vector3 back = rot * Vector3.back;
 
             // Spring arm. The blockout is dense by design, so without this the camera would spend
