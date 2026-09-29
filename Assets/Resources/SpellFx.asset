@@ -66,9 +66,9 @@ MonoBehaviour:
     struck: {fileID: 0}
     shatter: {fileID: 0}
   - spell: LIGHTNING
-    cast: {fileID: 1658496247936348207, guid: 0d713fcb15324fd46be23262bd297ed9, type: 3}
-    projectile: {fileID: 1319398647745027786, guid: 5c2f1f6164c9ed34f8c9a5083af95d8c, type: 3}
-    impact: {fileID: 6589385767113089740, guid: 9d49cf9d2c9052a4cae1aae4f655d6ba, type: 3}
+    cast: {fileID: 1658496247936348207, guid: c91ad56760191e4469e6c4eb21c324f2, type: 3}
+    projectile: {fileID: 1319398647745027786, guid: 34d1d6fc527ecc54f91780426a420a2b, type: 3}
+    impact: {fileID: 6589385767113089740, guid: b13a5871319359b4e888a033f7849a21, type: 3}
     projectileScale: 2
     castScale: 0.22
     impactScale: 0.5
@@ -92,9 +92,9 @@ MonoBehaviour:
     struck: {fileID: 0}
     shatter: {fileID: 0}
   - spell: AIR
-    cast: {fileID: 1708297399293405800, guid: a03e865ad8c708243974b2f1f5e83901, type: 3}
-    projectile: {fileID: 6475832785224247900, guid: 731453387afbf3e419cc42e5de4a4626, type: 3}
-    impact: {fileID: 3002614074438278360, guid: bd82f3c6a42b46e4380cc4b4906bbfe8, type: 3}
+    cast: {fileID: 1708297399293405800, guid: 34277ff215b06c842b84ff1ee9281af9, type: 3}
+    projectile: {fileID: 6475832785224247900, guid: 7c3dc957f6e73fa4fbcd265688402ca9, type: 3}
+    impact: {fileID: 3002614074438278360, guid: ddfb4831f9fd1a84b80acdb9820983ca, type: 3}
     projectileScale: 0.8
     castScale: 0.22
     impactScale: 0.6
@@ -120,25 +120,25 @@ MonoBehaviour:
   - spell: BARRIER
     cast: {fileID: 0}
     projectile: {fileID: 0}
-    impact: {fileID: 5213359654510746434, guid: 1a5e2577e07e8874384d286b14b639aa, type: 3}
+    impact: {fileID: 4748681987041982144, guid: 0e3931ea89093814c8599a7cd9325157, type: 3}
     projectileScale: 1
     castScale: 1
-    impactScale: 0.16
+    impactScale: 0.3
     castTurn: {x: 0, y: 0, z: 0}
     launch: {fileID: 0}
     status: {fileID: 0}
     statusScale: 1
-    special: {fileID: 0}
-    specialScale: 1
-    specialLeadIn: 0
+    special: {fileID: 4748681987041982144, guid: 2b8a5cd938476ec4a92827209053acf9, type: 3}
+    specialScale: 0.75
+    specialLeadIn: 0.5
     specialSound: {fileID: 0}
     statusSound: {fileID: 0}
-    zone: {fileID: 0}
+    zone: {fileID: 4748681987041982144, guid: ef28b97cf114bed4dbb29c673f136537, type: 3}
     zoneAuthoredRadius: 3
     zoneLeadIn: 2
     zoneStart: {fileID: 0}
-    zoneLoop: {fileID: 0}
-    zoneEnd: {fileID: 0}
+    zoneLoop: {fileID: 8300000, guid: e53a5d8793b496344a3100d535e09685, type: 3}
+    zoneEnd: {fileID: 8300000, guid: 4e6717cd39ff12e4aadf11f180822aa0, type: 3}
     raise: {fileID: 8300000, guid: 944fc21edac9d7b47b9c38f0c6ae4671, type: 3}
     hum: {fileID: 8300000, guid: e53a5d8793b496344a3100d535e09685, type: 3}
     struck: {fileID: 8300000, guid: 0594f86f76c8df14caf73629192aab26, type: 3}

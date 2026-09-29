@@ -185,8 +185,15 @@ namespace MageCast.Gestures
                 main.scalingMode = ParticleSystemScalingMode.Hierarchy;
             }
 
-            foreach (AudioSource a in go.GetComponentsInChildren<AudioSource>(true)) MakeSpatial(a);
+            foreach (AudioSource a in go.GetComponentsInChildren<AudioSource>(true))
+            {
+                MakeSpatial(a);
+                a.volume *= Volume;
+            }
         }
+
+        /// <summary>How loud spells are, from the settings (see GameSettings.SpellVolume).</summary>
+        public static float Volume { get { return GameSettings.SpellVolume; } }
 
         public static void MakeSpatial(AudioSource a)
         {
@@ -224,7 +231,7 @@ namespace MageCast.Gestures
             AudioSource a = go.AddComponent<AudioSource>();
             MakeSpatial(a);
             a.clip = clip;
-            a.volume = volume;
+            a.volume = volume * Volume;
             a.Play();
             float length = clip.length;
             if (longest > 0f && longest < length)

@@ -347,6 +347,7 @@ namespace MageCast
         public void SendLaunch(float upSpeed) { if (IsServer) LaunchClientRpc(upSpeed, ToOwner()); }
         public void SendInterrupt() { if (IsServer) InterruptClientRpc(ToOwner()); }
         public void SendShock() { if (IsServer) ShockClientRpc(ToOwner()); }
+        public void SendStagger() { if (IsServer) StaggerClientRpc(ToOwner()); }
         public void SendToss(Vector3 along, float upSpeed) { if (IsServer) TossClientRpc(along, upSpeed, ToOwner()); }
         public void SendSlide(Vector3 push) { if (IsServer) SlideClientRpc(push, ToOwner()); }
 
@@ -367,6 +368,9 @@ namespace MageCast
 
         [ClientRpc]
         void ShockClientRpc(ClientRpcParams p = default) { if (IsOwner) caster.Shock(); }
+
+        [ClientRpc]
+        void StaggerClientRpc(ClientRpcParams p = default) { if (IsOwner) caster.Staggered(); }
 
         [ClientRpc]
         void TossClientRpc(Vector3 along, float upSpeed, ClientRpcParams p = default) { if (IsOwner) motor.Toss(along, upSpeed); }

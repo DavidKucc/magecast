@@ -28,6 +28,9 @@ namespace MageCast.Gestures
         /// <summary>Precision a tier III is left with when it falls to II -- just under the III line.</summary>
         public const float FallenPrecision = 0.84f;
 
+        /// <summary>Precision a tier II is left with when a hit knocks it to I -- just under the II line.</summary>
+        public const float KnockedPrecision = 0.64f;
+
         // fire
         public const float BurnPerSecond = 4f;
         public const float BurnSeconds = 3f;

@@ -65,6 +65,8 @@ namespace MageCast
         void OnGUI()
         {
             Styles();
+            // the help covers the menu and takes its clicks, so nothing underneath is drawn meanwhile
+            if (HelpScreen.Draw()) return;
             BuildInfo.DrawCorner();
             NetSession session = NetSession.Instance;
             bool busy = session == null || session.Busy;
@@ -98,8 +100,10 @@ namespace MageCast
             if (GUI.Button(new Rect(x + w * 0.62f, y, w * 0.38f, h), "Join", button)) session.JoinOnline(code);
             y += h + 22f;
 
-            if (GUI.Button(new Rect(x, y, w, 34f), showSettings ? "hide settings" : "Settings", smallButton))
+            if (GUI.Button(new Rect(x, y, w * 0.48f, 34f), showSettings ? "hide settings" : "Settings", smallButton))
                 showSettings = !showSettings;
+            if (GUI.Button(new Rect(x + w * 0.52f, y, w * 0.48f, 34f), "How to play", smallButton))
+                HelpScreen.Open = true;
             y += 44f;
             if (showSettings) y = GameSettings.Draw(x, y, w);
 

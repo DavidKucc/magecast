@@ -346,6 +346,10 @@ namespace MageCast.Gestures
 
             if (motor != null)
             {
+                // a direct hit costs whatever they hold a tier
+                GestureCaster struck = motor.GetComponent<GestureCaster>();
+                if (struck != null) struck.Staggered();
+
                 if (knockback > 0f)
                     // Along the flight path with a bit of lift, so it reads as being blown off your feet
                     // rather than shunted sideways.

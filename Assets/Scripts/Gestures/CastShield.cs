@@ -53,6 +53,9 @@ namespace MageCast.Gestures
         /// <summary>How long it takes to rise out of the floor.</summary>
         const float RiseTime = 0.35f;
 
+        /// <summary>The AoE pack's bursts wind up this long before their bang.</summary>
+        const float BurstLeadIn = 0.5f;
+
         // the tier III dome: a sphere around its caster, half in the floor, following them
         bool isDome;
         Transform follows;
@@ -157,7 +160,22 @@ namespace MageCast.Gestures
             Mesh mesh = GetComponent<MeshFilter>().sharedMesh;
             domeVertices = mesh.vertices;
             domeUvs = mesh.uv;
+
+            // a burst of light as it closes over you, and a glowing ring on the floor under it that
+            // goes where you go
+            Vector3 feet = follows.position;
+            if (fx != null && fx.special != null)
+                SpellFx.PlayBurst(fx.special, feet, fx.specialScale * radius / 3f * 1.2f, fx.specialLeadIn);
+            if (fx != null && fx.zone != null)
+            {
+                var reach = new float[SpellZone.Spokes];
+                for (int i = 0; i < reach.Length; i++) reach[i] = radius;
+                floorRing = ZoneFx.Play(fx, feet, radius, SpellTiers.DomeSeconds, reach);
+                if (floorRing != null) floorRing.transform.SetParent(follows, true);
+            }
         }
+
+        ZoneFx floorRing;
 
         void BuildWall(float width, float height, Color c)
         {
@@ -180,6 +198,11 @@ namespace MageCast.Gestures
             wall.SetFloat("_Rise", 0f);
             wall.SetVectorArray("_Hits", hits);
             r.material = wall;
+
+            // the light burst along its foot as it goes up
+            if (fx != null && fx.special != null)
+                SpellFx.PlayBurst(fx.special, transform.position - Vector3.up * (height * 0.5f),
+                                  fx.specialScale * width * 0.3f, fx.specialLeadIn);
         }
 
         void Sounds()
@@ -189,13 +212,14 @@ namespace MageCast.Gestures
             if (fx != null)
             {
                 SpellFx.OneShot(fx.raise, middle, 0.9f);
-                if (fx.hum != null)
+                // the dome's floor ring brings its own loop; a wall hums
+                if (fx.hum != null && !isDome)
                 {
                     hum = gameObject.AddComponent<AudioSource>();
                     SpellFx.MakeSpatial(hum);
                     hum.clip = fx.hum;
                     hum.loop = true;
-                    hum.volume = HumVolume;
+                    hum.volume = HumVolume * SpellFx.Volume;
                     hum.Play();
                 }
             }
@@ -356,8 +380,10 @@ namespace MageCast.Gestures
             // shattered: the wall flies apart into pieces of itself, with a flash and the sound of it
             if (wall != null) Shatter();
             if (fx != null && fx.impact != null)
-                SpellFx.Play(fx.impact, transform.position, transform.rotation, fx.impactScale * transform.localScale.x,
-                             null, false);
+                SpellFx.PlayBurst(fx.impact,
+                                  isDome && follows != null ? follows.position
+                                                            : transform.position - Vector3.up * (transform.localScale.y * 0.5f),
+                                  fx.impactScale * transform.localScale.x, BurstLeadIn);
             else
                 Projectile.FlashAt(transform.position, colour, 2.4f, 2.2f);
             if (fx != null) SpellFx.OneShot(fx.shatter, transform.position, 1f);
@@ -367,6 +393,7 @@ namespace MageCast.Gestures
         void OnDestroy()
         {
             if (wall != null) Destroy(wall);
+            if (floorRing != null && remaining > 0.3f) floorRing.Fade();
             CastShield current;
             if (byOwner.TryGetValue(owner, out current) && current == this) byOwner.Remove(owner);
         }
@@ -403,7 +430,7 @@ namespace MageCast.Gestures
             // can see one more fireball will do it, and the caster knows when to move.
             float t = Mathf.Min(remaining / Mathf.Max(0.01f, total), DurabilityFraction);
 
-            if (hum != null) hum.volume = HumVolume * Mathf.Clamp01(remaining / 0.5f);
+            if (hum != null) hum.volume = HumVolume * SpellFx.Volume * Mathf.Clamp01(remaining / 0.5f);
             if (wall != null)
             {
                 wall.SetFloat("_Strength", t);

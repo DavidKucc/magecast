@@ -47,6 +47,15 @@ namespace MageCast
         {
             bool locked = WebPointer.IsLocked;
 
+            // Esc in the help goes back to the menu, not out of it
+            if (HelpScreen.Open)
+            {
+                if (Input.GetKeyDown(KeyCode.Escape)) HelpScreen.Open = false;
+                if (!GameInput.MenuOpen) HelpScreen.Open = false;
+                wasLocked = locked;
+                return;
+            }
+
             if (NetSession.IsWeb)
             {
                 // In a browser, Esc belongs to the browser: it frees the mouse, and the game may or may
@@ -95,6 +104,7 @@ namespace MageCast
             TopBar(session, nm);
             KillFeed();
             DeathOverlay();
+            if (GameInput.MenuOpen && HelpScreen.Draw()) return;
             if (GameInput.MenuOpen) { Menu(session, nm); BuildInfo.DrawCorner(); }
             else ClickToPlay();
         }
@@ -211,8 +221,11 @@ namespace MageCast
             if (GUI.Button(new Rect(x, y, w, h), "Resume", button)) GameInput.MenuOpen = false;
             y += h + 10f;
 
-            // settings live in the pause menu too, so sensitivity can be tuned without leaving a game
-            Box(new Rect(x - 10f, y - 4f, w + 20f, 104f));
+            if (GUI.Button(new Rect(x, y, w, h), "How to play", button)) HelpScreen.Open = true;
+            y += h + 10f;
+
+            // settings live in the pause menu too, so they can be tuned without leaving a game
+            Box(new Rect(x - 10f, y - 4f, w + 20f, GameSettings.Height));
             y = GameSettings.Draw(x, y, w) + 8f;
 
             if (session != null && !string.IsNullOrEmpty(session.JoinCode) && session.Current == NetSession.Mode.Host)

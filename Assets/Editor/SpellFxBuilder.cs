@@ -75,9 +75,14 @@ namespace MageCast.EditorTools
             // sounds and, for breaking, the ice hit's shards turned the barrier's gold.
             SpellFx.Entry wall = fx.entries.Find(x => x.spell == "BARRIER");
             if (wall == null) { wall = new SpellFx.Entry { spell = "BARRIER" }; fx.entries.Add(wall); }
-            string shards = Recolour(Magic + "Ice/VFX_Ice_Magic_Hit.prefab", BarrierHue, BarrierSaturation, null);
+            // breaking: the AoE pack's crystal burst, turned gold -- shards thrown up from where it stood
+            string shards = Recolour(Area + "VFX/Crystal/Particles/VFX_Crystal_Burst_01.prefab", BarrierHue, BarrierSaturation, null);
             wall.impact = AssetDatabase.LoadAssetAtPath<GameObject>(shards ?? "");
-            wall.impactScale = 0.16f;   // a flash behind the shards, not a blinding one
+            wall.impactScale = 0.3f;    // times the wall's width
+            // going up: the golden light burst, a dome of light with rays
+            wall.special = AssetDatabase.LoadAssetAtPath<GameObject>(Area + "VFX/Light/Particles/VFX_Light_Burst_01.prefab");
+            wall.specialScale = 0.75f;
+            wall.specialLeadIn = 0.5f;
             const string Anime = "Assets/Vefects/Anime Stylized VFX/Sounds/WAV/";
             wall.raise = AssetDatabase.LoadAssetAtPath<AudioClip>(Anime + "SFX_Heal_Cast.wav");        // a shimmer with its attack up front
             wall.hum = AreaSound("Light", "Area_Loop_01");                                            // low, steady
@@ -89,6 +94,7 @@ namespace MageCast.EditorTools
             SetZone(fx, "FIRE", "Fire");
             SetZone(fx, "ICE", "Ice");
             SetZone(fx, "AIR", "Air");
+            SetZone(fx, "BARRIER", "Light");     // the glowing ring on the floor under the tier III dome
 
             // Tier effects (see SpellTiers). The AoE bursts wind up for half a second before their bang;
             // PlayBurst drops that, and their sounds are trimmed to start at the bang the same way.
@@ -291,9 +297,11 @@ namespace MageCast.EditorTools
                 var type = shader.GetPropertyType(i);
                 if (type == UnityEngine.Rendering.ShaderPropertyType.Color)
                     copy.SetColor(name, Shift(m.GetColor(name), hue, saturation));
-                // Only the main picture. The other texture slots (distortion, cutout, noise) pack data into
+                // Only the pictures that carry colour: the main one, and the colour ramp (LUT) the AoE pack
+                // colours its effects through. The other slots (distortion, cutout, noise) pack data into
                 // their channels, and "recolouring" those would scramble what they mean.
-                else if (type == UnityEngine.Rendering.ShaderPropertyType.Texture && (name == "_Texture" || name == "_MainTex"))
+                else if (type == UnityEngine.Rendering.ShaderPropertyType.Texture
+                         && (name == "_Texture" || name == "_MainTex" || name == "_MainTexture" || name == "_LUT"))
                 {
                     Texture2D tex = m.GetTexture(name) as Texture2D;
                     Texture2D shifted = RecolourTexture(tex, hue, saturation);

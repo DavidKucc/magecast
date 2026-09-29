@@ -95,6 +95,11 @@ Tier mění, **co kouzlo dělá**, ne jen kolik ubere — poškození samo se s 
 - **Tier III v ruce vydrží 4 s**, pak spadne na tier II (proužek pod názvem ukazuje, kolik zbývá). Jinak
   by se vyplatilo kreslit v klidu za krytem, dokud nepadne III, a s ním chodit. Tier II vydrží napořád.
 - Tier je **vidět nad hlavou** — „FIRE III“; když spadne, objeví se „FIRE II“.
+- **Zásah sráží tier kouzla v ruce.** Když tě cokoli trefí přímým zásahem, kouzlo, které držíš, klesne o
+  tier; kouzlo s tierem I zmizí (LOST). Stání v ploše ani hoření se nepočítá.
+
+V menu je **„How to play“** — ovládání, pravidla a všechna kouzla s runami a tiery. V nastavení je
+hlasitost celé hry a zvlášť hlasitost kouzel (výchozí 70 %).
 
 V pravém horním rohu je **legenda** se všemi gesty (`F6` ji schová). Kreslí skutečné šablony
 rozpoznávače, ne ručně dělané ikonky, aby nikdy nemohla ukazovat něco jiného, než co hra čeká.

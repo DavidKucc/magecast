@@ -274,7 +274,7 @@ namespace MageCast.Gestures
                 if (loop == null) { loop = gameObject.AddComponent<AudioSource>(); SpellFx.MakeSpatial(loop); }
                 loop.clip = e.zoneLoop;
                 loop.loop = true;
-                loop.volume = LoopVolume;
+                loop.volume = LoopVolume * SpellFx.Volume;
                 loop.Play();
             }
             endClip = e.zoneEnd;
@@ -313,7 +313,7 @@ namespace MageCast.Gestures
                 // down with the patch's own dimming, gone as it goes
                 float left = lifetime - 0.2f - age;
                 if (fading) loop.volume = Mathf.MoveTowards(loop.volume, 0f, Time.deltaTime * 3f);
-                else if (left < EndLead) loop.volume = LoopVolume * Mathf.Clamp01(left / EndLead);
+                else if (left < EndLead) loop.volume = LoopVolume * SpellFx.Volume * Mathf.Clamp01(left / EndLead);
                 if (loop.volume <= 0.001f) loop.Stop();
             }
             if (!fading && !endPlayed && endClip != null && age >= lifetime - EndLead)

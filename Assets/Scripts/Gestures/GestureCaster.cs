@@ -612,6 +612,34 @@ namespace MageCast.Gestures
         }
 
         /// <summary>
+        /// Hit squarely while holding a spell: it drops a tier, and a tier I is knocked out of the hand
+        /// altogether. Holding a spell is not safe -- getting hit costs you what you drew. Only direct
+        /// hits count; standing in a patch or burning does not.
+        /// </summary>
+        public void Staggered()
+        {
+            if (Networked && !net.IsOwner) { net.SendStagger(); return; }
+            if (!holding || heldSpell == null) return;
+
+            int tier = SpellTiers.Of(heldQuality);
+            byte index = IndexOf(heldSpell);
+            if (tier <= 1)
+            {
+                ClearHeld();
+                Headline("LOST", FailColour, 1.2f);
+                WorldPopups.Word(transform, "LOST", FailColour);
+                if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Interrupted, index);
+                return;
+            }
+
+            heldQuality = tier >= 3 ? CastQuality.Clean : CastQuality.Weak;
+            heldPrecision = Mathf.Min(heldPrecision, tier >= 3 ? SpellTiers.FallenPrecision : SpellTiers.KnockedPrecision);
+            AnnounceCreated(index, tier - 1);
+            if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Held, index, (byte)(tier - 1));
+            Announce(heldSpell.displayName + " knocked down to tier " + SpellTiers.Roman(tier - 1));
+        }
+
+        /// <summary>
         /// Lightning III: the shock takes the glyph out of your hand -- one being drawn, or one held
         /// ready. On somebody else's player it is passed on to the machine that owns their hands.
         /// </summary>
