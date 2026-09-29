@@ -84,6 +84,7 @@ namespace MageCast.Gestures
                 case GroundEffect.Ice: return ByName("ICE");
                 case GroundEffect.Updraft: return ByName("AIR");
                 case GroundEffect.Water: return ByName("WATER");
+                case GroundEffect.Shock: return ByName("LIGHTNING");
             }
             return null;
         }

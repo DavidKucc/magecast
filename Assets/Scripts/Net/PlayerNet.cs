@@ -304,6 +304,25 @@ namespace MageCast
             if (fanned) z.MarkFanned();
         }
 
+        /// <summary>
+        /// Server: air blew one of the fire patches away as a wave. Everyone takes the patch away and runs
+        /// their own copy of the wave -- to look at; only the server's burns and shoves.
+        /// </summary>
+        public void BroadcastFireWave(Vector3 fireCentre, Vector3 from, Vector3 wind, float burnPerSecond)
+        {
+            if (!IsServer) return;
+            FireWaveClientRpc(fireCentre, from, wind, burnPerSecond);
+        }
+
+        [ClientRpc]
+        void FireWaveClientRpc(Vector3 fireCentre, Vector3 from, Vector3 wind, float burnPerSecond)
+        {
+            if (IsServer) return;
+            SpellZone fire = SpellZone.Find(fireCentre, GroundEffect.Burn);
+            if (fire != null) fire.Remove();
+            FireWave.Spawn(from, wind, burnPerSecond, Health.NoAttacker, false);
+        }
+
         /// <summary>Server: this player's lightning ran through an ice patch. Everyone sees it happen.</summary>
         public void BroadcastCharge(Vector3 iceCentre, Vector3 struck, Vector3[] victims)
         {
@@ -346,7 +365,6 @@ namespace MageCast
         public void SendSlow(float multiplier, float duration) { if (IsServer) SlowClientRpc(multiplier, duration, ToOwner()); }
         public void SendLaunch(float upSpeed) { if (IsServer) LaunchClientRpc(upSpeed, ToOwner()); }
         public void SendInterrupt() { if (IsServer) InterruptClientRpc(ToOwner()); }
-        public void SendShock() { if (IsServer) ShockClientRpc(ToOwner()); }
         public void SendStagger() { if (IsServer) StaggerClientRpc(ToOwner()); }
         public void SendToss(Vector3 along, float upSpeed) { if (IsServer) TossClientRpc(along, upSpeed, ToOwner()); }
         public void SendSlide(Vector3 push) { if (IsServer) SlideClientRpc(push, ToOwner()); }
@@ -365,9 +383,6 @@ namespace MageCast
 
         [ClientRpc]
         void InterruptClientRpc(ClientRpcParams p = default) { if (IsOwner) caster.Interrupt(); }
-
-        [ClientRpc]
-        void ShockClientRpc(ClientRpcParams p = default) { if (IsOwner) caster.Shock(); }
 
         [ClientRpc]
         void StaggerClientRpc(ClientRpcParams p = default) { if (IsOwner) caster.Staggered(); }

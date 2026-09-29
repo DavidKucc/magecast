@@ -66,9 +66,9 @@ MonoBehaviour:
     struck: {fileID: 0}
     shatter: {fileID: 0}
   - spell: LIGHTNING
-    cast: {fileID: 1658496247936348207, guid: c91ad56760191e4469e6c4eb21c324f2, type: 3}
-    projectile: {fileID: 1319398647745027786, guid: 34d1d6fc527ecc54f91780426a420a2b, type: 3}
-    impact: {fileID: 6589385767113089740, guid: b13a5871319359b4e888a033f7849a21, type: 3}
+    cast: {fileID: 1658496247936348207, guid: 112492713e5dc7e4c942c0f4fea753d3, type: 3}
+    projectile: {fileID: 1319398647745027786, guid: 5871ca9177b82314abc6725d2974a557, type: 3}
+    impact: {fileID: 6589385767113089740, guid: d7df035d8a5319749a430b8621c9ca0b, type: 3}
     projectileScale: 2
     castScale: 0.22
     impactScale: 0.5
@@ -81,20 +81,20 @@ MonoBehaviour:
     specialLeadIn: 0
     specialSound: {fileID: 0}
     statusSound: {fileID: 0}
-    zone: {fileID: 0}
+    zone: {fileID: 4748681987041982144, guid: a3af12de822874945aff3cbed4e1faa4, type: 3}
     zoneAuthoredRadius: 3
     zoneLeadIn: 2
     zoneStart: {fileID: 0}
-    zoneLoop: {fileID: 0}
-    zoneEnd: {fileID: 0}
+    zoneLoop: {fileID: 8300000, guid: 6005bb0f603a2754fa30d9c6d9aea52a, type: 3}
+    zoneEnd: {fileID: 8300000, guid: f91153bb6aec64c4b815d1da7d8d4070, type: 3}
     raise: {fileID: 0}
     hum: {fileID: 0}
     struck: {fileID: 0}
     shatter: {fileID: 0}
   - spell: AIR
-    cast: {fileID: 1708297399293405800, guid: 34277ff215b06c842b84ff1ee9281af9, type: 3}
-    projectile: {fileID: 6475832785224247900, guid: 7c3dc957f6e73fa4fbcd265688402ca9, type: 3}
-    impact: {fileID: 3002614074438278360, guid: ddfb4831f9fd1a84b80acdb9820983ca, type: 3}
+    cast: {fileID: 1708297399293405800, guid: e0bc616983306df4787db3aee11b1d64, type: 3}
+    projectile: {fileID: 6475832785224247900, guid: 112adf10422ebf5449472600acfcc33a, type: 3}
+    impact: {fileID: 3002614074438278360, guid: a7b3fb2e8ed923141aaf12992f23f869, type: 3}
     projectileScale: 0.8
     castScale: 0.22
     impactScale: 0.6
@@ -120,7 +120,7 @@ MonoBehaviour:
   - spell: BARRIER
     cast: {fileID: 0}
     projectile: {fileID: 0}
-    impact: {fileID: 4748681987041982144, guid: 0e3931ea89093814c8599a7cd9325157, type: 3}
+    impact: {fileID: 4748681987041982144, guid: 51fbebd71137dd3408b3bb2dccd6f833, type: 3}
     projectileScale: 1
     castScale: 1
     impactScale: 0.3

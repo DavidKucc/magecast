@@ -370,12 +370,6 @@ namespace MageCast.Gestures
                     if (caster != null) caster.Interrupt();
                 }
 
-                // lightning III: the shock knocks a held spell out of the hand, and a glyph with it
-                if (IsLightning && tier >= 3)
-                {
-                    GestureCaster caster = motor.GetComponent<GestureCaster>();
-                    if (caster != null) caster.Shock();
-                }
             }
         }
 
@@ -410,8 +404,29 @@ namespace MageCast.Gestures
                     if (authoritative) next.TakeDamage(damage * SpellTiers.ChainShare, attacker);
                 }
             }
-            if (IsLightning && tier >= 3)
-                WorldPopups.Word(hp.transform, "SHOCKED", colour);
+            // lightning III: the shock patch appears right under whoever it hit
+            if (IsLightning && tier >= 3 && authoritative)
+            {
+                Collider body = hp.GetComponentInChildren<Collider>();
+                Vector3 feet = body != null ? new Vector3(hp.transform.position.x, body.bounds.min.y, hp.transform.position.z)
+                                            : hp.transform.position;
+                LayShock(feet);
+            }
+        }
+
+        static readonly Color ShockColour = new Color(1f, 0.9f, 0.35f);
+
+        /// <summary>Lightning's patch: stings, and nobody standing in it can draw. Server only; sent to all.</summary>
+        void LayShock(Vector3 at)
+        {
+            if (!authoritative) return;
+            float strength = SpellTiers.ShockPerSecond * power;
+            float r = SpellTiers.ShockRadius * sizeScale;
+            SpellZone zone = SpellZone.Spawn(at, GroundEffect.Shock, r, SpellTiers.ShockSeconds, strength, ShockColour,
+                                             true, attacker, attacker);
+            PlayerNet caster = owner != null ? owner.GetComponent<PlayerNet>() : null;
+            if (caster != null && caster.IsSpawned)
+                caster.BroadcastZone(zone.transform.position, GroundEffect.Shock, r, SpellTiers.ShockSeconds, strength, ShockColour);
         }
 
         Health NearestOther(Health from, Vector3 at, float reach)
@@ -588,16 +603,16 @@ namespace MageCast.Gestures
                     SpellZone fire = SpellZone.At(at, GroundEffect.Burn, radius);
                     if (fire != null)
                     {
-                        if (!fire.Fanned)
-                        {
-                            // Half again as wide and pushed the way the wind blew, so it still covers
-                            // most of where it was and now reaches further. It burns a little longer for
-                            // the stirring. Still the owner's fire -- the air only moved it.
-                            Vector3 moved = fire.transform.position + wind * fire.Radius * 0.6f;
-                            ReplaceZone(caster, fire, GroundEffect.Burn, moved, fire.Radius * 1.5f,
-                                      Mathf.Max(fire.Remaining, 3f), fire.Strength, fire.Colour, fire.Owner, true,
-                                      fire.Attacker);
-                        }
+                        // Blown away: the patch is gone and a wall of flame rolls on the way the wind
+                        // blew, setting everyone it passes on fire (see FireWave). Starts at the
+                        // patch's near edge, so it sweeps through where the fire was.
+                        Vector3 centre = fire.transform.position;
+                        Vector3 from = centre - wind * fire.Radius * 0.5f;
+                        float burn = fire.Strength;
+                        ulong burnsFor = fire.Attacker;
+                        fire.Remove();
+                        FireWave.Spawn(from, wind, burn, burnsFor, true);
+                        if (caster != null && caster.IsSpawned) caster.BroadcastFireWave(centre, from, wind, burn);
                         Flash(at, 1.4f, 1.6f);
                         return true;
                     }
@@ -642,6 +657,15 @@ namespace MageCast.Gestures
             // Lightning grounds out -- unless the ground is ice or water, which carries it to everyone on it.
             if (spell != null && spell.chargeDamage > 0f && DischargeIceAt(at, at))
             {
+                End();
+                return true;
+            }
+
+            // from tier II it leaves its patch where it struck the floor
+            if (IsLightning && tier >= 2)
+            {
+                Flash(at, 1f, 2f);
+                LayShock(at);
                 End();
                 return true;
             }

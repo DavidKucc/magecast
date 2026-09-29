@@ -85,11 +85,11 @@ Tier mění, **co kouzlo dělá**, ne jen kolik ubere — poškození samo se s 
 |---|---|---|---|
 | **oheň** | zásah | + hoření na zasaženém (4/s na 3 s), plocha, odraz od zdi | + výbuch: všichni do 2,5 m kromě zasaženého dostanou polovinu zásahu (i autor), bariéru opotřebí 1,5× |
 | **led** | zásah | + zpomalení, plocha | + zamrznutí na 0,6 s: nehýbe se ani neskočí, kreslit může |
-| **blesk** | zásah | + přeskočí na nejbližší jiný cíl do 6 m za polovinu | + šok: vyrazí z ruky držené kouzlo (a zruší rozkreslené) |
-| **vzduch** | odhoz | + updraft plocha, v ploše rozdmýchá oheň / rozklouže led | + v jakékoli ploše **vzduchová bomba**: všechny v ploše a do 1,5 m od ní jednou hodí do jejího středu (i autora) |
+| **blesk** | zásah | + přeskočí na nejbližší jiný cíl do 6 m za polovinu; do země nechá **elektrickou plochu** (2,2 m, 4 s, 4/s, kdo v ní stojí, nemůže kreslit) | + elektrická plocha se objeví přímo pod zasaženým |
+| **vzduch** | odhoz | + updraft plocha; do ohně **ohnivá vlna** (oheň zmizí a 8 m po větru se převalí stěna plamenů, zapálí a odhodí každého v cestě, zastaví ji zeď); na ledu rozklouže lidi | + v jakékoli ploše **vzduchová bomba**: všechny v ploše a do 1,5 m od ní jednou hodí do jejího středu (i autora) |
 | **bariéra** | stěna | větší stěna (1,35× šířka), víc výdrže | **kopule** kolem tebe na 4,5 s, chodí s tebou, tvoje kouzla propouští, cizí zastaví |
 
-- **Tier I je holé kouzlo**: žádná plocha, žádný odraz, žádná kombinace (voda, rozdmýchání...). Blesk do
+- **Tier I je holé kouzlo**: žádná plocha, žádný odraz, žádná kombinace (voda, ohnivá vlna...). Blesk do
   ledu se vybije na každém tieru — je to jeho hlavní použití.
 - **Vzduch přeruší kreslení** při každém zásahu, na každém tieru.
 - **Tier III v ruce vydrží 4 s**, pak spadne na tier II (proužek pod názvem ukazuje, kolik zbývá). Jinak
@@ -143,7 +143,7 @@ Ostatní kombinace — vždy jedno kouzlo leží, druhé do něj přiletí:
 | voda | oheň | oheň zhasne, voda zůstane |
 | voda | led | voda **zase zmrzne** na led |
 | voda | blesk | nabije se jako led |
-| oheň | vzduch | oheň se **rozfouká**: 1,5× širší a posunutý po větru, hoří aspoň 3 s. **Jen jednou** — pak je zafixovaný |
+| oheň | vzduch | **ohnivá vlna**: plocha zmizí a 8 m po větru se převalí stěna plamenů — zapálí a odhodí každého v cestě, zastaví ji zeď |
 | led | vzduch | kdo stojí na ledu, **odletí po něm** ve směru větru, až za jeho kraj |
 
 Voda vzniká jen takhle, žádná runa ji nedělá. Kombinace spočítá hostitel a ostatním pošle, jak teď

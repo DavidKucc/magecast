@@ -11,8 +11,10 @@ namespace MageCast.Gestures
     ///            I            II                                   III
     ///   fire     damage       + burning, patch, wall bounce        + explosion around the hit
     ///   ice      damage       + slow, patch                        + frozen in place (can still draw)
-    ///   light.   damage       + jumps to the nearest other target  + shock: knocks a held spell away
-    ///   air      shove        + updraft patch, combines in patches + air bomb in a patch: pulls in
+    ///   light.   damage       + jumps to the nearest other target, + the patch under whoever it hit
+    ///                           into the floor: a shock patch
+    ///   air      shove        + updraft patch; blows fire away     + air bomb in a patch: pulls in
+    ///                           as a wave, blows people over ice
     ///   barrier  wall         bigger, tougher wall                 dome around you, your spells pass
     ///
     /// Every air hit interrupts drawing, at every tier.
@@ -44,6 +46,9 @@ namespace MageCast.Gestures
         // lightning
         public const float ChainRange = 6f;
         public const float ChainShare = 0.5f;
+        public const float ShockRadius = 2.2f;
+        public const float ShockSeconds = 4f;
+        public const float ShockPerSecond = 4f;
 
         // air
         public const float BombReachBeyondPatch = 1.5f;

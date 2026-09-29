@@ -413,6 +413,17 @@ namespace MageCast.Gestures
                             t.Motor.ApplySlippery(strength, TickInterval + 0.15f);
                         break;
 
+                    case GroundEffect.Shock:
+                        // Stings, and takes the glyph out of the hand of anyone drawing in it: to cast,
+                        // step out first. Standing in it, not jumping over it.
+                        if (authoritative && t.Health != null && t.Touching) t.Health.TakeDamage(strength * TickInterval, attacker);
+                        if (t.Motor != null && t.Motor.IsLocallyControlled && t.Touching)
+                        {
+                            GestureCaster hands = t.Motor.GetComponent<GestureCaster>();
+                            if (hands != null) hands.Interrupt();
+                        }
+                        break;
+
                     case GroundEffect.Updraft:
                         // Once per person per patch. Without that, a two-second updraft is a trampoline,
                         // and "you walked into it" turns into "you cannot get out of it".

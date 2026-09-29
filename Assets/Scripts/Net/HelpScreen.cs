@@ -43,13 +43,15 @@ namespace MageCast
                 Colour = new Color(1f, 0.9f, 0.35f),
                 Basics = "12 poškození, 44 m/s - skoro se nedá uhnout. Do ledu nebo vody vybije všechny, kdo na ní stojí.",
                 I = "zásah",
-                II = "+ přeskočí na nejbližší jiný cíl do " + SpellTiers.ChainRange + " m za polovinu",
-                III = "+ šok: vyrazí zasaženému z ruky držené kouzlo" },
+                II = "+ přeskočí na nejbližší jiný cíl do " + SpellTiers.ChainRange + " m za polovinu; do země nechá elektrickou plochu " +
+                     "(" + SpellTiers.ShockPerSecond + "/s, kdo v ní stojí, nemůže kreslit)",
+                III = "+ elektrická plocha se objeví přímo pod zasaženým" },
             new SpellInfo { Rune = GestureTemplates.Ehwaz, Name = "AIR", Czech = "Ehwaz (pohyb) - vzduch",
                 Colour = new Color(0.8f, 0.95f, 0.9f),
                 Basics = "Žádné poškození, nikdy. Odhodí a vždycky přeruší kreslení.",
                 I = "odhoz",
-                II = "+ updraft plocha, která vyhodí toho, kdo na ni vstoupí, a odkloní střely nahoru",
+                II = "+ updraft plocha (vyhodí toho, kdo na ni vstoupí, a odkloní střely nahoru); do ohně: sfoukne ho jako ohnivou vlnu, " +
+                     "která se 8 m převalí ve směru větru, zapálí a odhodí každého v cestě; na ledu rozklouže lidi",
                 III = "+ dopadne-li do jakékoli plochy: vzduchová bomba - všechny v ní a do " + SpellTiers.BombReachBeyondPatch + " m od ní hodí do jejího středu (i tebe)" },
             new SpellInfo { Rune = GestureTemplates.Uruz, Name = "BARRIER", Czech = "Uruz (síla) - bariéra",
                 Colour = new Color(1f, 0.85f, 0.4f),
@@ -90,13 +92,14 @@ namespace MageCast
             "Tvoje runa se kreslí nad tvou hlavou a jakmile kouzlo vznikne, objeví se nad tebou i jeho název s tierem " +
             "(FIRE III). Kreslení tě vystavuje - a soupeř to vidí.\n\n" +
             "<b>Plochy na zemi</b>\n" +
-            "Oheň, led a vzduch (od tieru II) nechávají na zemi plochu. Každý smí mít najednou dvě - třetí vezme tu nejstarší. " +
+            "Oheň, led, vzduch a blesk (od tieru II) nechávají na zemi plochu. Každý smí mít najednou dvě - třetí vezme tu nejstarší. " +
+            "V elektrické ploše (blesk) se nedá kreslit - runa se rozpadne. " +
             "Plochy působí na všechny, i na toho, kdo je udělal.\n\n" +
             "<b>Kombinace</b>\n" +
             "oheň do ledu / led do ohně - voda (vede blesk)\n" +
             "oheň do vody - uhasne,  led do vody - zamrzne\n" +
             "blesk do ledu nebo vody - zasáhne všechny, kdo na ní stojí\n" +
-            "vzduch II do ohně - rozdmýchá,  vzduch II na led - rozklouže lidi\n" +
+            "vzduch II do ohně - ohnivá vlna,  vzduch II na led - rozklouže lidi\n" +
             "vzduch III do plochy - vzduchová bomba\n" +
             "Updraft odkloní střely, které jím letí, nahoru.";
 

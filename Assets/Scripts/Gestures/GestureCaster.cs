@@ -26,7 +26,8 @@ namespace MageCast.Gestures
 
         // Appended, never inserted: Unity stores these as numbers in every serialized spell, and a new
         // value slipped in ahead of Updraft turned every air spell into water.
-        Water      // fire and ice together: harmless to walk in, but it carries lightning like ice does
+        Water,     // fire and ice together: harmless to walk in, but it carries lightning like ice does
+        Shock      // lightning's: stings, and nobody standing in it can draw -- the glyph falls apart
     }
 
     [System.Serializable]
@@ -637,24 +638,6 @@ namespace MageCast.Gestures
             AnnounceCreated(index, tier - 1);
             if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Held, index, (byte)(tier - 1));
             Announce(heldSpell.displayName + " knocked down to tier " + SpellTiers.Roman(tier - 1));
-        }
-
-        /// <summary>
-        /// Lightning III: the shock takes the glyph out of your hand -- one being drawn, or one held
-        /// ready. On somebody else's player it is passed on to the machine that owns their hands.
-        /// </summary>
-        public void Shock()
-        {
-            if (Networked && !net.IsOwner) { net.SendShock(); return; }
-            if (drawing) AbortDraw("SHOCKED", StrokeOutcome.Interrupted);
-            else if (holding)
-            {
-                Spell lost = heldSpell;
-                ClearHeld();
-                Headline("SHOCKED", FailColour, 1.2f);
-                WorldPopups.Word(transform, "SHOCKED", FailColour);
-                if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Interrupted, lost != null ? IndexOf(lost) : (byte)0);
-            }
         }
 
         /// <summary>

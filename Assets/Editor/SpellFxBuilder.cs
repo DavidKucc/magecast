@@ -65,7 +65,9 @@ namespace MageCast.EditorTools
             for (int i = 0; i < 3; i++)
                 gust[i] = Recolour(Magic + "Sound/VFX_Sound_Magic_" + parts[i] + ".prefab", AirHue, AirSaturation, gustSounds[i],
                                    // what makes it music rather than wind: the notes, the staff lines, the emblem
-                                   "PS_VFX_Notes", "PS_VFX_Rings", "PS_VFX_Flare_Black");
+                                   "PS_VFX_Notes", "PS_VFX_Rings", "PS_VFX_Flare_Black",
+                                   // and the solid flash sphere, which up close is just a blob
+                                   "PS_VFX_Flare_Sphere");
             Set(fx, "AIR", gust[0], gust[1], gust[2], projectileScale: 0.8f, castScale: 0.22f, impactScale: 0.6f,
                 castTurn: new Vector3(0f, -90f, 0f));
             fx.entries.Find(x => x.spell == "AIR").launch =
@@ -95,6 +97,10 @@ namespace MageCast.EditorTools
             SetZone(fx, "ICE", "Ice");
             SetZone(fx, "AIR", "Air");
             SetZone(fx, "BARRIER", "Light");     // the glowing ring on the floor under the tier III dome
+            SetZone(fx, "LIGHTNING", "Electric");
+            SpellFx.Entry lightningEntry = fx.entries.Find(x => x.spell == "LIGHTNING");
+            string yellowArea = Recolour(Area + "VFX/Electric/Particles/VFX_Electric_Area_01.prefab", LightningHue, LightningSaturation, null);
+            if (lightningEntry != null && yellowArea != null) lightningEntry.zone = AssetDatabase.LoadAssetAtPath<GameObject>(yellowArea);
 
             // Tier effects (see SpellTiers). The AoE bursts wind up for half a second before their bang;
             // PlayBurst drops that, and their sounds are trimmed to start at the bang the same way.
