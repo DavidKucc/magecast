@@ -22,6 +22,13 @@ MonoBehaviour:
     impactScale: 0.5
     castTurn: {x: 0, y: -90, z: 0}
     launch: {fileID: 0}
+    status: {fileID: 868468853075218060, guid: 28aa90600df2fd9479eb5ccbc39a3fc1, type: 3}
+    statusScale: 0.45
+    special: {fileID: 4748681987041982144, guid: 9e93e11de89037e46a2407d2ae653bb2, type: 3}
+    specialScale: 0.85
+    specialLeadIn: 0.5
+    specialSound: {fileID: 8300000, guid: 062ce74e35e131c4288933da216081d3, type: 3}
+    statusSound: {fileID: 8300000, guid: 4518b496fbddcc04f99197a24a8974b4, type: 3}
     zone: {fileID: 4748681987041982144, guid: dd5b5df89b4ca004ab1376a4cbbf6ee2, type: 3}
     zoneAuthoredRadius: 3
     zoneLeadIn: 2
@@ -41,6 +48,13 @@ MonoBehaviour:
     impactScale: 0.5
     castTurn: {x: 0, y: -90, z: 0}
     launch: {fileID: 0}
+    status: {fileID: 868468853075218060, guid: 14d6e10b8b21c6b40913fdf2d483185d, type: 3}
+    statusScale: 0.45
+    special: {fileID: 0}
+    specialScale: 1
+    specialLeadIn: 0
+    specialSound: {fileID: 0}
+    statusSound: {fileID: 8300000, guid: 15c4c05e917ae594d997d4d93fedea31, type: 3}
     zone: {fileID: 4748681987041982144, guid: e23e5aa08e555484593eec3ba5eede8e, type: 3}
     zoneAuthoredRadius: 3
     zoneLeadIn: 2
@@ -52,14 +66,21 @@ MonoBehaviour:
     struck: {fileID: 0}
     shatter: {fileID: 0}
   - spell: LIGHTNING
-    cast: {fileID: 1658496247936348207, guid: bb0165cb4d130fd45a8c73567bcecfcc, type: 3}
-    projectile: {fileID: 1319398647745027786, guid: 8a8df2508b25cb3489902aefd0f03cce, type: 3}
-    impact: {fileID: 6589385767113089740, guid: 3fc38d36e3d0d63499e0e4119034c2f4, type: 3}
+    cast: {fileID: 1658496247936348207, guid: 0d713fcb15324fd46be23262bd297ed9, type: 3}
+    projectile: {fileID: 1319398647745027786, guid: 5c2f1f6164c9ed34f8c9a5083af95d8c, type: 3}
+    impact: {fileID: 6589385767113089740, guid: 9d49cf9d2c9052a4cae1aae4f655d6ba, type: 3}
     projectileScale: 2
     castScale: 0.22
     impactScale: 0.5
     castTurn: {x: 0, y: -90, z: 0}
     launch: {fileID: 0}
+    status: {fileID: 0}
+    statusScale: 1
+    special: {fileID: 0}
+    specialScale: 1
+    specialLeadIn: 0
+    specialSound: {fileID: 0}
+    statusSound: {fileID: 0}
     zone: {fileID: 0}
     zoneAuthoredRadius: 3
     zoneLeadIn: 2
@@ -71,14 +92,21 @@ MonoBehaviour:
     struck: {fileID: 0}
     shatter: {fileID: 0}
   - spell: AIR
-    cast: {fileID: 1708297399293405800, guid: a30a6c832569d4946865460fefbb523d, type: 3}
-    projectile: {fileID: 6475832785224247900, guid: 408a400a3997ed04f991f9952b4acd09, type: 3}
-    impact: {fileID: 3002614074438278360, guid: a700cbab38d95db4f940232303efb205, type: 3}
+    cast: {fileID: 1708297399293405800, guid: a03e865ad8c708243974b2f1f5e83901, type: 3}
+    projectile: {fileID: 6475832785224247900, guid: 731453387afbf3e419cc42e5de4a4626, type: 3}
+    impact: {fileID: 3002614074438278360, guid: bd82f3c6a42b46e4380cc4b4906bbfe8, type: 3}
     projectileScale: 0.8
     castScale: 0.22
     impactScale: 0.6
     castTurn: {x: 0, y: -90, z: 0}
     launch: {fileID: 8300000, guid: fb276463bd6b0464ab1822cc7937587d, type: 3}
+    status: {fileID: 0}
+    statusScale: 1
+    special: {fileID: 4748681987041982144, guid: ba4b50191cd913444be00efbdb61b163, type: 3}
+    specialScale: 1
+    specialLeadIn: 0.5
+    specialSound: {fileID: 8300000, guid: aa8f29b8add636b439bd17342053db5c, type: 3}
+    statusSound: {fileID: 0}
     zone: {fileID: 4748681987041982144, guid: 17d553f8d4894f04aaeb705b46c348e7, type: 3}
     zoneAuthoredRadius: 3
     zoneLeadIn: 2
@@ -92,12 +120,19 @@ MonoBehaviour:
   - spell: BARRIER
     cast: {fileID: 0}
     projectile: {fileID: 0}
-    impact: {fileID: 5213359654510746434, guid: 6533ef44eace64848a4ef6926e5b82cb, type: 3}
+    impact: {fileID: 5213359654510746434, guid: 1a5e2577e07e8874384d286b14b639aa, type: 3}
     projectileScale: 1
     castScale: 1
     impactScale: 0.16
     castTurn: {x: 0, y: 0, z: 0}
     launch: {fileID: 0}
+    status: {fileID: 0}
+    statusScale: 1
+    special: {fileID: 0}
+    specialScale: 1
+    specialLeadIn: 0
+    specialSound: {fileID: 0}
+    statusSound: {fileID: 0}
     zone: {fileID: 0}
     zoneAuthoredRadius: 3
     zoneLeadIn: 2

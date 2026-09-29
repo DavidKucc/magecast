@@ -80,6 +80,9 @@ namespace MageCast
         // landing becomes frame-perfect and feels broken. 15 cm of headroom makes it land every time.
         [SerializeField] float jumpHeight = 1.35f;
         [SerializeField] float gravity = -22f;           // heavier than real gravity; 9.81 feels floaty
+
+        /// <summary>The fall rate as a positive number, for working out throws (see Toss).</summary>
+        public const float Gravity = 22f;
         [SerializeField] float coyoteTime = 0.12f;       // still jumpable just after walking off an edge
         [SerializeField] float jumpBuffer = 0.12f;       // pressing just before landing still counts
         /// <summary>
@@ -256,6 +259,25 @@ namespace MageCast
         }
 
         /// <summary>
+        /// Throws the body in an arc: up at <paramref name="upSpeed"/> and along at
+        /// <paramref name="along"/>, replacing its own run -- the air bomb pulling people into a patch.
+        /// In the air there is little control, so it lands where it was thrown.
+        /// </summary>
+        public void Toss(Vector3 along, float upSpeed)
+        {
+            if (!IsLocallyControlled) { if (net != null) net.SendToss(along, upSpeed); return; }
+            velocity.x = along.x;
+            velocity.z = along.z;
+            if (velocity.y < upSpeed) velocity.y = upSpeed;
+            external = Vector3.zero;
+            lastGroundedTime = -999f;
+            tossed = true;
+        }
+
+        /// <summary>In a throw from Toss: no steering until the feet are back on the ground.</summary>
+        bool tossed;
+
+        /// <summary>
         /// Puts the body somewhere else outright -- a respawn. The controller has to be off while the
         /// transform moves, or it snaps straight back to where it was on its next Move.
         /// </summary>
@@ -268,6 +290,7 @@ namespace MageCast
 
             velocity = Vector3.zero;
             external = Vector3.zero;
+            tossed = false;
             slowUntil = -99f;
             gripUntil = -99f;
         }
@@ -323,7 +346,14 @@ namespace MageCast
             Vector3 wanted = basis * shaped * ((sprinting ? runSpeed : jogSpeed) * paceOverAnimation
                                                * SpeedMultiplier * CurrentSlow);
 
-            if (IsGrounded)
+            // a throw ends when it comes down, not in the frame it leaves the ground
+            if (tossed && IsGrounded && velocity.y <= 0f) tossed = false;
+
+            if (tossed)
+            {
+                // thrown: the arc is the throw's, not the player's
+            }
+            else if (IsGrounded)
             {
                 Vector3 flat = new Vector3(velocity.x, 0f, velocity.z);
                 // speeding up (or turning) uses the acceleration, only letting go uses the braking
@@ -343,7 +373,8 @@ namespace MageCast
                 velocity.z = air.z;
             }
 
-            bool jumpReady = !JumpLocked
+            // frozen solid (an ice III): no running and no jumping out of it either
+            bool jumpReady = !JumpLocked && CurrentSlow > 0f
                              && Time.time - lastGroundedTime <= coyoteTime
                              && Time.time - lastJumpPressedTime <= jumpBuffer;
             if (jumpReady)

@@ -179,12 +179,10 @@ namespace MageCast.Gestures
         // "clean" number any more, because the tier is now read off precision rather than the other
         // way round and a third constant would only be able to disagree with it.
         //
-        // The floor is deliberately low. The trade being made is "you almost always get the spell you
-        // drew, and a scrappy one is nearly worthless" instead of "a scrappy one gives you nothing at
-        // all" -- firing blanks reads as the game refusing you, a feeble hit reads as your own fault.
-        // A sevenfold gap between worst and best is a strong enough reason to draw well.
-        [SerializeField] float weakPower = 0.25f;
-        [SerializeField] float perfectPower = 1.8f;
+        // Narrow on purpose: 0.8-1.2x. Drawing well is paid for by the tier -- what the spell DOES (see
+        // SpellTiers) -- and a wide damage range on top of that would pay the better drawer twice.
+        [SerializeField] float weakPower = 0.8f;
+        [SerializeField] float perfectPower = 1.2f;
 
         [Header("Precision axes -> spell properties")]
         [SerializeField, Range(0f, 1f)] float damageFromSteadiness = 0.5f;
@@ -294,6 +292,9 @@ namespace MageCast.Gestures
         /// <summary>The last stroke's lines, errors and precision, for the diagnostics line.</summary>
         string lastSegments = "";
 
+        /// <summary>When a held tier III falls to tier II. See SpellTiers.TopTierHold.</summary>
+        float heldTopTierUntil;
+
         // LMB went down with a spell in hand: a click sends it, a long hold drops it
         bool pressing;
         float pressedAt;
@@ -347,6 +348,7 @@ namespace MageCast.Gestures
             // release rather than on press, because only then is it known which of the two it was.
             if (holding)
             {
+                if (heldQuality == CastQuality.Perfect && Time.time >= heldTopTierUntil) FallToTierTwo();
                 if (Input.GetMouseButtonDown(castButton)) { pressing = true; pressedAt = Time.time; }
                 if (pressing && !Input.GetMouseButton(castButton))
                 {
@@ -564,9 +566,10 @@ namespace MageCast.Gestures
             motor.SprintLocked = true;    // loaded or fast, not both -- see the class comment
 
             if (crosshair != null) crosshair.SetTint(heldSpell.colour);
-            bool crit = quality == CastQuality.Perfect;
-            AnnounceCreated(IndexOf(heldSpell), crit);
-            if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Held, IndexOf(heldSpell), crit);
+            int tier = SpellTiers.Of(quality);
+            heldTopTierUntil = Time.time + SpellTiers.TopTierHold;
+            AnnounceCreated(IndexOf(heldSpell), tier);
+            if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Held, IndexOf(heldSpell), (byte)tier);
 
             if (segmentRecognition)
                 Announce(string.Format(System.Globalization.CultureInfo.InvariantCulture,
@@ -592,6 +595,38 @@ namespace MageCast.Gestures
             if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Sent, IndexOf(spell));
             Cast(spell, ResolveAim(), heldPrecision, heldQuality, heldMetrics);
             Headline(spell.displayName + "  SENT", spell.colour, 1.2f);
+        }
+
+        /// <summary>
+        /// A tier III kept in the hand too long settles to tier II -- the best spells belong to the moment
+        /// they were drawn in. Everyone is told, the same way they were told what it was.
+        /// </summary>
+        void FallToTierTwo()
+        {
+            heldQuality = CastQuality.Clean;
+            heldPrecision = Mathf.Min(heldPrecision, SpellTiers.FallenPrecision);
+            byte index = IndexOf(heldSpell);
+            AnnounceCreated(index, 2);
+            if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Held, index, 2);
+            Announce(heldSpell.displayName + " fell to tier II");
+        }
+
+        /// <summary>
+        /// Lightning III: the shock takes the glyph out of your hand -- one being drawn, or one held
+        /// ready. On somebody else's player it is passed on to the machine that owns their hands.
+        /// </summary>
+        public void Shock()
+        {
+            if (Networked && !net.IsOwner) { net.SendShock(); return; }
+            if (drawing) AbortDraw("SHOCKED", StrokeOutcome.Interrupted);
+            else if (holding)
+            {
+                Spell lost = heldSpell;
+                ClearHeld();
+                Headline("SHOCKED", FailColour, 1.2f);
+                WorldPopups.Word(transform, "SHOCKED", FailColour);
+                if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Interrupted, lost != null ? IndexOf(lost) : (byte)0);
+            }
         }
 
         /// <summary>
@@ -831,11 +866,13 @@ namespace MageCast.Gestures
         /// know about: from here there are 0.9 s to get behind something. Shown on every machine, the
         /// caster's own included; a crit gets an exclamation mark.
         /// </summary>
-        public void AnnounceCreated(byte index, bool crit)
+        /// <summary>The spell's name and tier over the caster, for everyone: "FIRE III".</summary>
+        public void AnnounceCreated(byte index, int tier)
         {
             Spell spell = SpellByIndex(index);
-            WorldPopups.Spell(transform, crit ? spell.displayName + "!" : spell.displayName,
-                              crit ? Color.Lerp(spell.colour, Color.white, 0.35f) : spell.colour, crit);
+            bool top = tier >= 3;
+            WorldPopups.Spell(transform, spell.displayName + " " + SpellTiers.Roman(tier),
+                              top ? Color.Lerp(spell.colour, Color.white, 0.35f) : spell.colour, top);
         }
 
         /// <summary>
@@ -905,12 +942,22 @@ namespace MageCast.Gestures
 
                 // Every machine plants its own, and every one is solid: the server's stops the real
                 // shots, the rest stop the copies, so what you see blocked is what was blocked.
+                int barrierTier = SpellTiers.Of(quality);
+                if (barrierTier >= 3)
+                {
+                    // tier III: a dome around the caster, going where they go; their own spells pass
+                    CastShield.SpawnDome(transform, SpellTiers.DomeRadius, SpellTiers.DomeSeconds, colour,
+                                         CastShield.BaseDurability * SpellTiers.DomeDurability,
+                                         attacker, Networked ? net : null, authoritative);
+                    return;
+                }
+                bool second = barrierTier == 2;
                 CastShield.Spawn(at, flat,
-                                 spell.barrierWidth * sizeScale,
-                                 spell.barrierHeight,
-                                 spell.lifetime * Mathf.Lerp(0.6f, 1.4f, precision),
+                                 spell.barrierWidth * sizeScale * (second ? SpellTiers.WallWidthII : 1f),
+                                 spell.barrierHeight * (second ? SpellTiers.WallHeightII : 1f),
+                                 spell.lifetime,
                                  colour,
-                                 CastShield.BaseDurability * Mathf.Lerp(0.6f, 1.4f, precision),
+                                 CastShield.BaseDurability * (second ? SpellTiers.WallDurabilityII : SpellTiers.WallDurabilityI),
                                  attacker, Networked ? net : null, authoritative);
                 return;
             }
@@ -932,6 +979,7 @@ namespace MageCast.Gestures
                              spell.knockback * Mathf.Lerp(0.7f, 1.3f, precision),
                              dealt,
                              spell, sizeScale, authoritative, attacker);
+            if (shot != null) shot.SetTier(SpellTiers.Of(quality));
 
             // A cast that arrived over the network is as old as its trip here: the copy is moved on by
             // that much, so it flies -- and lands, and hits -- where the caster's own shot is, instead of
@@ -959,7 +1007,7 @@ namespace MageCast.Gestures
             Vector3 forward = cam.AimDirection;
 
             RaycastHit hit;
-            Vector3 target = Physics.Raycast(origin, forward, out hit, 200f, ~0, QueryTriggerInteraction.Ignore)
+            Vector3 target = CastShield.AimRay(origin, forward, 200f, transform, out hit)
                              ? hit.point
                              : origin + forward * 200f;
 
@@ -1014,9 +1062,22 @@ namespace MageCast.Gestures
                 float held = pressing ? Time.time - pressedAt : 0f;
                 bool willDrop = pressing && held >= dropHold;
 
+                int tier = SpellTiers.Of(heldQuality);
                 bigStyle.normal.textColor = willDrop ? FailColour : heldSpell.colour;
                 GUI.Label(new Rect(14f, 10f, 700f, 40f),
-                          heldSpell.displayName + (willDrop ? "  - RELEASE TO DROP" : "  READY"), bigStyle);
+                          heldSpell.displayName + " " + SpellTiers.Roman(tier) + (willDrop ? "  - RELEASE TO DROP" : "  READY"),
+                          bigStyle);
+
+                // a tier III runs down to II: shown as a draining bar under the name
+                if (tier >= 3 && !pressing)
+                {
+                    float left = Mathf.Clamp01((heldTopTierUntil - Time.time) / SpellTiers.TopTierHold);
+                    GUI.color = new Color(0f, 0f, 0f, 0.5f);
+                    GUI.DrawTexture(new Rect(16f, 66f, 220f, 5f), Texture2D.whiteTexture);
+                    GUI.color = Color.Lerp(heldSpell.colour, Color.white, 0.4f);
+                    GUI.DrawTexture(new Rect(16f, 66f, 220f * left, 5f), Texture2D.whiteTexture);
+                    GUI.color = Color.white;
+                }
 
                 smallStyle.normal.textColor = Color.white;
                 GUI.Label(new Rect(16f, 46f, 700f, 20f), "LMB click: send     hold LMB: drop", smallStyle);

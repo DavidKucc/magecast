@@ -67,8 +67,7 @@ namespace MageCast.Gestures
 
             // the same ray the caster aims along, so the marker cannot disagree with the shot
             RaycastHit hit;
-            if (!Physics.Raycast(cam.AimOrigin, cam.AimDirection, out hit, 200f, ~0,
-                                 QueryTriggerInteraction.Ignore))
+            if (!CastShield.AimRay(cam.AimOrigin, cam.AimDirection, 200f, transform, out hit))
                 return;
 
             // skip our own body, which the camera ray can graze at a steep angle

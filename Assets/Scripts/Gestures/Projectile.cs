@@ -56,6 +56,21 @@ namespace MageCast.Gestures
         /// </summary>
         Collider ignoreOnce;
 
+        /// <summary>I, II or III -- see SpellTiers. II until told otherwise: the spell as designed.</summary>
+        int tier = 2;
+
+        /// <summary>Sets the tier. A tier I spell is the plain hit: it does not bounce.</summary>
+        public void SetTier(int value)
+        {
+            tier = Mathf.Clamp(value, 1, 3);
+            if (tier < 2) bouncesLeft = 0;
+        }
+
+        bool IsFire { get { return spell != null && spell.groundEffect == GroundEffect.Burn; } }
+        bool IsIce { get { return spell != null && spell.groundEffect == GroundEffect.Ice; } }
+        bool IsAir { get { return spell != null && spell.groundEffect == GroundEffect.Updraft; } }
+        bool IsLightning { get { return spell != null && spell.chargeDamage > 0f; } }
+
         SpellFx.Entry fxEntry;     // this spell's real effects, or null for the placeholder look
         GameObject fx;             // the flying effect, riding on this object
         bool impactShown;
@@ -184,6 +199,10 @@ namespace MageCast.Gestures
                     if (owner != null && (t == owner || t.IsChildOf(owner))) continue;
                     if (ignoreOnce != null && hits[i].collider == ignoreOnce) continue;
 
+                    // the caster's own dome lets the caster's spells out (and only theirs)
+                    CastShield dome = hits[i].collider.GetComponentInParent<CastShield>();
+                    if (dome != null && dome.IsDome && owner != null && dome.Follows == owner) continue;
+
                     // The floor is not found by the ball's edge -- see below. That includes the ball
                     // already dipping into the floor: a sweep that starts overlapping reports no normal at
                     // all, and read as a wall it bounced a fire straight back off the ground.
@@ -279,6 +298,7 @@ namespace MageCast.Gestures
                 shield.Struck(at, BarrierWear() / 30f);
                 if (authoritative) shield.Wear(BarrierWear());
                 Flash(at, 1.1f, 2.2f);
+                if (IsFire && tier >= 3) Explode(at, null);
                 End();
                 return true;
             }
@@ -287,6 +307,7 @@ namespace MageCast.Gestures
             {
                 if (authoritative) HitPerson(hp, motor, heading);
                 Flash(at, 1.4f, 2.5f);
+                TierHit(hp, at);
                 End();
                 return true;
             }
@@ -302,7 +323,9 @@ namespace MageCast.Gestures
         float BarrierWear()
         {
             if (spell == null) return damage;
-            return Mathf.Max(damage * spell.barrierWear, spell.barrierWearFlat);
+            float wear = Mathf.Max(damage * spell.barrierWear, spell.barrierWearFlat);
+            if (IsFire && tier >= 3) wear *= SpellTiers.ExplosionBarrierWear;
+            return wear;
         }
 
         void HitPerson(Health hp, PlayerMotor motor, Vector3 heading)
@@ -328,8 +351,12 @@ namespace MageCast.Gestures
                     // rather than shunted sideways.
                     motor.AddImpulse((heading + Vector3.up * 0.45f).normalized * knockback);
 
-                if (spell != null && spell.hitSlowDuration > 0f && spell.hitSlow < 1f)
-                    motor.ApplySlow(spell.hitSlow, spell.hitSlowDuration);
+                // ice: slowed from tier II, frozen in place at III -- which still lets you draw
+                if (spell != null && spell.hitSlowDuration > 0f && spell.hitSlow < 1f && tier >= 2)
+                {
+                    if (tier >= 3) motor.ApplySlow(0f, SpellTiers.FreezeSeconds);
+                    else motor.ApplySlow(spell.hitSlow, spell.hitSlowDuration);
+                }
 
                 if (spell != null && spell.interruptsDrawing)
                 {
@@ -338,6 +365,119 @@ namespace MageCast.Gestures
                     GestureCaster caster = motor.GetComponent<GestureCaster>();
                     if (caster != null) caster.Interrupt();
                 }
+
+                // lightning III: the shock knocks a held spell out of the hand, and a glyph with it
+                if (IsLightning && tier >= 3)
+                {
+                    GestureCaster caster = motor.GetComponent<GestureCaster>();
+                    if (caster != null) caster.Shock();
+                }
+            }
+        }
+
+        /// <summary>
+        /// What a tier adds to a hit on somebody, on every machine -- each copy shows it, only the
+        /// deciding copy (authoritative) deals it.
+        /// </summary>
+        void TierHit(Health hp, Vector3 at)
+        {
+            if (hp == null) { if (IsFire && tier >= 3) Explode(at, null); return; }
+
+            if (IsFire && tier >= 2)
+                Burning.Apply(hp, SpellTiers.BurnPerSecond * power, SpellTiers.BurnSeconds, attacker, authoritative, fxEntry);
+            if (IsFire && tier >= 3)
+                Explode(at, hp);
+
+            if (IsIce && tier >= 3)
+            {
+                WorldPopups.Word(hp.transform, "FROZEN", colour);
+                if (fxEntry != null && fxEntry.status != null)
+                    SpellFx.Play(fxEntry.status, hp.transform.position, Quaternion.identity, fxEntry.statusScale);
+                if (fxEntry != null) SpellFx.OneShot(fxEntry.statusSound, hp.transform.position, 0.8f);
+            }
+
+            if (IsLightning && tier >= 2)
+            {
+                // on to the nearest other body within reach, at half strength
+                Health next = NearestOther(hp, at, SpellTiers.ChainRange);
+                if (next != null)
+                {
+                    ChargeArc.Spawn(Centre(hp), Centre(next));
+                    if (authoritative) next.TakeDamage(damage * SpellTiers.ChainShare, attacker);
+                }
+            }
+            if (IsLightning && tier >= 3)
+                WorldPopups.Word(hp.transform, "SHOCKED", colour);
+        }
+
+        Health NearestOther(Health from, Vector3 at, float reach)
+        {
+            Health best = null;
+            float bestDistance = reach;
+            Health mine = owner != null ? owner.GetComponentInParent<Health>() : null;
+            foreach (Health h in FindObjectsOfType<Health>())
+            {
+                if (h == from || h == mine || h.IsDead) continue;
+                float d = Vector3.Distance(Centre(h), at);
+                if (d < bestDistance) { bestDistance = d; best = h; }
+            }
+            return best;
+        }
+
+        static Vector3 Centre(Health h)
+        {
+            Collider c = h.GetComponentInChildren<Collider>();
+            return c != null ? c.bounds.center : h.transform.position + Vector3.up;
+        }
+
+        /// <summary>
+        /// Fire III: a blast around where it struck. Everyone in reach but the one it hit directly takes
+        /// half the hit -- the caster too, if they are that close: point-blank fire costs.
+        /// </summary>
+        void Explode(Vector3 at, Health exclude)
+        {
+            if (fxEntry != null && fxEntry.special != null)
+            {
+                SpellFx.PlayBurst(fxEntry.special, at, fxEntry.specialScale * sizeScale, fxEntry.specialLeadIn);
+                SpellFx.OneShot(fxEntry.specialSound, at);
+            }
+            else FlashAt(at, colour, SpellTiers.ExplosionRadius * 2f * sizeScale, 2.5f);
+
+            if (!authoritative) return;
+            float reach = SpellTiers.ExplosionRadius * sizeScale;
+            var done = new System.Collections.Generic.HashSet<Health>();
+            foreach (Collider c in Physics.OverlapSphere(at, reach, ~0, QueryTriggerInteraction.Ignore))
+            {
+                Health h = c.GetComponentInParent<Health>();
+                if (h == null || h == exclude || h.IsDead || !done.Add(h)) continue;
+                h.TakeDamage(damage * SpellTiers.ExplosionShare, attacker);
+            }
+        }
+
+        /// <summary>
+        /// Air III landing in a patch: everyone in it or just outside it is thrown once into its middle
+        /// -- into your fire, onto your ice. The caster too, if they are standing there.
+        /// </summary>
+        void AirBomb(SpellZone zone)
+        {
+            Vector3 centre = zone.transform.position;
+            if (fxEntry != null && fxEntry.special != null)
+            {
+                SpellFx.PlayBurst(fxEntry.special, centre, fxEntry.specialScale * zone.Radius / 3f, fxEntry.specialLeadIn);
+                SpellFx.OneShot(fxEntry.specialSound, centre);
+            }
+            else FlashAt(centre, colour, zone.Radius * 2f, 1.6f);
+
+            if (!authoritative) return;
+            float reach = zone.Radius + SpellTiers.BombReachBeyondPatch;
+            float airTime = 2f * SpellTiers.BombLift / PlayerMotor.Gravity;
+            foreach (PlayerMotor m in FindObjectsOfType<PlayerMotor>())
+            {
+                Vector3 offset = centre - m.transform.position;
+                if (Mathf.Abs(offset.y) > 2f) continue;
+                Vector3 flat = new Vector3(offset.x, 0f, offset.z);
+                if (flat.magnitude > reach) continue;
+                m.Toss(flat / airTime, SpellTiers.BombLift);
             }
         }
 
@@ -361,6 +501,7 @@ namespace MageCast.Gestures
 
             if (spell != null && spell.wallBurstRadius > 0f)
                 WallBurst(at, normal, spell.wallBurstRadius * sizeScale);
+            if (IsFire && tier >= 3) Explode(at, null);
 
             if (areaRadius > 0f && authoritative)
                 PoisonPuddle.Spawn(at, areaRadius, areaLifetime, colour);
@@ -411,7 +552,7 @@ namespace MageCast.Gestures
         /// </summary>
         bool Combine(Vector3 at)
         {
-            if (!authoritative || spell == null) return false;
+            if (!authoritative || spell == null || tier < 2) return false;   // tier I: the plain spell
             PlayerNet caster = owner != null ? owner.GetComponent<PlayerNet>() : null;
             Vector3 wind = new Vector3(velocity.x, 0f, velocity.z);
             wind = wind.sqrMagnitude > 0.01f ? wind.normalized : Vector3.forward;
@@ -501,13 +642,32 @@ namespace MageCast.Gestures
                 return true;
             }
 
+            // air III into a patch: the air bomb, instead of whatever air would do to it
+            if (IsAir && tier >= 3)
+            {
+                SpellZone patch = SpellZone.AnyAt(at, radius);
+                if (patch != null)
+                {
+                    AirBomb(patch);
+                    End();
+                    return true;
+                }
+            }
+
             if (Combine(at))
             {
                 End();
                 return true;
             }
 
-            if (spell != null && spell.groundEffect != GroundEffect.None && !authoritative)
+            if (IsFire && tier >= 3) Explode(at, null);
+
+            // tier I leaves nothing on the floor
+            if (spell != null && spell.groundEffect != GroundEffect.None && tier < 2)
+            {
+                Flash(at, 1f, 2f);
+            }
+            else if (spell != null && spell.groundEffect != GroundEffect.None && !authoritative)
             {
                 // A watcher's copy leaves nothing: the server's patch is sent to everyone, so there is
                 // exactly one patch, in exactly one place, whatever the copies happened to hit.

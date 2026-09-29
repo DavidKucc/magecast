@@ -20,6 +20,10 @@ Shader "MageCast/EnergyWall"
         _Size ("Size in metres (x, y)", Vector) = (2.8, 2.2, 0, 0)
         // 1 for the shards a broken wall flies apart into: particles, faded by their vertex colour
         _UseVertexColor ("Use vertex colour", Float) = 0
+        // the dome: no frame (a sphere's UV edges are a seam and a pole, not edges), and the ground
+        // meets it at its equator rather than at the bottom of the UV
+        _Frame ("Frame", Float) = 1
+        _GroundAt ("Ground line (UV y)", Float) = 0
     }
 
     SubShader
@@ -44,6 +48,8 @@ Shader "MageCast/EnergyWall"
             // up to four recent hits: xy = where (UV), z = when (_Time.y), w = how hard (0-1)
             float4 _Hits[4];
             float _UseVertexColor;
+            float _Frame;
+            float _GroundAt;
 
             struct appdata { float4 vertex : POSITION; float2 uv : TEXCOORD0; fixed4 color : COLOR; };
             struct v2f { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; fixed4 color : COLOR; };
@@ -92,7 +98,7 @@ Shader "MageCast/EnergyWall"
                 float t = _Time.y;
 
                 // rising out of the floor, with a bright leading edge
-                float top = _Rise * 1.05;
+                float top = lerp(_GroundAt, 1.05, _Rise);
                 clip(top - uv.y);
                 float lead = (1.0 - saturate((top - uv.y) * _Size.y * 6.0)) * step(_Rise, 0.999);
 
@@ -101,8 +107,8 @@ Shader "MageCast/EnergyWall"
                 float shimmer = fbm(float2(m.x * 4.0 + t * 0.3, m.y * 4.0 - t * 1.7));
 
                 float2 fromEdge = min(uv, 1.0 - uv) * _Size.xy;
-                float frame = 1.0 - smoothstep(0.0, 0.14, min(fromEdge.x, fromEdge.y));
-                float ground = 1.0 - smoothstep(0.0, 0.45, m.y);
+                float frame = (1.0 - smoothstep(0.0, 0.14, min(fromEdge.x, fromEdge.y))) * _Frame;
+                float ground = 1.0 - smoothstep(0.0, 0.45, abs(uv.y - _GroundAt) * _Size.y);
 
                 // hits: a flash where it struck and a ring running out from it
                 float hit = 0.0;

@@ -53,6 +53,18 @@ namespace MageCast.Gestures
         /// <summary>How long it takes to rise out of the floor.</summary>
         const float RiseTime = 0.35f;
 
+        // the tier III dome: a sphere around its caster, half in the floor, following them
+        bool isDome;
+        Transform follows;
+        Vector3[] domeVertices;
+        Vector2[] domeUvs;
+        const float DomeLift = 0.1f;
+
+        public bool IsDome { get { return isDome; } }
+
+        /// <summary>Who a dome goes around -- their own spells pass through it. Null for a wall.</summary>
+        public Transform Follows { get { return follows; } }
+
         public float DurabilityFraction { get { return maxDurability > 0f ? durability / maxDurability : 0f; } }
 
         public static CastShield Spawn(Vector3 at, Vector3 facing, float width, float height,
@@ -75,6 +87,43 @@ namespace MageCast.Gestures
 
             CastShield s = go.AddComponent<CastShield>();
             s.BuildWall(width, height, colour);
+            s.Init(lifetime, durability, m, colour, owner, ownerNet, authoritative);
+            return s;
+        }
+
+        /// <summary>
+        /// Tier III: a dome around <paramref name="around"/> for a few seconds, going where they go. It
+        /// stops everybody else's spells and lets its caster's own out (Projectile skips it for them),
+        /// and it does not push its caster around -- their body ignores it.
+        /// </summary>
+        public static CastShield SpawnDome(Transform around, float radius, float lifetime, Color colour,
+                                           float durability, ulong owner, PlayerNet ownerNet, bool authoritative)
+        {
+            CastShield previous;
+            if (byOwner.TryGetValue(owner, out previous) && previous != null) Destroy(previous.gameObject);
+
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            go.name = "CastDome";
+            go.transform.position = around.position + Vector3.up * DomeLift;
+            go.transform.localScale = Vector3.one * (radius * 2f);
+            Collider shell = go.GetComponent<Collider>();
+            foreach (Collider c in around.GetComponentsInChildren<Collider>(true)) Physics.IgnoreCollision(shell, c);
+
+            Material m = RuntimeMaterials.Fade(colour, 0.3f, 0.8f);
+            go.GetComponent<Renderer>().material = m;
+
+            CastShield s = go.AddComponent<CastShield>();
+            s.isDome = true;
+            s.follows = around;
+            s.BuildDome(radius, colour);
+            s.Init(lifetime, durability, m, colour, owner, ownerNet, authoritative);
+            return s;
+        }
+
+        void Init(float lifetime, float durability, Material m, Color colour, ulong owner, PlayerNet ownerNet,
+                  bool authoritative)
+        {
+            CastShield s = this;
             s.remaining = lifetime;
             s.total = lifetime;
             s.durability = durability;
@@ -85,26 +134,34 @@ namespace MageCast.Gestures
             s.ownerNet = ownerNet;
             s.authoritative = authoritative;
             byOwner[owner] = s;
-            return s;
+        }
+
+        void BuildDome(float radius, Color c)
+        {
+            Sounds();
+            Material template = Resources.Load<Material>("RuntimeMaterials/EnergyWall");
+            if (template == null) return;
+
+            Renderer r = GetComponent<Renderer>();
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            wall = new Material(template);
+            wall.SetColor("_Color", c);
+            wall.SetVector("_Size", new Vector4(Mathf.PI * 2f * radius, radius * 2f, 0f, 0f));
+            wall.SetFloat("_Frame", 0f);
+            wall.SetFloat("_GroundAt", 0.5f - DomeLift / (radius * 2f));
+            wall.SetFloat("_Rise", 0f);
+            wall.SetVectorArray("_Hits", hits);
+            r.material = wall;
+
+            Mesh mesh = GetComponent<MeshFilter>().sharedMesh;
+            domeVertices = mesh.vertices;
+            domeUvs = mesh.uv;
         }
 
         void BuildWall(float width, float height, Color c)
         {
-            fx = SpellFx.ByName("BARRIER");
-            Vector3 middle = transform.position;
-            if (fx != null)
-            {
-                SpellFx.OneShot(fx.raise, middle, 0.9f);
-                if (fx.hum != null)
-                {
-                    hum = gameObject.AddComponent<AudioSource>();
-                    SpellFx.MakeSpatial(hum);
-                    hum.clip = fx.hum;
-                    hum.loop = true;
-                    hum.volume = HumVolume;
-                    hum.Play();
-                }
-            }
+            Sounds();
 
             Material template = Resources.Load<Material>("RuntimeMaterials/EnergyWall");
             if (template == null) return;
@@ -123,6 +180,25 @@ namespace MageCast.Gestures
             wall.SetFloat("_Rise", 0f);
             wall.SetVectorArray("_Hits", hits);
             r.material = wall;
+        }
+
+        void Sounds()
+        {
+            fx = SpellFx.ByName("BARRIER");
+            Vector3 middle = transform.position;
+            if (fx != null)
+            {
+                SpellFx.OneShot(fx.raise, middle, 0.9f);
+                if (fx.hum != null)
+                {
+                    hum = gameObject.AddComponent<AudioSource>();
+                    SpellFx.MakeSpatial(hum);
+                    hum.clip = fx.hum;
+                    hum.loop = true;
+                    hum.volume = HumVolume;
+                    hum.Play();
+                }
+            }
         }
 
         /// <summary>
@@ -157,8 +233,17 @@ namespace MageCast.Gestures
             emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)Mathf.Clamp(size.x * size.y * 9f, 30f, 70f)) });
 
             var shape = ps.shape;
-            shape.shapeType = ParticleSystemShapeType.Box;
-            shape.scale = new Vector3(size.x, size.y, 0.05f);
+            if (isDome)
+            {
+                shape.shapeType = ParticleSystemShapeType.Hemisphere;
+                shape.radius = size.x * 0.5f;
+                shape.rotation = new Vector3(-90f, 0f, 0f);
+            }
+            else
+            {
+                shape.shapeType = ParticleSystemShapeType.Box;
+                shape.scale = new Vector3(size.x, size.y, 0.05f);
+            }
             shape.randomDirectionAmount = 1f;
 
             var spin = ps.rotationOverLifetime;
@@ -201,11 +286,41 @@ namespace MageCast.Gestures
         public void Struck(Vector3 point, float howHard)
         {
             Vector3 local = transform.InverseTransformPoint(point);
-            hits[nextHit] = new Vector4(Mathf.Clamp01(local.x + 0.5f), Mathf.Clamp01(local.y + 0.5f),
-                                        Time.timeSinceLevelLoad, Mathf.Clamp(howHard, 0.3f, 1f));
+            Vector2 uv = new Vector2(Mathf.Clamp01(local.x + 0.5f), Mathf.Clamp01(local.y + 0.5f));
+            if (isDome && domeVertices != null)
+            {
+                // the sphere's own mapping, read off its nearest vertex
+                Vector3 onShell = local.normalized * 0.5f;
+                float nearest = float.MaxValue;
+                for (int i = 0; i < domeVertices.Length; i++)
+                {
+                    float d = (domeVertices[i] - onShell).sqrMagnitude;
+                    if (d < nearest) { nearest = d; uv = domeUvs[i]; }
+                }
+            }
+            hits[nextHit] = new Vector4(uv.x, uv.y, Time.timeSinceLevelLoad, Mathf.Clamp(howHard, 0.3f, 1f));
             nextHit = (nextHit + 1) % hits.Length;
             if (wall != null) wall.SetVectorArray("_Hits", hits);
             if (fx != null) SpellFx.OneShot(fx.struck, point, 0.55f);
+        }
+
+        /// <summary>
+        /// A ray for aiming from <paramref name="self"/>: the first thing it meets, looking through their
+        /// own dome -- they are inside it, and it must not catch their crosshair.
+        /// </summary>
+        public static bool AimRay(Vector3 origin, Vector3 direction, float distance, Transform self, out RaycastHit hit)
+        {
+            hit = new RaycastHit();
+            RaycastHit[] all = Physics.RaycastAll(origin, direction, distance, ~0, QueryTriggerInteraction.Ignore);
+            float nearest = float.MaxValue;
+            bool found = false;
+            foreach (RaycastHit h in all)
+            {
+                CastShield s = h.collider.GetComponentInParent<CastShield>();
+                if (s != null && s.isDome && s.follows == self) continue;
+                if (h.distance < nearest) { nearest = h.distance; hit = h; found = true; }
+            }
+            return found;
         }
 
         /// <summary>The current barrier of a player on this machine, or null.</summary>
@@ -274,6 +389,12 @@ namespace MageCast.Gestures
 
         void Update()
         {
+            if (isDome)
+            {
+                if (follows == null) { Destroy(gameObject); return; }
+                transform.position = follows.position + Vector3.up * DomeLift;
+            }
+
             remaining -= Time.deltaTime;
             age += Time.deltaTime;
             if (remaining <= 0f) { Destroy(gameObject); return; }

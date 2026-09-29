@@ -159,8 +159,8 @@ MonoBehaviour:
   cleanDistance: 1
   weakDistance: 2.2
   misfireDistance: 3.2
-  weakPower: 0.25
-  perfectPower: 1.8
+  weakPower: 0.8
+  perfectPower: 1.2
   damageFromSteadiness: 0.5
   sizeReferencePixels: 250
   sizeSpreadMin: 0.7

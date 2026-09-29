@@ -46,6 +46,18 @@ namespace MageCast.Gestures
             /// </summary>
             public AudioClip launch;
 
+            [Header("Tier effects")]
+            /// <summary>On whoever was hit, while the effect lasts -- burning, frozen.</summary>
+            public GameObject status;
+            public float statusScale = 1f;
+            /// <summary>The tier III blast -- fire's explosion, air's bomb.</summary>
+            public GameObject special;
+            public float specialScale = 1f;
+            /// <summary>Seconds of wind-up the blast plays before its bang; dropped, the bang is now.</summary>
+            public float specialLeadIn;
+            public AudioClip specialSound;
+            public AudioClip statusSound;
+
             [Header("Patch on the floor")]
             public GameObject zone;          // an area effect; see ZoneFx for how it is fitted to a patch
             /// <summary>The radius the area effect was made for; it is scaled from this to the patch's.</summary>
@@ -117,6 +129,37 @@ namespace MageCast.Gestures
                 foreach (AudioSource a in go.GetComponentsInChildren<AudioSource>(true)) Destroy(a);
 
             if (parent == null) Destroy(go, Lifetime(go));
+            return go;
+        }
+
+        /// <summary>
+        /// A burst from the AoE pack, starting at its bang: the pack winds each one up for a moment
+        /// first (a telegraph for a spell that lands later), which here would put the bang after the
+        /// thing that caused it. Pieces that only belong to the wind-up are left out.
+        /// </summary>
+        public static GameObject PlayBurst(GameObject prefab, Vector3 at, float scale, float leadIn)
+        {
+            if (prefab == null) return null;
+            GameObject go = Instantiate(prefab, at, Quaternion.identity);
+            go.transform.localScale = prefab.transform.localScale * scale;
+            Tame(go);
+
+            ParticleSystem[] systems = go.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (ParticleSystem ps in systems) ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+            foreach (ParticleSystem ps in systems)
+            {
+                var main = ps.main;
+                float delay = main.startDelay.constantMax;
+                if (delay + main.startLifetime.constantMax <= leadIn + 0.05f && delay < leadIn)
+                {
+                    var emission = ps.emission;
+                    emission.enabled = false;
+                    continue;
+                }
+                main.startDelay = Mathf.Max(0f, delay - leadIn);
+            }
+            foreach (ParticleSystem ps in systems) ps.Play(false);
+            Destroy(go, Lifetime(go));
             return go;
         }
 

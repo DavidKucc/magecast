@@ -177,12 +177,12 @@ namespace MageCast
         }
 
         /// <summary>Owner: the draw is over, one way or another.</summary>
-        public void OwnerStrokeEnd(StrokeOutcome outcome, byte spell, bool crit = false)
+        public void OwnerStrokeEnd(StrokeOutcome outcome, byte spell, byte tier = 0)
         {
             if (!IsSpawned) return;
             if (pendingPoints.Count > 0) FlushStroke();
             Drawing.Value = false;
-            if (IsServer) StrokeEndClientRpc(outcome, spell, crit); else StrokeEndServerRpc(outcome, spell, crit);
+            if (IsServer) StrokeEndClientRpc(outcome, spell, tier); else StrokeEndServerRpc(outcome, spell, tier);
         }
 
         void FlushStroke()
@@ -200,7 +200,7 @@ namespace MageCast
         void StrokePointsServerRpc(Vector2[] points) { StrokePointsClientRpc(points); }
 
         [ServerRpc]
-        void StrokeEndServerRpc(StrokeOutcome outcome, byte spell, bool crit) { StrokeEndClientRpc(outcome, spell, crit); }
+        void StrokeEndServerRpc(StrokeOutcome outcome, byte spell, byte tier) { StrokeEndClientRpc(outcome, spell, tier); }
 
         [ClientRpc]
         void StrokeBeginClientRpc()
@@ -217,7 +217,7 @@ namespace MageCast
         }
 
         [ClientRpc]
-        void StrokeEndClientRpc(StrokeOutcome outcome, byte spell, bool crit)
+        void StrokeEndClientRpc(StrokeOutcome outcome, byte spell, byte tier)
         {
             if (IsOwner) return;
             if (glyph != null) glyph.End(outcome, caster.SpellColour(spell));
@@ -227,14 +227,11 @@ namespace MageCast
             {
                 case StrokeOutcome.Fizzle: WorldPopups.Word(transform, "FIZZLE", GestureCaster.FailColour); break;
                 case StrokeOutcome.Interrupted: WorldPopups.Word(transform, "INTERRUPTED", GestureCaster.FailColour); break;
-                case StrokeOutcome.Lost: WorldPopups.Word(transform, "LOST", GestureCaster.FailColour); break;
-                // the spell exists from here on -- its name goes up now, not when it is sent
-                case StrokeOutcome.Held: caster.AnnounceCreated(spell, crit); break;
-                case StrokeOutcome.Banked: caster.AnnounceCreated(spell, false); break;
-                case StrokeOutcome.Sent: if (spell == GestureCaster.MisfireId) caster.AnnounceCreated(spell, false); break;
-                case StrokeOutcome.WindUp:
-                    WorldPopups.Word(transform, caster.SpellByIndex(spell).displayName + " ...", caster.SpellColour(spell));
-                    break;
+                case StrokeOutcome.Lost: WorldPopups.Word(transform, "DROPPED", GestureCaster.FailColour); break;
+                // the spell exists from here on -- its name and tier go up now, not when it is sent (and
+                // again if a tier III falls to II in the hand)
+                case StrokeOutcome.Held: caster.AnnounceCreated(spell, tier); break;
+                case StrokeOutcome.Sent: if (spell == GestureCaster.MisfireId) caster.AnnounceCreated(spell, 1); break;
             }
         }
 
@@ -349,6 +346,8 @@ namespace MageCast
         public void SendSlow(float multiplier, float duration) { if (IsServer) SlowClientRpc(multiplier, duration, ToOwner()); }
         public void SendLaunch(float upSpeed) { if (IsServer) LaunchClientRpc(upSpeed, ToOwner()); }
         public void SendInterrupt() { if (IsServer) InterruptClientRpc(ToOwner()); }
+        public void SendShock() { if (IsServer) ShockClientRpc(ToOwner()); }
+        public void SendToss(Vector3 along, float upSpeed) { if (IsServer) TossClientRpc(along, upSpeed, ToOwner()); }
         public void SendSlide(Vector3 push) { if (IsServer) SlideClientRpc(push, ToOwner()); }
 
         [ClientRpc]
@@ -365,6 +364,12 @@ namespace MageCast
 
         [ClientRpc]
         void InterruptClientRpc(ClientRpcParams p = default) { if (IsOwner) caster.Interrupt(); }
+
+        [ClientRpc]
+        void ShockClientRpc(ClientRpcParams p = default) { if (IsOwner) caster.Shock(); }
+
+        [ClientRpc]
+        void TossClientRpc(Vector3 along, float upSpeed, ClientRpcParams p = default) { if (IsOwner) motor.Toss(along, upSpeed); }
 
         // ---------------------------------------------------------------- dying
 

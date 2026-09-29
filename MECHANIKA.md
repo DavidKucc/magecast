@@ -76,6 +76,26 @@ odměnou za kreslení jsou jen tiery těch tvarů, které vyjdou.
 
 Všechno jsou runy — kolečko pro bariéru nahradila Uruz, aby byla celá abeceda runová.
 
+### Tiery
+
+Jak dobře je runa nakreslená, dává kouzlu **tier I, II nebo III** (odfláknutá / průměrná / pečlivá).
+Tier mění, **co kouzlo dělá**, ne jen kolik ubere — poškození samo se s přesností hýbe jen 0,8–1,2×.
+
+| | I | II | III |
+|---|---|---|---|
+| **oheň** | zásah | + hoření na zasaženém (4/s na 3 s), plocha, odraz od zdi | + výbuch: všichni do 2,5 m kromě zasaženého dostanou polovinu zásahu (i autor), bariéru opotřebí 1,5× |
+| **led** | zásah | + zpomalení, plocha | + zamrznutí na 0,6 s: nehýbe se ani neskočí, kreslit může |
+| **blesk** | zásah | + přeskočí na nejbližší jiný cíl do 6 m za polovinu | + šok: vyrazí z ruky držené kouzlo (a zruší rozkreslené) |
+| **vzduch** | odhoz | + updraft plocha, v ploše rozdmýchá oheň / rozklouže led | + v jakékoli ploše **vzduchová bomba**: všechny v ploše a do 1,5 m od ní jednou hodí do jejího středu (i autora) |
+| **bariéra** | stěna | větší stěna (1,35× šířka), víc výdrže | **kopule** kolem tebe na 4,5 s, chodí s tebou, tvoje kouzla propouští, cizí zastaví |
+
+- **Tier I je holé kouzlo**: žádná plocha, žádný odraz, žádná kombinace (voda, rozdmýchání...). Blesk do
+  ledu se vybije na každém tieru — je to jeho hlavní použití.
+- **Vzduch přeruší kreslení** při každém zásahu, na každém tieru.
+- **Tier III v ruce vydrží 4 s**, pak spadne na tier II (proužek pod názvem ukazuje, kolik zbývá). Jinak
+  by se vyplatilo kreslit v klidu za krytem, dokud nepadne III, a s ním chodit. Tier II vydrží napořád.
+- Tier je **vidět nad hlavou** — „FIRE III“; když spadne, objeví se „FIRE II“.
+
 V pravém horním rohu je **legenda** se všemi gesty (`F6` ji schová). Kreslí skutečné šablony
 rozpoznávače, ne ručně dělané ikonky, aby nikdy nemohla ukazovat něco jiného, než co hra čeká.
 
@@ -193,11 +213,9 @@ Jsou to **dvě nezávislé branky** a snadno se pletou.
 **Vzdálenost tvaru** rozhoduje, jestli to vůbec vyjde. Měří se v jednotkách, kde 1,0 znamená „tah s
 roztřesením, na které je to nakalibrované" — takže je to číslo nezávislé na tom, který tvar kreslíš.
 
-**Preciznost** rozhoduje, jak silné to je. Skládá se z klidu ruky, ostrosti rohů a u zavřených tvarů
-z toho, jak přesně se tah uzavřel. Síla kouzla jde plynule od **0,25×** za odfláknutý tah po **1,8×**
-za dokonalý — sedminásobný rozdíl.
-
-Odfláknutý blesk tedy dá 3 poškození, dokonalý 21,6.
+**Preciznost** rozhoduje o tieru (viz Tiery) a trochu i o síle: poškození jde plynule od **0,8×** za
+odfláknutý tah po **1,2×** za dokonalý. Hlavní odměna za dobré kreslení je to, co kouzlo na vyšším tieru
+navíc udělá, ne číslo.
 
 **Rozpoznávač čte runu po čarách.** Tah se zjednoduší na rohy a čáry mezi nimi se porovnají **úhlem**
 s čarami každé runy. Nezáleží, odkud začneš (každá runa se zkouší z obou konců), zrcadlená runa je ale

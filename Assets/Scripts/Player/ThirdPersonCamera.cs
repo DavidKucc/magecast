@@ -108,6 +108,8 @@ namespace MageCast
             {
                 Transform t = hits[i].transform;
                 if (t == target || t.IsChildOf(target)) continue;
+                // barriers are see-through energy: the camera does not duck in front of them
+                if (hits[i].collider.GetComponentInParent<Gestures.CastShield>() != null) continue;
                 if (hits[i].distance > 0f && hits[i].distance < wanted) wanted = hits[i].distance;
             }
 

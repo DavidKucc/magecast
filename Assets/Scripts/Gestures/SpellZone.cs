@@ -248,6 +248,17 @@ namespace MageCast.Gestures
             return null;
         }
 
+        /// <summary>The newest patch of any kind under a point, or null.</summary>
+        public static SpellZone AnyAt(Vector3 point, float reachOut = 0f)
+        {
+            for (int i = all.Count - 1; i >= 0; i--)
+            {
+                SpellZone z = all[i];
+                if (z != null && z.Contains(point, 0.6f, reachOut)) return z;
+            }
+            return null;
+        }
+
         /// <summary>A patch that carries lightning -- ice or water -- under a point, or null.</summary>
         public static SpellZone ConductorAt(Vector3 point)
         {

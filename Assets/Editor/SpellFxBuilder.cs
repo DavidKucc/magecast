@@ -90,6 +90,37 @@ namespace MageCast.EditorTools
             SetZone(fx, "ICE", "Ice");
             SetZone(fx, "AIR", "Air");
 
+            // Tier effects (see SpellTiers). The AoE bursts wind up for half a second before their bang;
+            // PlayBurst drops that, and their sounds are trimmed to start at the bang the same way.
+            const string AnimeFx = "Assets/Vefects/Anime Stylized VFX/Shared/Particles/";
+            const string AnimeSfx = "Assets/Vefects/Anime Stylized VFX/Sounds/WAV/";
+            SpellFx.Entry fire = fx.entries.Find(x => x.spell == "FIRE");
+            if (fire != null)
+            {
+                fire.status = AssetDatabase.LoadAssetAtPath<GameObject>(AnimeFx + "VFX_Fire.prefab");      // flames on the burning
+                fire.statusScale = 0.45f;
+                fire.statusSound = AreaSound("Fire", "Area_Loop_01");
+                fire.special = AssetDatabase.LoadAssetAtPath<GameObject>(Area + "VFX/Fire/Particles/VFX_Fire_Burst_01.prefab");
+                fire.specialScale = 0.85f;                                                                  // ~2.5 m blast
+                fire.specialLeadIn = 0.5f;
+                fire.specialSound = Trim(AreaSound("Fire", "Burst_01"), 0.42f, "Fire_Burst_Impact");
+            }
+            SpellFx.Entry ice = fx.entries.Find(x => x.spell == "ICE");
+            if (ice != null)
+            {
+                ice.status = AssetDatabase.LoadAssetAtPath<GameObject>(AnimeFx + "VFX_Explosion_Omni_Ice.prefab");   // frozen
+                ice.statusScale = 0.45f;
+                ice.statusSound = AssetDatabase.LoadAssetAtPath<AudioClip>(AnimeSfx + "SFX_Explosion_Ice.wav");
+            }
+            SpellFx.Entry air = fx.entries.Find(x => x.spell == "AIR");
+            if (air != null)
+            {
+                air.special = AssetDatabase.LoadAssetAtPath<GameObject>(Area + "VFX/Air/Particles/VFX_Air_Burst_01.prefab");   // the air bomb
+                air.specialScale = 1f;
+                air.specialLeadIn = 0.5f;
+                air.specialSound = Trim(AreaSound("Air", "Burst_01"), 0.42f, "Air_Bomb_Impact");
+            }
+
             EditorUtility.SetDirty(fx);
             AssetDatabase.SaveAssets();
             Debug.Log("[SpellFx] assigned: " + fx.entries.Count + " spell(s) with effects");
