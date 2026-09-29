@@ -103,13 +103,14 @@ namespace MageCast.Gestures
     }
 
     /// <summary>
-    /// The core mechanic, in two phases.
+    /// The core mechanic, all on the left mouse button.
     ///
-    /// 1. DRAW -- hold RMB. The camera freezes and the mouse draws instead of looking. WASD still
+    /// 1. DRAW -- hold LMB. The camera freezes and the mouse draws instead of looking. WASD still
     ///    works at reduced speed with sprint and jump locked; that is what makes a long gesture a real
-    ///    risk rather than a free action.
-    /// 2. AIM AND SEND -- release RMB and the spell is held ready. The camera comes back, and you have
-    ///    under a second to point and fire with LMB.
+    ///    risk rather than a free action. RMB throws the glyph away mid-draw.
+    /// 2. HOLD -- let go and the spell is in your hand, for as long as you like. The camera comes back.
+    /// 3. SEND OR DROP -- click LMB and it flies where you aim. Keep LMB down longer instead and let go:
+    ///    the spell is dropped and your hand is empty again.
     ///
     /// The split exists because the old design -- lock the direction at the moment you START drawing --
     /// made moving targets unhittable. A target running at 6 m/s moves about 8 m during a one-second
@@ -119,9 +120,8 @@ namespace MageCast.Gestures
     /// wrong. Aiming after the draw leaves the vulnerable window intact and cuts the lead to flight
     /// time alone.
     ///
-    /// The window is deliberately under a second. Give it two to five and the best play becomes "draw
-    /// safely behind cover, peek, fire" -- cover is never more than about three metres away in this
-    /// arena -- and the vulnerable window, which the entire map is designed around, becomes optional.
+    /// A held spell has no time limit (it used to lapse after 0.9 s). Holding one keeps sprint locked,
+    /// so walking around loaded costs something: you can have a spell ready or be fast, not both.
     ///
     /// Networked through PlayerNet: the forming glyph is streamed to everyone else as it is drawn, and a
     /// finished cast goes out as a CastData that every machine turns into the same spell. Only the
@@ -132,19 +132,20 @@ namespace MageCast.Gestures
     public class GestureCaster : MonoBehaviour
     {
         [Header("Input")]
-        [SerializeField] int drawButton = 1;                 // RMB
-        [SerializeField] int sendButton = 0;                 // LMB
+        [SerializeField] int castButton = 0;                 // LMB: draw, then send
+        [SerializeField] int cancelButton = 1;               // RMB: throw away a glyph mid-draw
+
+        /// <summary>
+        /// Holding LMB at least this long with a spell in hand drops it instead of sending it -- long
+        /// enough that a click never does it by accident, short enough to be a deliberate gesture.
+        /// </summary>
+        [SerializeField] float dropHold = 0.45f;
         [SerializeField] float drawSensitivity = 14f;        // pixels per unit of mouse delta -- NOT aim sensitivity
         [SerializeField] float minPointSpacing = 4f;         // pixels; stops a stationary mouse flooding the stroke
         [SerializeField] float minStrokeLength = 60f;        // pixels; below this it was a twitch, not a gesture
 
         [Header("While drawing")]
         [SerializeField, Range(0.1f, 1f)] float castMoveSpeed = 0.6f;
-
-        [Header("Aim window")]
-        // Under a second on purpose -- see the class comment. Sprint stays locked through it, otherwise
-        // sprint-peek-fire hands back the safety the short window was there to deny.
-        [SerializeField] float aimWindow = 0.9f;
 
         [Header("Recognition")]
         // Runes by their lines and angles (RuneSegments) rather than as a $P point cloud. F7 in
@@ -264,17 +265,6 @@ namespace MageCast.Gestures
             gesture = "misfire", displayName = "MISFIRE", colour = new Color(0.55f, 0.55f, 0.6f),
             speed = 11f, radius = 0.3f, lifetime = 2.5f, damage = 5f };
 
-        [Header("Slots")]
-        // Bank a drawn spell instead of sending it, then pull it out later. Using a slot empties it and
-        // starts the cooldown, so you cannot walk around permanently loaded -- which was the whole
-        // reason to put a timer on slots rather than on spells.
-        [SerializeField] float slotCooldown = 30f;
-
-        // A slot cast must not be instant. At arena range a projectile crosses the gap inside human
-        // reaction time, so without a visible wind-up there is nothing for the target to react TO and
-        // the slot becomes an undodgeable delete button. Short enough to still be worth the slot.
-        [SerializeField] float slotWindUp = 0.3f;
-
         [Header("Calibration")]
         [SerializeField] bool logCasts = true;
 
@@ -294,55 +284,6 @@ namespace MageCast.Gestures
         bool movedWhileCasting;
         string practiceTarget = "?";
 
-        /// <summary>
-        /// One banked spell. Holds the grading too, not just which spell it was -- a spell you drew
-        /// perfectly should still land as a crit an hour later, otherwise banking quietly costs you
-        /// the thing you earned by drawing well.
-        /// </summary>
-        class SpellSlot
-        {
-            public Spell spell;            // null = empty
-            public float precision;
-            public CastQuality quality;
-            public StrokeMetrics metrics;
-            public float readyAt;          // cooldown expiry
-        }
-
-        readonly SpellSlot[] slots = { new SpellSlot(), new SpellSlot() };
-
-        /// <summary>
-        /// Per-slot debounce. Input.inputString REPEATS while a key is held -- GetKeyDown does not --
-        /// so one slightly long press delivered the character again a frame or two later. The second
-        /// delivery found the spell already banked and pulled it straight back out, starting the
-        /// cooldown and letting the aim window lapse: one keypress, spell gone, slot on cooldown.
-        /// </summary>
-        readonly float[] slotBlockedUntil = new float[2];
-        const float SlotKeyDebounce = 0.35f;
-
-        /// <summary>
-        /// Chosen DURING the draw: hold a slot key while drawing and the spell goes straight into that
-        /// slot on release, with no aim window at all.
-        ///
-        /// Deciding in advance is the point, not a limitation. If you could bank after seeing the
-        /// grade, the best play would be to draw in safety over and over and bank only the crits, and
-        /// every fight would open with two of them. Committing first makes a slot a bet rather than a
-        /// pick of the best takes.
-        /// </summary>
-        int bankTarget = -1;
-
-        /// <summary>Which slot is armed and waiting for the mouse. -1 = none.</summary>
-        int selectedSlot = -1;
-
-        int windUpFrom = -1;
-        float windUpEndsAt;
-
-        /// <summary>
-        /// Precision a banked spell is capped at -- just under the Perfect tier, so a slot can never
-        /// crit. A spell drawn in safety would otherwise be strictly better than one drawn under fire,
-        /// and drawing under fire is the entire game. A banked spell is stabilised, not sharpened.
-        /// </summary>
-        const float BankedPrecisionCap = 0.84f;
-
         // held between the draw and the send
         bool holding;
         Spell heldSpell;
@@ -352,7 +293,10 @@ namespace MageCast.Gestures
 
         /// <summary>The last stroke's lines, errors and precision, for the diagnostics line.</summary>
         string lastSegments = "";
-        float heldUntil;
+
+        // LMB went down with a spell in hand: a click sends it, a long hold drops it
+        bool pressing;
+        float pressedAt;
 
         string lastResult = "";
         float lastResultTime = -99f;
@@ -362,7 +306,6 @@ namespace MageCast.Gestures
         float headlineUntil = -99f;
         GUIStyle bigStyle;
         GUIStyle smallStyle;
-        GUIStyle slotStyle;
 
         void Awake()
         {
@@ -394,47 +337,40 @@ namespace MageCast.Gestures
             if (GameInput.Blocked)
             {
                 if (drawing) Interrupt();
+                pressing = false;     // a click the menu took is not a send, nor a drop
                 return;
             }
 
             ReadPracticeTarget();
 
-            // Committed: the wind-up is the tell that makes a slot cast dodgeable at all, so nothing
-            // may interrupt it and nothing else may start during it.
-            if (windUpFrom >= 0)
-            {
-                if (Time.time >= windUpEndsAt) FireFromSlot();
-                return;
-            }
-
-            HandleSlotKeys();
-
+            // A spell in hand: LMB decides on release -- a click sends it, a long hold drops it. On
+            // release rather than on press, because only then is it known which of the two it was.
             if (holding)
             {
-                if (Input.GetMouseButtonDown(sendButton)) { Send(); return; }
-                if (Time.time >= heldUntil) LoseHeld();
-            }
-            else if (selectedSlot >= 0 && Input.GetMouseButtonDown(sendButton))
-            {
-                BeginWindUp();
+                if (Input.GetMouseButtonDown(castButton)) { pressing = true; pressedAt = Time.time; }
+                if (pressing && !Input.GetMouseButton(castButton))
+                {
+                    pressing = false;
+                    if (Time.time - pressedAt >= dropHold) Drop(); else Send();
+                }
                 return;
             }
+            pressing = false;
 
             // Changed your mind mid-glyph: the other button throws it away. Nothing is cast and nothing
-            // is spent; the right button has to be pressed again to start over.
-            if (drawing && Input.GetMouseButtonDown(sendButton))
+            // is spent; LMB has to be pressed again to start over.
+            if (drawing && Input.GetMouseButtonDown(cancelButton))
             {
                 AbortDraw("CANCELLED", StrokeOutcome.Cancelled);
                 return;
             }
 
-            if (!drawing && !holding && Input.GetMouseButtonDown(drawButton)) BeginDraw();
-            else if (drawing && Input.GetMouseButton(drawButton)) ContinueDraw();
-            else if (drawing && Input.GetMouseButtonUp(drawButton)) EndDraw();
+            if (!drawing && Input.GetMouseButtonDown(castButton)) BeginDraw();
+            else if (drawing && Input.GetMouseButton(castButton)) ContinueDraw();
+            else if (drawing && !Input.GetMouseButton(castButton)) EndDraw();
         }
 
-        // Moved to the function row: the number keys belong to the slots now, and a calibration aid
-        // must never sit on top of something you press mid-fight.
+        // On the function row: a calibration aid must never sit on top of something you press mid-fight.
         void ReadPracticeTarget()
         {
             if (Input.GetKeyDown(KeyCode.F1)) practiceTarget = GestureTemplates.Uruz;
@@ -448,185 +384,6 @@ namespace MageCast.Gestures
             if (Input.GetKeyDown(KeyCode.F3)) practiceTarget = GestureTemplates.Laguz;
             if (Input.GetKeyDown(KeyCode.F4)) practiceTarget = GestureTemplates.Sowulo;
             if (Input.GetKeyDown(KeyCode.F5)) practiceTarget = GestureTemplates.Ehwaz;
-        }
-
-        // ---------------------------------------------------------------- slots
-
-        /// <summary>
-        /// One key, three meanings, chosen by what you are already doing -- and the three contexts
-        /// never overlap, so there is nothing to remember:
-        ///
-        ///   while drawing      pick where this spell will be banked
-        ///   holding a spell    bank it now (the opportunistic route; the draw-time one has no timer)
-        ///   empty handed       select the slot, which then fires on the mouse
-        /// </summary>
-        void HandleSlotKeys()
-        {
-            for (int i = 0; i < slots.Length; i++)
-            {
-                if (Time.time < slotBlockedUntil[i]) continue;
-                if (!SlotPressed(i)) continue;
-
-                slotBlockedUntil[i] = Time.time + SlotKeyDebounce;
-
-                if (drawing) ChooseBankTarget(i);
-                else if (holding) StoreHeld(i);
-                else SelectSlot(i);
-            }
-        }
-
-        void ChooseBankTarget(int index)
-        {
-            SpellSlot slot = slots[index];
-            int shown = index + 1;
-
-            if (Time.time < slot.readyAt || slot.spell != null)
-            {
-                bankTarget = -1;
-                Headline("SLOT " + shown + (slot.spell != null ? " FULL" : " COOLING"), FailColour, 1f);
-                return;
-            }
-
-            bankTarget = bankTarget == index ? -1 : index;   // press again to change your mind
-            if (bankTarget >= 0) Announce("this one goes to slot " + shown);
-            else Announce("banking cancelled - this one comes to hand");
-        }
-
-        void SelectSlot(int index)
-        {
-            SpellSlot slot = slots[index];
-            int shown = index + 1;
-
-            if (slot.spell == null)
-            {
-                selectedSlot = -1;
-                if (Time.time < slot.readyAt)
-                    Headline("SLOT " + shown + "  " + Mathf.CeilToInt(slot.readyAt - Time.time) + "s", FailColour, 1f);
-                return;
-            }
-
-            // Selecting costs nothing and is reversible. What costs is FIRING, which empties the slot
-            // and starts the cooldown -- so there is no reason to punish someone for changing their mind.
-            selectedSlot = selectedSlot == index ? -1 : index;
-
-            if (selectedSlot >= 0)
-            {
-                Headline(slot.spell.displayName + "  SELECTED", slot.spell.colour, 1f);
-                Announce("LMB to send from slot " + shown);
-                if (crosshair != null) crosshair.SetTint(slot.spell.colour);
-            }
-            else
-            {
-                Announce("slot " + shown + " deselected");
-                if (crosshair != null) crosshair.SetTint(null);
-            }
-        }
-
-        void BeginWindUp()
-        {
-            SpellSlot slot = slots[selectedSlot];
-            if (slot.spell == null) { selectedSlot = -1; return; }
-
-            windUpFrom = selectedSlot;
-            windUpEndsAt = Time.time + slotWindUp;
-            motor.SprintLocked = true;
-
-            // the wind-up only works as a tell if the other side can see it
-            if (Networked) net.OwnerStrokeEnd(StrokeOutcome.WindUp, IndexOf(slot.spell));
-            Headline(slot.spell.displayName, slot.spell.colour, slotWindUp + 0.6f);
-        }
-
-        void FireFromSlot()
-        {
-            SpellSlot slot = slots[windUpFrom];
-            int shown = windUpFrom + 1;
-
-            windUpFrom = -1;
-            selectedSlot = -1;
-            motor.SprintLocked = false;
-            if (crosshair != null) crosshair.SetTint(null);
-
-            if (slot.spell == null) return;
-
-            Spell spell = slot.spell;
-            Cast(spell, ResolveAim(), slot.precision, slot.quality, slot.metrics);
-
-            // Firing is what "using" a slot means, so this is where the cooldown starts -- selecting is
-            // free, and charging for a decision you can undo would only teach people not to touch it.
-            slot.spell = null;
-            slot.readyAt = Time.time + slotCooldown;
-
-            Headline(spell.displayName + "  SENT", spell.colour, 1.2f);
-            Announce("from slot " + shown + " at " + slot.quality);
-        }
-
-        /// <summary>
-        /// Reads the physical key AND the character it produced.
-        ///
-        /// On a Czech layout the keys in the 1 and 2 positions type '+' and 'e-caron', and there is no
-        /// KeyCode for the latter at all -- so a KeyCode-only check works or fails depending on the
-        /// layout the player happens to have active, which is exactly the kind of bug that looks like
-        /// broken input. Checking the typed character as well covers both without asking anyone to
-        /// switch layouts to play.
-        /// </summary>
-        bool SlotPressed(int index)
-        {
-            if (index == 0)
-            {
-                if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1)) return true;
-                return Typed('1') || Typed('+');
-            }
-
-            if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2)) return true;
-            // written as an escape so the source stays pure ASCII and cannot be broken by a tool or
-            // editor guessing the file's encoding wrong
-            return Typed('2') || Typed('\u011B');   // e-caron: the Czech key in the 2 position
-        }
-
-        static bool Typed(char c)
-        {
-            string s = Input.inputString;
-            for (int i = 0; i < s.Length; i++) if (s[i] == c) return true;
-            return false;
-        }
-
-        void StoreHeld(int index)
-        {
-            SpellSlot slot = slots[index];
-            int shown = index + 1;
-
-            if (Time.time < slot.readyAt)
-            {
-                Headline("SLOT " + shown + " COOLING", FailColour, 1f);
-                return;
-            }
-            if (slot.spell != null)
-            {
-                Headline("SLOT " + shown + " FULL", FailColour, 1f);
-                return;
-            }
-
-            Bank(index, heldSpell, heldPrecision, heldMetrics);
-            ClearHeld();
-        }
-
-        /// <summary>Puts a spell in a slot, capped so a slot can never hold a crit.</summary>
-        void Bank(int index, Spell spell, float precision, StrokeMetrics metrics)
-        {
-            SpellSlot slot = slots[index];
-
-            float capped = Mathf.Min(precision, BankedPrecisionCap);
-            slot.spell = spell;
-            slot.precision = capped;
-            slot.quality = PrecisionTier(capped);
-            slot.metrics = metrics;
-
-            Headline(spell.displayName + "  ->  SLOT " + (index + 1), spell.colour, 1.2f);
-            AnnounceCreated(IndexOf(spell), false);
-            if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Banked, IndexOf(spell), false);
-            Announce(precision > BankedPrecisionCap
-                     ? "banked at " + slot.quality + " - a slot never holds a crit, only a live cast does"
-                     : "banked at " + slot.quality);
         }
 
         // ---------------------------------------------------------------- drawing
@@ -646,7 +403,6 @@ namespace MageCast.Gestures
 
             castStartedAt = Time.time;
             movedWhileCasting = false;
-            bankTarget = -1;              // decided during this draw, never carried over from the last
 
             if (anim != null) anim.SetDrawing(true);
 
@@ -799,23 +555,13 @@ namespace MageCast.Gestures
 
             Spell cast = SpellFor(id);
 
-            // Banked straight from the draw: the destination was chosen before the grade was known, so
-            // no aim window ever starts and there is nothing to race against.
-            if (bankTarget >= 0)
-            {
-                motor.SprintLocked = false;
-                Bank(bankTarget, cast, precision, metrics);
-                bankTarget = -1;
-                return;
-            }
-
             heldSpell = cast;
             heldQuality = quality;
             heldPrecision = precision;
             heldMetrics = metrics;
-            heldUntil = Time.time + aimWindow;
             holding = true;
-            motor.SprintLocked = true;    // no sprint-peek-fire
+            pressing = false;
+            motor.SprintLocked = true;    // loaded or fast, not both -- see the class comment
 
             if (crosshair != null) crosshair.SetTint(heldSpell.colour);
             bool crit = quality == CastQuality.Perfect;
@@ -848,15 +594,17 @@ namespace MageCast.Gestures
             Headline(spell.displayName + "  SENT", spell.colour, 1.2f);
         }
 
-        void LoseHeld()
+        /// <summary>
+        /// Let go of the spell in hand without casting it -- a long hold on LMB. The hand is empty and
+        /// the next press draws again.
+        /// </summary>
+        void Drop()
         {
-            Spell lost = heldSpell;
+            Spell dropped = heldSpell;
             ClearHeld();
-            // Letting it lapse is the cancel: draw something you did not want and simply do not send
-            // it. It has to cost the cast, or the right play would be to keep one drawn at all times.
-            Headline("LOST", FailColour, 1.2f);
-            Announce("aim window expired on " + (lost != null ? lost.displayName : "-"));
-            if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Lost, lost != null ? IndexOf(lost) : (byte)0);
+            Headline("DROPPED", FailColour, 1.2f);
+            Announce("dropped " + (dropped != null ? dropped.displayName : "-"));
+            if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Lost, dropped != null ? IndexOf(dropped) : (byte)0);
         }
 
         void ClearHeld()
@@ -911,7 +659,6 @@ namespace MageCast.Gestures
             drawing = false;
             stroke.Clear();
             strokeLength = 0f;
-            bankTarget = -1;
 
             cam.LookEnabled = true;
             motor.SpeedMultiplier = 1f;
@@ -1257,31 +1004,31 @@ namespace MageCast.Gestures
             {
                 bigStyle = new GUIStyle(GUI.skin.label) { fontSize = 30, fontStyle = FontStyle.Bold };
                 smallStyle = new GUIStyle(GUI.skin.label) { fontSize = 12 };
-                slotStyle = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold };
             }
 
             // --- top left: what you are holding, or what just happened ---
             if (holding && heldSpell != null)
             {
-                float left = Mathf.Max(0f, heldUntil - Time.time);
-                bigStyle.normal.textColor = heldSpell.colour;
-                GUI.Label(new Rect(14f, 10f, 700f, 40f), heldSpell.displayName + "  READY", bigStyle);
+                // Holding LMB down: the bar fills towards the drop. Released before it is full, the
+                // press was a click and the spell flies; full, letting go drops it.
+                float held = pressing ? Time.time - pressedAt : 0f;
+                bool willDrop = pressing && held >= dropHold;
+
+                bigStyle.normal.textColor = willDrop ? FailColour : heldSpell.colour;
+                GUI.Label(new Rect(14f, 10f, 700f, 40f),
+                          heldSpell.displayName + (willDrop ? "  - RELEASE TO DROP" : "  READY"), bigStyle);
 
                 smallStyle.normal.textColor = Color.white;
-                GUI.Label(new Rect(16f, 46f, 700f, 20f),
-                          string.Format(System.Globalization.CultureInfo.InvariantCulture,
-                                        "LMB to send   {0:F2}s left", left),
-                          smallStyle);
+                GUI.Label(new Rect(16f, 46f, 700f, 20f), "LMB click: send     hold LMB: drop", smallStyle);
 
-                // a bar rather than only a number: you will be looking at the world, not the corner
-                GUI.color = new Color(0f, 0f, 0f, 0.5f);
-                GUI.DrawTexture(new Rect(16f, 66f, 220f, 5f), Texture2D.whiteTexture);
-                GUI.color = heldSpell.colour;
-                // clamped: the fraction can exceed 1 if the window is ever extended at runtime, and an
-                // unclamped bar then paints straight across the screen
-                float fraction = Mathf.Clamp01(left / Mathf.Max(0.01f, aimWindow));
-                GUI.DrawTexture(new Rect(16f, 66f, 220f * fraction, 5f), Texture2D.whiteTexture);
-                GUI.color = Color.white;
+                if (pressing)
+                {
+                    GUI.color = new Color(0f, 0f, 0f, 0.5f);
+                    GUI.DrawTexture(new Rect(16f, 66f, 220f, 5f), Texture2D.whiteTexture);
+                    GUI.color = willDrop ? FailColour : Color.white;
+                    GUI.DrawTexture(new Rect(16f, 66f, 220f * Mathf.Clamp01(held / dropHold), 5f), Texture2D.whiteTexture);
+                    GUI.color = Color.white;
+                }
             }
             else if (Time.time < headlineUntil)
             {
@@ -1301,85 +1048,6 @@ namespace MageCast.Gestures
                           "   (F1 uruz/barrier  F2 kenaz/fire  F3 laguz/ice  F4 sowulo/lightning  F5 ehwaz/air" +
                           "   F7 recognizer: " + (segmentRecognition ? "lines+angles" : "$P") + ")",
                           smallStyle);
-
-            DrawSlots();
-        }
-
-        /// <summary>
-        /// Two boxes, bottom left, above the health bar. Words rather than icons on purpose -- art is
-        /// not the question being answered yet, and a placeholder icon would only invite opinions about
-        /// the icon instead of about whether banking a spell is any fun.
-        /// </summary>
-        void DrawSlots()
-        {
-            const float w = 176f, h = 34f, x = 16f, gap = 6f;
-            float bottom = Screen.height - 62f;      // clear of the health bar underneath
-
-            for (int i = 0; i < slots.Length; i++)
-            {
-                Rect box = new Rect(x, bottom - (slots.Length - i) * (h + gap), w, h);
-                SpellSlot slot = slots[i];
-                bool selected = selectedSlot == i || windUpFrom == i;
-                bool marked = drawing && bankTarget == i;
-
-                // A selected slot has to be obvious at a glance -- it changes what the mouse does, and
-                // an input that silently changes meaning is the fastest way to make a game feel broken.
-                if (selected || marked)
-                {
-                    GUI.color = marked ? new Color(1f, 1f, 1f, 0.5f)
-                                       : (slot.spell != null ? slot.spell.colour : Color.white);
-                    GUI.DrawTexture(new Rect(box.x - 2f, box.y - 2f, box.width + 4f, box.height + 4f),
-                                    Texture2D.whiteTexture);
-                }
-
-                GUI.color = new Color(0f, 0f, 0f, selected ? 0.8f : 0.55f);
-                GUI.DrawTexture(box, Texture2D.whiteTexture);
-                GUI.color = Color.white;
-
-                smallStyle.normal.textColor = new Color(1f, 1f, 1f, 0.55f);
-                GUI.Label(new Rect(box.x + 7f, box.y + 2f, 60f, 16f), i == 0 ? "1 / +" : "2 / e", smallStyle);
-
-                string text;
-                Color colour;
-                float cooling = slot.readyAt - Time.time;
-
-                if (slot.spell != null)
-                {
-                    text = slot.spell.displayName;
-                    colour = slot.spell.colour;
-                }
-                else if (cooling > 0f)
-                {
-                    text = Mathf.CeilToInt(cooling) + "s";
-                    colour = new Color(0.65f, 0.65f, 0.7f);
-                }
-                else
-                {
-                    text = "empty";
-                    colour = new Color(0.55f, 0.55f, 0.6f);
-                }
-
-                slotStyle.normal.textColor = colour;
-                GUI.Label(new Rect(box.x + 7f, box.y + 12f, w - 14f, 22f), text, slotStyle);
-
-                // a drained bar makes the wait readable without staring at the number
-                if (slot.spell == null && cooling > 0f)
-                {
-                    float f = Mathf.Clamp01(1f - cooling / Mathf.Max(0.01f, slotCooldown));
-                    GUI.color = new Color(0.5f, 0.5f, 0.55f, 0.8f);
-                    GUI.DrawTexture(new Rect(box.x, box.yMax - 3f, w * f, 3f), Texture2D.whiteTexture);
-                    GUI.color = Color.white;
-                }
-
-                // the wind-up, filling left to right: the same beat the opponent gets to react to
-                if (windUpFrom == i)
-                {
-                    float f = Mathf.Clamp01(1f - (windUpEndsAt - Time.time) / Mathf.Max(0.01f, slotWindUp));
-                    GUI.color = slot.spell != null ? slot.spell.colour : Color.white;
-                    GUI.DrawTexture(new Rect(box.x, box.yMax - 4f, w * f, 4f), Texture2D.whiteTexture);
-                    GUI.color = Color.white;
-                }
-            }
         }
     }
 }

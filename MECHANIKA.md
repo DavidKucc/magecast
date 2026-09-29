@@ -33,21 +33,25 @@ než to vypustíš. Vzniká tím čtení záměru a blafování — a je to ta n
 
 ## Jak se sesílá
 
+Všechno je na **levém tlačítku**:
+
 ```
-1.  držíš pravé tlačítko     → kamera zamrzne, myš se změní na pero
-2.  kreslíš tvar             → tah se vykresluje, soupeř ho vidí
-3.  pustíš pravé             → rozpoznávač tvar vyhodnotí a oznámkuje
-4.  máš 0,9 s                → crosshair se obarví podle kouzla, míříš
-5.  levé tlačítko            → vypustí to tam, kam míří crosshair
+1.  držíš levé               → kamera zamrzne, myš se změní na pero
+2.  kreslíš runu             → tah se vykresluje, soupeř ho vidí
+3.  pustíš levé              → runa se vyhodnotí a oznámkuje, kouzlo máš v ruce
+4.  míříš, jak dlouho chceš  → crosshair má barvu kouzla, žádný časový limit
+5a. klikneš levým            → kouzlo letí tam, kam míří crosshair
+5b. podržíš levé a pustíš    → kouzlo zahodíš (DROPPED), ruka je prázdná
 ```
 
 Míření je pořád jedno a to samé: z kamery jde paprsek dopředu a kde trefí, tam kouzlo letí.
 
-Místo kroků 4–5 se kouzlo dá **uložit do slotu** (rozhoduje se během kreslení) a vypustit později
-klávesou `1` nebo `2`.
+Rozdíl mezi kliknutím a podržením je **0,45 s**; při držení se vlevo nahoře plní proužek, a jakmile je
+plný, puštění kouzlo zahodí. Dokud kouzlo držíš, **nejde sprint** — buď máš připravené kouzlo, nebo jsi
+rychlý, ne obojí.
 
-**Zrušit kreslení** jde kdykoli **levým tlačítkem** — nic se nesešle a nic se nespotřebuje. Pak je potřeba
-pravé pustit a stisknout znovu. Stejně skončí kreslení, když tě trefí vzduch.
+**Zrušit kreslení** jde kdykoli **pravým tlačítkem** — nic se nesešle a nic se nespotřebuje. Stejně skončí
+kreslení, když tě trefí vzduch.
 
 ---
 
@@ -212,17 +216,6 @@ Původní $P (mračno bodů) zůstává v tréninku na `F7` pro porovnání.
 
 ---
 
-## Sloty
-
-Dvě kapsy na předcastěná kouzla, klávesy `1` / `+` a `2` / `ě`. Nakreslíš v klidu, vypustíš, když se to
-hodí. Po použití 30 s cooldown.
-
-Uložené kouzlo má **strop kvality 0,84** — slot nikdy nedrží kritický zásah, ten umí jen živý cast.
-
-Jsou to jediné kouzla, která jdou vypustit bez kreslení, takže odpovídají na otázku *co si s sebou
-vezmu* — a jednou z odpovědí má být záchrana, ne jen rána.
-
----
 
 ## Hra ve dvou
 
@@ -237,9 +230,8 @@ porty ani znát cizí IP. Když hostitel odejde, hra končí i pro ostatní.
 - **runu, jak ji kreslíš** — bíle nad tvou hlavou, tak jak ji kreslíš ty (ne zrcadlově). Jakmile ji
   pustíš a kouzlo držíš, zbarví se barvou kouzla. Tohle je druhá polovina hlavního pravidla: kreslení tě
   vystavuje, a soupeř to musí *vidět*, aby na to mohl reagovat,
-- **název kouzla ve chvíli, kdy vznikne** — když dokreslíš a kouzlo držíš (nebo ho uložíš do slotu), ne
-  až když ho vypustíš. Od té chvíle má soupeř 0,9 s se schovat. Kritický zásah má vykřičník. Taky FIZZLE,
-  INTERRUPTED, LOST a nádech slotu (FIRE ...),
+- **název kouzla ve chvíli, kdy vznikne** — když dokreslíš a kouzlo držíš, ne až když ho vypustíš. Od té
+  chvíle soupeř ví, co na něj čeká. Kritický zásah má vykřičník. Taky FIZZLE, INTERRUPTED a DROPPED,
 - **poškození** jako číslo nad zasaženým. Hoření se sčítá do jednoho rostoucího čísla, ne čtyři za
   sekundu,
 - tvoje jméno, životy a to, kam se díváš.
@@ -268,17 +260,10 @@ kvality. Žádné nové pravidlo, žádné nové UI. Důsledek: pod palbou sešl
 Ve dvou už to vyzkoušet jde.)* **Už nakreslené a držené kouzlo je
 nedotknutelné** — riziko je v kreslení, ne v držení.
 
-**Dva cooldowny na sloty.** Krátký sdílený (5–10 s) mezi vypuštěním prvního a druhého slotu, a delší na
-doplnění. Bez toho jdou dvě uložená kouzla vysypat naráz za ~96 poškození ze sta, čímž souboj rozhodne
-příprava před ním.
-
-**Úskok jen ze slotu.** Únikové kouzlo, které musíš nejdřív nakreslit, je proti sobě — než ho
-dokreslíš, už tě dostali. Připravená obrana ano, improvizovaná ne.
-
 **Minimální vzdálenost odjištění** (~3 m), aby se nedalo spamovat z bezprostřední blízkosti.
 
 **Obrana napříč cenami:** kolečko jako rychlý panický štít, Othala jako pořádná postavená hradba,
-osobní štít, co pohltí poškození a chodí s tebou, a úskok ze slotu.
+osobní štít, co pohltí poškození a chodí s tebou.
 
 ---
 
