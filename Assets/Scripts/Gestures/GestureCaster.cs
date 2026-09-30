@@ -565,6 +565,7 @@ namespace MageCast.Gestures
             holding = true;
             pressing = false;
             motor.SprintLocked = true;    // loaded or fast, not both -- see the class comment
+            motor.SpeedMultiplier = HoldSpeed;
 
             if (crosshair != null) crosshair.SetTint(heldSpell.colour);
             int tier = SpellTiers.Of(quality);
@@ -653,11 +654,18 @@ namespace MageCast.Gestures
             if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Lost, dropped != null ? IndexOf(dropped) : (byte)0);
         }
 
+        /// <summary>
+        /// With a spell in hand she walks: this share of the jog, and no sprint. Must match HoldPace in
+        /// CharacterAnimatorBuilder, which plays the walk at this speed.
+        /// </summary>
+        public const float HoldSpeed = 0.52f;
+
         void ClearHeld()
         {
             holding = false;
             heldSpell = null;
             motor.SprintLocked = false;
+            motor.SpeedMultiplier = 1f;
             if (crosshair != null) crosshair.SetTint(null);
         }
 

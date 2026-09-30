@@ -35,6 +35,19 @@ namespace MageCast.EditorTools
         const string CastFolder = "Assets/Animation/Cast";
 
         /// <summary>
+        /// Mixamo's Pro Magic Pack, used by name for a few roles: the barrier's block, the walk with a
+        /// spell in hand, and the running jump. Not searched by keyword -- it holds a whole library,
+        /// and a keyword search there would hand a role whatever came first.
+        /// </summary>
+        const string PackFolder = "Assets/Animation/Pro Magic Pack";
+
+        /// <summary>
+        /// How fast she moves with a spell in hand, as a share of the jog. Must match
+        /// GestureCaster.HoldSpeed, which applies it to the motor; here it sets the walk's playback.
+        /// </summary>
+        const float HoldPace = 0.52f;
+
+        /// <summary>
         /// A character pack whose clips may be borrowed for roles the library has not filled yet.
         ///
         /// Empty on purpose. There used to be one here, and borrowing from it turned out to cost more
@@ -194,7 +207,20 @@ namespace MageCast.EditorTools
             SetLooping(idle, true);   // stood in for as long as nobody touches a key
             SetLooping(draw, true);   // held while the glyph is being drawn, however long that takes
             sendAttack = TrimToStrike(sendAttack, "SendAttack");
-            sendShield = TrimToStrike(sendShield, "SendShield");
+
+            // The barrier goes up with a block -- raise, then lower -- rather than a thrown spell.
+            AnimationClip blockStart = PackClip("Standing Block Start");
+            AnimationClip blockEnd = PackClip("Standing Block End");
+            SetLooping(blockStart, false);
+            SetLooping(blockEnd, false);
+            if (blockStart != null) sendShield = blockStart;
+            else sendShield = TrimToStrike(sendShield, "SendShield");
+
+            // A spell in hand: she walks instead of jogging.
+            AnimationClip walkF = PackClip("Standing Walk Forward"), walkB = PackClip("Standing Walk Back");
+            AnimationClip walkL = PackClip("Standing Walk Left"), walkR = PackClip("Standing Walk Right");
+            foreach (AnimationClip w in new[] { walkF, walkB, walkL, walkR }) SetLooping(w, true);
+            bool canWalk = walkF != null && walkB != null && walkL != null && walkR != null;
 
             // Only the idle is genuinely required -- it is what every other role falls back to. The rest
             // degrade instead of aborting, so the project still builds and runs while the library is
@@ -238,6 +264,8 @@ namespace MageCast.EditorTools
             ctrl.AddParameter("Send", AnimatorControllerParameterType.Trigger);
             ctrl.AddParameter("Defensive", AnimatorControllerParameterType.Bool);
             ctrl.AddParameter("LeftHand", AnimatorControllerParameterType.Bool);   // mirrors the send
+            ctrl.AddParameter("Hold", AnimatorControllerParameterType.Float);      // 1 = a spell in hand: walk
+            ctrl.AddParameter("JumpRun", AnimatorControllerParameterType.Bool);    // took off sprinting
 
             var sm = ctrl.layers[0].stateMachine;
 
@@ -265,11 +293,33 @@ namespace MageCast.EditorTools
             // 1 is a full jog whether that is 2.6 forward or 1.6 backwards, and 1.54 is the run.
             // Feeding it raw m/s would put a full-speed backpedal at 2.4 and drag idle back in at 40%,
             // which is the same bug in a different costume.
-            BlendTree tree;
-            var locomotion = ctrl.CreateBlendTreeInController("Locomotion", out tree, 0);
+            //
+            // And an outer blend on Hold on top of that: with a spell in hand she walks (the pack's walk,
+            // at HoldPace of the jog), and letting go of the spell blends back into the free tree.
+            BlendTree outer;
+            var locomotion = ctrl.CreateBlendTreeInController("Locomotion", out outer, 0);
+            outer.blendType = BlendTreeType.Simple1D;
+            outer.blendParameter = "Hold";
+            outer.useAutomaticThresholds = false;
+
+            BlendTree tree = outer.CreateBlendTreeChild(0f);
+            tree.name = "Free";
             tree.blendType = BlendTreeType.Simple1D;
             tree.blendParameter = "Speed";
             tree.useAutomaticThresholds = false;
+
+            if (canWalk)
+            {
+                BlendTree walk = BuildMoveTree(ctrl, "Walk", JogSpeed * HoldPace, idle, walkF, walkB, walkL, walkR);
+                BlendTree held = outer.CreateBlendTreeChild(1f);
+                held.name = "Holding";
+                held.blendType = BlendTreeType.Simple1D;
+                held.blendParameter = "Speed";
+                held.useAutomaticThresholds = false;
+                held.AddChild(idle, 0f);
+                held.AddChild(walk, HoldPace);
+            }
+            else Debug.LogWarning("[Animator] no walk clips in " + PackFolder + " - holding a spell keeps the jog");
 
             float footfall = loco.RunFwd != null ? FootDownPhase(loco.RunFwd) : -1f;
             if (footfall >= 0f)
@@ -312,9 +362,14 @@ namespace MageCast.EditorTools
             RepairJumpFiles();
             JumpPhases forward = ResolveJump("Jump", false);
             JumpPhases backward = ResolveJump("JumpBack", true);
+            JumpPhases running = ResolveRunningJump();
 
             if (forward.Complete)
             {
+                // Sprinting (Shift) takes off into the pack's running jump. Checked first: the forward
+                // chain would otherwise take a sprinting take-off too, since it only asks "not backward".
+                if (running.Complete) BuildJumpChain(sm, locomotion, "JumpRun", running, 0, "JumpRun");
+                else Debug.LogWarning("[Animator] no running jump - a sprinting take-off uses the plain one");
                 // Two chains, because leaping backwards is a different shape from leaping forwards and
                 // this character faces the camera while she does both. Which chain runs is latched at
                 // the moment she leaves the ground; it must not switch mid-flight.
@@ -348,7 +403,21 @@ namespace MageCast.EditorTools
             castSm.defaultState = sDraw;
 
             BuildSend(castSm, sDraw, "SendAttack", sendAttack, false);
-            BuildSend(castSm, sDraw, "SendShield", sendShield, true);
+            AnimatorState shield = BuildSend(castSm, sDraw, "SendShield", sendShield, true);
+            if (blockEnd != null && blockStart != null)
+            {
+                // the block goes up, then comes down: the raise hands over to the lowering, which then
+                // goes back under the drawing pose
+                var lower = castSm.AddState("BlockEnd");
+                lower.motion = blockEnd;
+                lower.mirrorParameterActive = true;
+                lower.mirrorParameter = "LeftHand";
+                foreach (AnimatorStateTransition t in shield.transitions) shield.RemoveTransition(t);
+                var up = shield.AddTransition(lower);
+                up.hasExitTime = true; up.exitTime = 0.95f; up.duration = 0.08f;
+                var down = lower.AddTransition(sDraw);
+                down.hasExitTime = true; down.exitTime = 0.85f; down.duration = 0.15f;
+            }
 
             ctrl.AddLayer(new AnimatorControllerLayer
             {
@@ -972,7 +1041,26 @@ namespace MageCast.EditorTools
             return best;
         }
 
-        static bool SliceJump(string path, string prefix, ref JumpPhases phases)
+        /// <summary>
+        /// The pack's running jump (Jump (2)), sliced into take-off, hang and landing like the others.
+        /// It carries its own leap -- the root rises 1.1 m and travels 4 m -- which the slices leave out
+        /// of the pose (see Slice): the CharacterController does the leaping.
+        /// </summary>
+        static JumpPhases ResolveRunningJump()
+        {
+            var phases = new JumpPhases();
+            phases.Up = FindClipNamed(PackFolder, "JumpRunUp");
+            phases.Air = FindClipNamed(PackFolder, "JumpRunAir");
+            phases.Land = FindClipNamed(PackFolder, "JumpRunLand");
+            if (phases.Complete) return phases;
+
+            string path = PackFolder + "/Jump (2).fbx";
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(path) == null) return phases;
+            SliceJump(path, "JumpRun", ref phases, PackFolder);
+            return phases;
+        }
+
+        static bool SliceJump(string path, string prefix, ref JumpPhases phases, string folder = JumpFolder)
         {
             var imp = AssetImporter.GetAtPath(path) as ModelImporter;
             if (imp == null) return false;
@@ -1032,9 +1120,9 @@ namespace MageCast.EditorTools
             imp.clipAnimations = slices.ToArray();
             imp.SaveAndReimport();
 
-            phases.Up = FindClipNamed(JumpFolder, prefix + "Up");
-            phases.Air = FindClipNamed(JumpFolder, prefix + "Air");
-            phases.Land = FindClipNamed(JumpFolder, prefix + "Land");
+            phases.Up = FindClipNamed(folder, prefix + "Up");
+            phases.Air = FindClipNamed(folder, prefix + "Air");
+            phases.Land = FindClipNamed(folder, prefix + "Land");
 
             Debug.Log(string.Format(System.Globalization.CultureInfo.InvariantCulture,
                 "[Animator] {0}: sliced {1} ({2} frames) -- rise 0-{3}, apex {3}, land {4}-{2}",
@@ -1164,7 +1252,7 @@ namespace MageCast.EditorTools
         const float MovingLanding = 0.3f;
 
         static void BuildJumpChain(AnimatorStateMachine sm, AnimatorState locomotion, string prefix,
-                                   JumpPhases phases, int gate)
+                                   JumpPhases phases, int gate, string onlyIf = null)
         {
             var sUp = sm.AddState(prefix + "Up"); sUp.motion = phases.Up;
             var sAir = sm.AddState(prefix + "Air"); sAir.motion = phases.Air;
@@ -1195,6 +1283,7 @@ namespace MageCast.EditorTools
             if (gate >= 0)
                 toAir.AddCondition(gate == 1 ? AnimatorConditionMode.If : AnimatorConditionMode.IfNot,
                                    0f, "JumpBack");
+            if (onlyIf != null) toAir.AddCondition(AnimatorConditionMode.If, 0f, onlyIf);
             toAir.duration = 0.06f; toAir.hasExitTime = false;
 
             var upToAir = sUp.AddTransition(sAir);
@@ -1236,6 +1325,7 @@ namespace MageCast.EditorTools
             if (gate >= 0)
                 landToUp.AddCondition(gate == 1 ? AnimatorConditionMode.If : AnimatorConditionMode.IfNot,
                                       0f, "JumpBack");
+            if (onlyIf != null) landToUp.AddCondition(AnimatorConditionMode.If, 0f, onlyIf);
             landToUp.duration = 0.06f; landToUp.hasExitTime = false;
         }
 
@@ -1448,8 +1538,8 @@ namespace MageCast.EditorTools
             return result != null ? result : clip;
         }
 
-        static void BuildSend(AnimatorStateMachine sm, AnimatorState back, string name,
-                              AnimationClip clip, bool defensive)
+        static AnimatorState BuildSend(AnimatorStateMachine sm, AnimatorState back, string name,
+                                       AnimationClip clip, bool defensive)
         {
             var s = sm.AddState(name);
             s.motion = clip;
@@ -1470,6 +1560,7 @@ namespace MageCast.EditorTools
             done.hasExitTime = true;
             done.exitTime = 0.85f;
             done.duration = 0.15f;
+            return s;
         }
 
         /// <summary>
@@ -1763,6 +1854,19 @@ namespace MageCast.EditorTools
             MakeHumanoid(IdleFolder, false, true);
             MakeHumanoid(JumpFolder, false, true);
             MakeHumanoid(CastFolder, false, true);
+            MakeHumanoid(PackFolder, false, true);
+        }
+
+        /// <summary>The one clip in PackFolder/name.fbx, or null if the pack is not there.</summary>
+        static AnimationClip PackClip(string name)
+        {
+            string path = PackFolder + "/" + name + ".fbx";
+            foreach (Object o in AssetDatabase.LoadAllAssetsAtPath(path))
+            {
+                AnimationClip c = o as AnimationClip;
+                if (c != null && !c.name.StartsWith("__")) return c;
+            }
+            return null;
         }
 
         static void MakeHumanoid(string folder, bool forceLooping, bool wearSkinAvatar)

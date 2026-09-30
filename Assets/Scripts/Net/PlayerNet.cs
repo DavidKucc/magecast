@@ -33,6 +33,10 @@ namespace MageCast
         public readonly NetworkVariable<bool> Grounded = new NetworkVariable<bool>(true,
             NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
+        /// <summary>A spell in hand -- the puppet walks instead of jogging, like its owner.</summary>
+        public readonly NetworkVariable<bool> Holding = new NetworkVariable<bool>(false,
+            NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+
         /// <summary>What the player is looking at, so a puppet's head turns the same way.</summary>
         public readonly NetworkVariable<Vector3> AimPoint = new NetworkVariable<Vector3>(Vector3.zero,
             NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
@@ -151,6 +155,7 @@ namespace MageCast
 
             // NetworkVariables only send when the value actually changes, so writing every frame is free
             if (motor != null) Grounded.Value = motor.IsGrounded;
+            if (caster != null) Holding.Value = caster.HeldSpell != null;
 
             if (pendingPoints.Count > 0 && Time.time >= nextStrokeSend) FlushStroke();
         }

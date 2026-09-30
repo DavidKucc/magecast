@@ -39,6 +39,17 @@ namespace MageCast
         static readonly int DirZHash = Animator.StringToHash("DirZ");
         static readonly int AirborneHash = Animator.StringToHash("Airborne");
         static readonly int JumpBackHash = Animator.StringToHash("JumpBack");
+        static readonly int HoldHash = Animator.StringToHash("Hold");
+        static readonly int JumpRunHash = Animator.StringToHash("JumpRun");
+
+        /// <summary>Effort above this at take-off is a sprint, and the running jump plays.</summary>
+        const float SprintEffort = 1.2f;
+
+        /// <summary>How fast the legs change between the jog and the spell-in-hand walk, per second.</summary>
+        const float HoldBlendSpeed = 5f;
+
+        Gestures.GestureCaster caster;
+        float shownHold;
 
         /// <summary>How hard she has to be backing away for the jump to read as a backward leap, in m/s.
         /// Above a drift, below a committed backpedal.</summary>
@@ -65,6 +76,7 @@ namespace MageCast
             if (animator == null) animator = GetComponentInChildren<Animator>();
             motor = GetComponent<PlayerMotor>();
             net = GetComponent<PlayerNet>();
+            caster = GetComponent<Gestures.GestureCaster>();
             if (animator != null) castLayer = animator.GetLayerIndex("Cast");
         }
 
@@ -107,6 +119,11 @@ namespace MageCast
             shownSpeed = Mathf.Lerp(shownSpeed, effort, 1f - Mathf.Exp(-blendSmoothing * Time.deltaTime));
 
             animator.SetFloat(SpeedHash, shownSpeed);
+
+            // a spell in hand: she walks
+            bool holding = remote ? net.Holding.Value : caster != null && caster.HeldSpell != null;
+            shownHold = Mathf.MoveTowards(shownHold, holding ? 1f : 0f, HoldBlendSpeed * Time.deltaTime);
+            animator.SetFloat(HoldHash, shownHold);
             animator.SetFloat(DirXHash, shownDir.x);
             animator.SetFloat(DirZHash, shownDir.y);
 
@@ -116,7 +133,11 @@ namespace MageCast
 
             // Latched at the moment the feet leave the ground and held for the whole flight. Deciding
             // it every frame instead would let a mid-air steer swap the animation halfway through a jump.
-            if (airborne && wasGrounded) animator.SetBool(JumpBackHash, velocity.y < -backwardJumpThreshold);
+            if (airborne && wasGrounded)
+            {
+                animator.SetBool(JumpBackHash, velocity.y < -backwardJumpThreshold);
+                animator.SetBool(JumpRunHash, effort > SprintEffort);
+            }
             wasGrounded = !airborne;
 
             animator.SetBool(AirborneHash, airborne);

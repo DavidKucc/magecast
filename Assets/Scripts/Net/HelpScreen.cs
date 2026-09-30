@@ -72,7 +72,7 @@ namespace MageCast
             "     Podrž levé a pusť - kouzlo zahodíš a ruku máš prázdnou.\n\n" +
             "Pravé tlačítko během kreslení - zruší rozkreslenou runu.\n" +
             "Kliknutí kolečkem myši - kamera přeskočí přes druhé rameno a kouzla letí z druhé ruky (výchozí je pravá).\n" +
-            "S kouzlem v ruce se nedá sprintovat.\n\n" +
+            "S kouzlem v ruce jen jdeš (asi poloviční rychlostí) a nedá se sprintovat.\n\n" +
             "<b>Ostatní</b>\n" +
             "Esc - menu (nastavení, nápověda, odchod)\n" +
             "F6 - schová / ukáže tabulku run vpravo nahoře\n" +

@@ -47,8 +47,11 @@ Všechno je na **levém tlačítku**:
 Míření je pořád jedno a to samé: z kamery jde paprsek dopředu a kde trefí, tam kouzlo letí.
 
 Rozdíl mezi kliknutím a podržením je **0,45 s**; při držení se vlevo nahoře plní proužek, a jakmile je
-plný, puštění kouzlo zahodí. Dokud kouzlo držíš, **nejde sprint** — buď máš připravené kouzlo, nebo jsi
-rychlý, ne obojí.
+plný, puštění kouzlo zahodí. Dokud kouzlo držíš, **jen jdeš** (52 % rychlosti, animace chůze) a **nejde
+sprint** — buď máš připravené kouzlo, nebo jsi rychlý, ne obojí.
+
+Bariéra se staví gestem bloku (zvednout ruce, spustit), skok při sprintu (Shift) má vlastní animaci
+skoku z běhu.
 
 Kouzlo letí **z ruky na straně, kam kamera kouká přes rameno** — výchozí je pravá. **Kliknutí kolečkem
 myši** přehodí kameru přes druhé rameno a kouzla pak letí z levé ruky (animace je zrcadlená).
