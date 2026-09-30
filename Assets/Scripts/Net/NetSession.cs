@@ -188,6 +188,35 @@ namespace MageCast
             HostRelay(Mode.Host);
         }
 
+        /// <summary>Where this room's Relay server is, e.g. "europe-central2" -- shown next to the ping.</summary>
+        public string RelayRegion { get; private set; }
+
+        /// <summary>
+        /// The Relay regions to open a room in, nearest first. Chosen here rather than left to the
+        /// service: it would measure which region is closest by pinging them, which a browser cannot do,
+        /// so from the web every room opened in the service's default region across the Atlantic --
+        /// every message went there and back, and the ping with it. The players are in Central Europe.
+        /// </summary>
+        static readonly string[] PreferredRegions = { "europe-central2", "europe-west4", "europe-west1", "europe-north1" };
+
+        /// <summary>The first preferred region the service offers, or null for its own choice.</summary>
+        static async System.Threading.Tasks.Task<string> PickRegion()
+        {
+            try
+            {
+                var offered = await RelayService.Instance.ListRegionsAsync();
+                var ids = new System.Collections.Generic.List<string>();
+                foreach (var r in offered) ids.Add(r.Id);
+                Debug.Log("[Net] relay regions offered: " + string.Join(", ", ids));
+                foreach (string want in PreferredRegions) if (ids.Contains(want)) return want;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[Net] could not list relay regions, leaving it to the service: " + e.Message);
+            }
+            return null;
+        }
+
         async void HostRelay(Mode mode)
         {
             if (!Ready()) return;
@@ -198,7 +227,10 @@ namespace MageCast
                 await SignIn();
 
                 Say(mode == Mode.Training ? "setting up training..." : "opening a room...");
-                Allocation allocation = await RelayService.Instance.CreateAllocationAsync(MaxGuests);
+                string region = await PickRegion();
+                Allocation allocation = await RelayService.Instance.CreateAllocationAsync(MaxGuests, region);
+                RelayRegion = allocation.Region;
+                Debug.Log("[Net] room opened in relay region " + allocation.Region + " (asked for " + (region ?? "the default") + ")");
                 string code = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
 
                 transport.UseWebSockets = true;
@@ -234,6 +266,7 @@ namespace MageCast
 
                 Say("joining " + code + "...");
                 JoinAllocation allocation = await RelayService.Instance.JoinAllocationAsync(code);
+                RelayRegion = allocation.Region;
 
                 transport.UseWebSockets = true;
                 transport.SetRelayServerData(new RelayServerData(allocation, RelayConnection));
@@ -342,6 +375,7 @@ namespace MageCast
             if (manager.IsListening) manager.Shutdown();
             Current = Mode.None;
             JoinCode = null;
+            RelayRegion = null;
             GameInput.MenuOpen = false;
             GameInput.LocalDead = false;
             if (!string.IsNullOrEmpty(reason)) Say(reason);

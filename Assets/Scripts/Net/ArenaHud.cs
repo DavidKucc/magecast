@@ -140,6 +140,8 @@ namespace MageCast
             string ping = "";
             if (!nm.IsServer && nm.IsConnectedClient)
                 ping = "   ping " + nm.NetworkConfig.NetworkTransport.GetCurrentRtt(NetworkManager.ServerClientId) + " ms";
+            // where the Relay server is: a far one is the first thing to suspect when the ping is high
+            if (!string.IsNullOrEmpty(session.RelayRegion)) ping += "   (" + session.RelayRegion + ")";
 
             Box(new Rect(cx - 260f, 6f, 520f, 30f));
             Shadowed(new Rect(cx - 260f, 8f, 520f, 26f), line + ping, mid, Color.white);
