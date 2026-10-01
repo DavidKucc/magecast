@@ -73,7 +73,7 @@ namespace MageCast
 
             float w = 380f, h = 54f;
             float x = Screen.width * 0.5f - w * 0.5f;
-            float y = Mathf.Max(30f, Screen.height * 0.5f - 290f);
+            float y = Mathf.Max(30f, Screen.height * 0.5f - 325f);
 
             GUI.Label(new Rect(0f, y, Screen.width, 80f), "MAGE CAST", title);
             y += 76f;
@@ -87,6 +87,19 @@ namespace MageCast
             string name = GUI.TextField(new Rect(x, y, w, 44f), NetSession.PlayerName, 12, field);
             if (name != NetSession.PlayerName) NetSession.PlayerName = name;
             y += 64f;
+
+            // The map for training and for a room you host. Joining needs no choice: you go where the host is.
+            GUI.Label(new Rect(x, y, w, 24f), "Map", label);
+            y += 26f;
+            int maps = NetSession.ArenaScenes.Length;
+            float mw = (w - 8f * (maps - 1)) / maps;
+            for (int i = 0; i < maps; i++)
+            {
+                bool on = NetSession.SelectedArena == i;
+                if (GUI.Toggle(new Rect(x + i * (mw + 8f), y, mw, 36f), on, NetSession.ArenaTitles[i], smallButton) && !on)
+                    NetSession.SelectedArena = i;
+            }
+            y += 48f;
 
             if (GUI.Button(new Rect(x, y, w, h), "Training", button)) session.StartTraining(true);
             y += h + 10f;

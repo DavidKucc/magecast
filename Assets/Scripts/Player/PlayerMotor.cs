@@ -101,6 +101,22 @@ namespace MageCast
         /// </summary>
         [SerializeField] float bodyTurnSpeed = 720f;
 
+        [Header("Climb")]
+        /// <summary>
+        /// How far above the feet the hands reach to pull up onto a ledge. With the 1.35 m jump that is
+        /// any ledge up to about 2.65 m: the 2.4 m ledges the maps are built with, but not a 2.8 m wall
+        /// that is there to block sight, and not a 4 m storey.
+        /// </summary>
+        [SerializeField] float climbReach = 1.3f;
+        /// <summary>Pulling up, start to standing on top. Long enough to be shot during, on purpose.</summary>
+        [SerializeField] float climbSeconds = 0.55f;
+
+        /// <summary>Pulling up onto a ledge: no casting, and a direct hit drops you (CancelClimb).</summary>
+        public bool IsClimbing { get; private set; }
+
+        Vector3 climbFrom, climbUp, climbTo;
+        float climbStarted;
+
         [Header("Refs")]
         [SerializeField] ThirdPersonCamera cam;
 
@@ -291,6 +307,7 @@ namespace MageCast
             velocity = Vector3.zero;
             external = Vector3.zero;
             tossed = false;
+            IsClimbing = false;
             slowUntil = -99f;
             gripUntil = -99f;
         }
@@ -328,6 +345,8 @@ namespace MageCast
             // swing sideways relative to the body and leans into the turn.
             transform.rotation = Quaternion.RotateTowards(transform.rotation, basis,
                                                           bodyTurnSpeed * Time.deltaTime);
+
+            if (IsClimbing) { ClimbStep(); return; }
 
             // With a menu open the keys belong to the menu; the body still falls and still slides to a stop.
             Vector3 input = hands ? new Vector3(Input.GetAxisRaw("Horizontal"), 0f, Input.GetAxisRaw("Vertical"))
@@ -373,6 +392,12 @@ namespace MageCast
                 velocity.z = air.z;
             }
 
+            // Jumped at a ledge too high to land on: grab it and pull up. Only while pushing towards it,
+            // and only from the top of the jump down -- on the way up a jump may still clear it by itself.
+            if (!IsGrounded && !tossed && !JumpLocked && CurrentSlow > 0f && velocity.y < 2.5f
+                && wanted.sqrMagnitude > 0.01f && TryClimb(wanted))
+                return;
+
             // frozen solid (an ice III): no running and no jumping out of it either
             bool jumpReady = !JumpLocked && CurrentSlow > 0f
                              && Time.time - lastGroundedTime <= coyoteTime
@@ -390,6 +415,109 @@ namespace MageCast
             // exponential bleed-off, framerate independent
             external *= Mathf.Exp(-externalDamping * Time.deltaTime);
             if (external.sqrMagnitude < 0.01f) external = Vector3.zero;
+        }
+
+        // ---------------------------------------------------------------- climbing
+
+        /// <summary>
+        /// Looks for a ledge in the direction of <paramref name="wish"/>: a wall right in front, a flat top
+        /// within reach of the hands, room to stand up there and room to rise to it. Starts the pull-up
+        /// when all four are there.
+        /// </summary>
+        bool TryClimb(Vector3 wish)
+        {
+            Vector3 dir = new Vector3(wish.x, 0f, wish.z).normalized;
+            Vector3 feet = transform.position;
+            float r = cc.radius;
+
+            RaycastHit wall = default;
+            bool found = false;
+            foreach (float h in new[] { 0.5f, 1.1f })
+            {
+                if (!Cast(feet + Vector3.up * h, dir, r + 0.4f, out wall)) continue;
+                if (Mathf.Abs(wall.normal.y) > 0.3f) continue;
+                found = true;
+                break;
+            }
+            if (!found) return false;
+
+            Vector3 into = new Vector3(-wall.normal.x, 0f, -wall.normal.z).normalized;
+            if (Vector3.Dot(into, dir) < 0.5f) return false;       // brushing along a wall is not climbing it
+
+            Vector3 probe = wall.point + into * 0.3f;
+            probe.y = feet.y + climbReach + 0.3f;
+            RaycastHit top;
+            if (!Cast(probe, Vector3.down, climbReach + 0.3f, out top) || top.normal.y < 0.7f) return false;
+            float rise = top.point.y - feet.y;
+            if (rise < 0.15f || rise > climbReach) return false;
+
+            Vector3 up = new Vector3(feet.x, top.point.y + 0.05f, feet.z);
+            Vector3 land = new Vector3(wall.point.x, top.point.y + 0.05f, wall.point.z) + into * (r + 0.15f);
+            if (Blocked(up) || Blocked(land)) return false;
+
+            IsClimbing = true;
+            climbStarted = Time.time;
+            climbFrom = feet;
+            climbUp = up;
+            climbTo = land;
+            velocity = Vector3.zero;
+            external = Vector3.zero;
+            return true;
+        }
+
+        /// <summary>Straight up the face first, then over the edge -- the capsule never cuts the corner.</summary>
+        void ClimbStep()
+        {
+            float k = Mathf.Clamp01((Time.time - climbStarted) / climbSeconds);
+            Vector3 target = k < 0.6f
+                ? Vector3.Lerp(climbFrom, climbUp, Mathf.SmoothStep(0f, 1f, k / 0.6f))
+                : Vector3.Lerp(climbUp, climbTo, Mathf.SmoothStep(0f, 1f, (k - 0.6f) / 0.4f));
+            cc.Move(target - transform.position);
+            if (k < 1f) return;
+            IsClimbing = false;
+            velocity = new Vector3(0f, -2f, 0f);
+            lastGroundedTime = Time.time;
+        }
+
+        /// <summary>Knocked off the ledge: let go where you are and fall.</summary>
+        public void CancelClimb()
+        {
+            if (!IsClimbing) return;
+            IsClimbing = false;
+            velocity = Vector3.zero;
+            lastGroundedTime = -999f;
+        }
+
+        /// <summary>Level geometry only: not yourself, not other people, not a barrier, not a dummy.</summary>
+        bool Solid(Collider c)
+        {
+            return c != null && !c.isTrigger && !c.transform.IsChildOf(transform)
+                   && c.GetComponentInParent<PlayerMotor>() == null
+                   && c.GetComponentInParent<Gestures.CastShield>() == null
+                   && c.GetComponentInParent<Combat.TrainingDummy>() == null;
+        }
+
+        bool Cast(Vector3 from, Vector3 dir, float distance, out RaycastHit nearest)
+        {
+            nearest = default;
+            bool any = false;
+            foreach (RaycastHit h in Physics.RaycastAll(from, dir, distance, ~0, QueryTriggerInteraction.Ignore))
+            {
+                if (!Solid(h.collider) || (any && h.distance >= nearest.distance)) continue;
+                nearest = h;
+                any = true;
+            }
+            return any;
+        }
+
+        /// <summary>Whether a standing body with its feet at <paramref name="feet"/> would be inside something.</summary>
+        bool Blocked(Vector3 feet)
+        {
+            float r = cc.radius;
+            foreach (Collider c in Physics.OverlapCapsule(feet + Vector3.up * (r + 0.05f), feet + Vector3.up * (cc.height - r),
+                                                          r * 0.95f, ~0, QueryTriggerInteraction.Ignore))
+                if (Solid(c)) return true;
+            return false;
         }
     }
 }

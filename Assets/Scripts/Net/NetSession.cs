@@ -26,7 +26,22 @@ namespace MageCast
     public class NetSession : MonoBehaviour
     {
         public const string MenuScene = "MainMenu";
-        public const string ArenaScene = "Arena_Blockout";
+
+        /// <summary>The maps, by scene: what the menu offers, in the order it offers them.</summary>
+        public static readonly string[] ArenaScenes = { "Arena_Blockout", "Arena_Temple" };
+        public static readonly string[] ArenaTitles = { "Blockout", "Temple" };
+
+        /// <summary>Which map training and hosting open, remembered between sessions.</summary>
+        public static int SelectedArena
+        {
+            get { return Mathf.Clamp(PlayerPrefs.GetInt("Arena", 0), 0, ArenaScenes.Length - 1); }
+            set { PlayerPrefs.SetInt("Arena", Mathf.Clamp(value, 0, ArenaScenes.Length - 1)); }
+        }
+
+        public static bool IsArena(string scene)
+        {
+            return Array.IndexOf(ArenaScenes, scene) >= 0;
+        }
 
         /// <summary>Players besides the host. Relay reserves room for exactly this many.</summary>
         const int MaxGuests = 3;
@@ -327,7 +342,8 @@ namespace MageCast
 
         void LoadArena()
         {
-            manager.SceneManager.LoadScene(ArenaScene, LoadSceneMode.Single);
+            // Joiners do not choose: Netcode takes them to whichever map the host is on.
+            manager.SceneManager.LoadScene(ArenaScenes[SelectedArena], LoadSceneMode.Single);
         }
 
         async Task SignIn()
@@ -378,6 +394,7 @@ namespace MageCast
             RelayRegion = null;
             GameInput.MenuOpen = false;
             GameInput.LocalDead = false;
+            GameInput.MatchOverUntil = -1f;
             if (!string.IsNullOrEmpty(reason)) Say(reason);
             if (SceneManager.GetActiveScene().name != MenuScene) SceneManager.LoadScene(MenuScene);
         }
@@ -390,7 +407,7 @@ namespace MageCast
             if (clientId != manager.LocalClientId && clientId != NetworkManager.ServerClientId) return;
 
             string why = string.IsNullOrEmpty(manager.DisconnectReason) ? "" : ": " + manager.DisconnectReason;
-            Leave(Current == Mode.Client && SceneManager.GetActiveScene().name == ArenaScene
+            Leave(Current == Mode.Client && IsArena(SceneManager.GetActiveScene().name)
                   ? "the host left the game" + why
                   : "could not connect" + why);
         }

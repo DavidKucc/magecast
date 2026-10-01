@@ -42,6 +42,15 @@ namespace MageCast.EditorTools
         const string PackFolder = "Assets/Animation/Pro Magic Pack";
 
         /// <summary>
+        /// The pull-up onto a ledge: whatever single clip is in this folder (Mixamo "Climbing To Top" or
+        /// "Braced Hang To Crouch"). Without one, a climb shows the airborne pose.
+        /// </summary>
+        const string ClimbFolder = "Assets/Animation/Climb";
+
+        /// <summary>PlayerMotor.climbSeconds: the clip is played at whatever rate fits it into the pull-up.</summary>
+        const float ClimbSeconds = 0.55f;
+
+        /// <summary>
         /// How fast she moves with a spell in hand, as a share of the jog. Must match
         /// GestureCaster.HoldSpeed, which applies it to the motor; here it sets the walk's playback.
         /// </summary>
@@ -408,6 +417,27 @@ namespace MageCast.EditorTools
                 var up = down.AddTransition(locomotion);
                 up.AddCondition(AnimatorConditionMode.IfNot, 0f, "Dead");
                 up.duration = 0.1f; up.hasExitTime = false;
+            }
+
+            // --- climbing ---
+            //
+            // Only when a clip is in the folder. The body is moved by PlayerMotor, not by the clip, so the
+            // clip's own rise is left out of the pose (root motion, which this character does not apply)
+            // -- kept in, it would lift the body a second time on top of the capsule.
+            AnimationClip climb = FolderClip(ClimbFolder);
+            if (climb != null)
+            {
+                ctrl.AddParameter("Climb", AnimatorControllerParameterType.Bool);
+                var climbState = sm.AddState("Climb");
+                climbState.motion = climb;
+                climbState.speed = climb.length / ClimbSeconds;
+                var climbIn = sm.AddAnyStateTransition(climbState);
+                climbIn.AddCondition(AnimatorConditionMode.If, 0f, "Climb");
+                climbIn.duration = 0.05f; climbIn.hasExitTime = false; climbIn.canTransitionToSelf = false;
+                var climbOut = climbState.AddTransition(locomotion);
+                climbOut.AddCondition(AnimatorConditionMode.IfNot, 0f, "Climb");
+                climbOut.duration = 0.12f; climbOut.hasExitTime = false;
+                Debug.Log("[Anim] climb: " + climb.name + " " + climb.length.ToString("F2") + " s at x" + climbState.speed.ToString("F1"));
             }
 
             // --- casting, as an upper-body layer over the top ---
@@ -1881,6 +1911,7 @@ namespace MageCast.EditorTools
             MakeHumanoid(JumpFolder, false, true);
             MakeHumanoid(CastFolder, false, true);
             MakeHumanoid(PackFolder, false, true);
+            MakeHumanoid(ClimbFolder, false, true);
         }
 
         /// <summary>
@@ -1911,6 +1942,19 @@ namespace MageCast.EditorTools
         }
 
         /// <summary>The one clip in PackFolder/name.fbx, or null if the pack is not there.</summary>
+        /// <summary>The first clip of the first FBX in a folder, or null.</summary>
+        static AnimationClip FolderClip(string folder)
+        {
+            if (!AssetDatabase.IsValidFolder(folder)) return null;
+            foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { folder }))
+                foreach (Object o in AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GUIDToAssetPath(guid)))
+                {
+                    AnimationClip c = o as AnimationClip;
+                    if (c != null && !c.name.StartsWith("__")) return c;
+                }
+            return null;
+        }
+
         static AnimationClip PackClip(string name)
         {
             string path = PackFolder + "/" + name + ".fbx";

@@ -31,6 +31,12 @@ namespace MageCast
             }
         }
 
-        public static bool Blocked { get { return MenuOpen || LocalDead || PointerFree; } }
+        /// <summary>A match was just won: everyone stands still under the result until the next one.</summary>
+        public static float MatchOverUntil = -1f;
+
+        public static bool Blocked
+        {
+            get { return MenuOpen || LocalDead || PointerFree || UnityEngine.Time.time < MatchOverUntil; }
+        }
     }
 }

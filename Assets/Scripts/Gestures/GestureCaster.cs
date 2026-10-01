@@ -343,6 +343,14 @@ namespace MageCast.Gestures
                 return;
             }
 
+            // Hands on a ledge: nothing drawn and nothing sent until you are up. A spell in hand stays.
+            if (motor != null && motor.IsClimbing)
+            {
+                if (drawing) Interrupt();
+                pressing = false;
+                return;
+            }
+
             ReadPracticeTarget();
 
             // A spell in hand: LMB decides on release -- a click sends it, a long hold drops it. On
@@ -621,6 +629,7 @@ namespace MageCast.Gestures
         public void Staggered()
         {
             if (Networked && !net.IsOwner) { net.SendStagger(); return; }
+            if (motor != null) motor.CancelClimb();     // hit while pulling up: you let go
             if (!holding || heldSpell == null) return;
 
             int tier = SpellTiers.Of(heldQuality);

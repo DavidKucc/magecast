@@ -37,6 +37,10 @@ namespace MageCast
         public readonly NetworkVariable<bool> Holding = new NetworkVariable<bool>(false,
             NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
+        /// <summary>Pulling up onto a ledge, for everyone else's animator.</summary>
+        public readonly NetworkVariable<bool> Climbing = new NetworkVariable<bool>(false,
+            NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+
         /// <summary>What the player is looking at, so a puppet's head turns the same way.</summary>
         public readonly NetworkVariable<Vector3> AimPoint = new NetworkVariable<Vector3>(Vector3.zero,
             NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
@@ -153,6 +157,7 @@ namespace MageCast
 
             // NetworkVariables only send when the value actually changes, so writing every frame is free
             if (motor != null) Grounded.Value = motor.IsGrounded;
+            if (motor != null) Climbing.Value = motor.IsClimbing;
             if (caster != null) Holding.Value = caster.HeldSpell != null;
 
             if (pendingPoints.Count > 0 && Time.time >= nextStrokeSend) FlushStroke();
@@ -409,7 +414,11 @@ namespace MageCast
 
             Deaths.Value++;
             PlayerNet killer = Find(health.LastAttacker);
-            if (killer != null && killer != this) killer.Kills.Value++;
+            if (killer != null && killer != this)
+            {
+                killer.Kills.Value++;
+                MatchDirector.Scored(killer);
+            }
             KillFeedClientRpc(killer != null && killer != this ? killer.DisplayName : "", DisplayName);
             StartCoroutine(RespawnLater());
         }
@@ -425,12 +434,26 @@ namespace MageCast
             yield return new WaitForSeconds(respawnSeconds);
             if (!IsSpawned) yield break;
 
-            Transform spawn = MatchDirector.PickSpawn(this);
+            ServerRespawnAt(MatchDirector.PickSpawn(this));
+        }
+
+        /// <summary>Server: back to full health at <paramref name="spawn"/> (or where they are, if none).</summary>
+        public void ServerRespawnAt(Transform spawn)
+        {
+            if (!IsServer || !IsSpawned) return;
             Vector3 at = spawn != null ? spawn.position : transform.position;
             float yaw = spawn != null ? spawn.eulerAngles.y : transform.eulerAngles.y;
 
             health.ResetToFull();
             RespawnClientRpc(at, yaw, ToOwner());
+        }
+
+        /// <summary>Somebody reached the kill limit: the result on every screen, hands off until the next match.</summary>
+        [ClientRpc]
+        public void MatchWonClientRpc(string winner, string score)
+        {
+            ArenaHud.ShowWinner(winner, score, MatchDirector.IntermissionSeconds);
+            GameInput.MatchOverUntil = Time.time + MatchDirector.IntermissionSeconds;
         }
 
         [ClientRpc]

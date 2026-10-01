@@ -41,6 +41,8 @@ namespace MageCast
         static readonly int JumpBackHash = Animator.StringToHash("JumpBack");
         static readonly int HoldHash = Animator.StringToHash("Hold");
         static readonly int JumpRunHash = Animator.StringToHash("JumpRun");
+        static readonly int ClimbHash = Animator.StringToHash("Climb");
+        bool hasClimb;
 
         /// <summary>Effort above this at take-off is a sprint, and the running jump plays.</summary>
         const float SprintEffort = 1.2f;
@@ -84,6 +86,8 @@ namespace MageCast
             caster = GetComponent<Gestures.GestureCaster>();
             health = GetComponent<Combat.Health>();
             if (animator != null) castLayer = animator.GetLayerIndex("Cast");
+            if (animator != null)
+                foreach (AnimatorControllerParameter p in animator.parameters) if (p.nameHash == ClimbHash) hasClimb = true;
         }
 
         void Update()
@@ -150,6 +154,9 @@ namespace MageCast
             // Read from the motor's grounded flag, not from the jump key, so being knocked off your
             // feet or stepping off a ledge looks the same as jumping -- which it should.
             bool airborne = remote ? !net.Grounded.Value : !motor.IsGrounded;
+
+            // the pull-up has its own clip once one is in the folder (the animator builder adds it)
+            if (hasClimb) animator.SetBool(ClimbHash, remote ? net.Climbing.Value : motor.IsClimbing);
 
             // Latched at the moment the feet leave the ground and held for the whole flight. Deciding
             // it every frame instead would let a mid-air steer swap the animation halfway through a jump.

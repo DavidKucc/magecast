@@ -27,6 +27,31 @@ namespace MageCast
         bool copied;
         float copiedAt;
 
+        static string winner, winnerScore;
+        static float winnerUntil = -1f;
+
+        /// <summary>The end of a match, for every screen: who won, the final score, the countdown to the next.</summary>
+        public static void ShowWinner(string name, string score, float seconds)
+        {
+            winner = name;
+            winnerScore = score;
+            winnerUntil = Time.time + seconds;
+        }
+
+        void Winner()
+        {
+            if (Time.time >= winnerUntil) return;
+            GUI.color = new Color(0f, 0f, 0f, 0.45f);
+            GUI.DrawTexture(new Rect(0f, Screen.height * 0.3f, Screen.width, 150f), Texture2D.whiteTexture);
+            GUI.color = Color.white;
+            bool me = PlayerNet.Local != null && PlayerNet.Local.DisplayName == winner;
+            Shadowed(new Rect(0f, Screen.height * 0.3f + 14f, Screen.width, 44f),
+                     me ? "YOU WIN" : winner + " WINS", big, me ? new Color(1f, 0.85f, 0.4f) : new Color(1f, 0.5f, 0.45f));
+            Shadowed(new Rect(0f, Screen.height * 0.3f + 66f, Screen.width, 30f), winnerScore, mid, Color.white);
+            Shadowed(new Rect(0f, Screen.height * 0.3f + 104f, Screen.width, 26f),
+                     "next match in " + Mathf.CeilToInt(winnerUntil - Time.time), small, new Color(1f, 1f, 1f, 0.75f));
+        }
+
         public static void ReportKill(string killer, string victim)
         {
             feed.Add(new Kill {
@@ -104,6 +129,7 @@ namespace MageCast
             TopBar(session, nm);
             KillFeed();
             DeathOverlay();
+            Winner();
             if (GameInput.MenuOpen && HelpScreen.Draw()) return;
             if (GameInput.MenuOpen) { Menu(session, nm); BuildInfo.DrawCorner(); }
             else ClickToPlay();
@@ -143,8 +169,8 @@ namespace MageCast
             // where the Relay server is: a far one is the first thing to suspect when the ping is high
             if (!string.IsNullOrEmpty(session.RelayRegion)) ping += "   (" + session.RelayRegion + ")";
 
-            Box(new Rect(cx - 260f, 6f, 520f, 30f));
-            Shadowed(new Rect(cx - 260f, 8f, 520f, 26f), line + ping, mid, Color.white);
+            Box(new Rect(cx - 300f, 6f, 600f, 30f));
+            Shadowed(new Rect(cx - 300f, 8f, 600f, 26f), line + "      (to " + MatchDirector.KillsToWin + ")" + ping, mid, Color.white);
         }
 
         void NameTags()

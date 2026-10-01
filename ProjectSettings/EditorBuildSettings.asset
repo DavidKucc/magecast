@@ -11,4 +11,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Arena_Blockout.unity
     guid: 040dffe4b23eafa49b0077fe0b70d739
+  - enabled: 1
+    path: Assets/Scenes/Arena_Temple.unity
+    guid: 899d93626211c2a4d9afd858548b5821
   m_configObjects: {}

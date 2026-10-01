@@ -276,8 +276,29 @@ porty ani znát cizí IP. Když hostitel odejde, hra končí i pro ostatní.
 Každý vidí svou kopii každého kouzla (letí, odráží se, bliká stejně), ale ubírá jen ta hostitelova.
 Plocha na zemi je jedna — pošle ji hostitel všem.
 
-**Smrt:** na nule zmizíš, 3 s a jsi zpátky na spawnu co nejdál od ostatních. Nahoře se počítá skóre
-zabití / smrtí. Vlastní oheň nebo vlastní výboj v ledu tě zabít může, ale soupeři to nepřipíše.
+**Smrt:** na nule padneš (animace pádu podle směru, odkud nejspíš přišla rána) a tělo leží bez kolize
+až do respawnu. Za 3 s jsi zpátky na spawnu, který žádný živý soupeř nevidí, a z takových co nejdál od
+ostatních. Nahoře se počítá skóre zabití / smrtí. Vlastní oheň nebo vlastní výboj v ledu tě zabít může,
+ale soupeři to nepřipíše. Jméno soupeře nad hlavou vidíš, jen když ho vidíš (ne přes zeď).
+
+**Zápas:** první na 5 zabití vyhrává. Všem se ukáže vítěz a skóre, 6 s se nikdo nehýbe, pak se skóre
+vynuluje a všichni začnou znovu z protilehlých spawnů. V tréninku zápasy nejsou.
+
+**Mapy:** hostitel (a trénink) vybírá v menu — *Blockout* (původní šedá aréna) a *Temple*. Kdo se
+připojí kódem, jde tam, kde je hostitel.
+
+**Temple** (generuje `Tools/Arena/Build Temple Map`, měří `Tools/Arena/Audit Temple`): zřícený chrám
+44 × 44 m, čtvrtina orazítkovaná čtyřikrát otočením. Výšky jsou jen tyhle: 1,2 skok, 1,6 kryt po prsa
+(dá se vyšplhat), 2,4 hrana na vyšplhání, 4 patro (po rampě).
+- **střed:** oltář 2,4 m s obeliskem, na každé straně schody,
+- **rohy:** věž o dvou podlažích — místnost se dvěma dveřmi, uvnitř rampa na střechu s cimbuřím,
+- **mosty:** ze střechy každé věže dolů na roh oltáře. Výhled, ale žádný kryt — a vzduch tě z nich shodí,
+- **boční uličky:** půlka je propadlina 1,2 m (kouzla létají nad tebou, plochy se v ní drží), půlka ruina
+  (zeď 2,4 m na vyšplhání, padlý sloup, kryt po prsa).
+
+**Šplhání:** skoč proti hraně a drž směr k ní. Na cokoli, co má vršek do 1,3 m nad tvýma nohama ve
+skoku (tj. hrany do ~2,6 m), se vytáhneš za 0,55 s. Během šplhání nekreslíš ani neposíláš (kouzlo v
+ruce zůstává) a přímý zásah tě pustí dolů. Na 2,8 m zeď ani na 4 m patro se vyšplhat nedá.
 
 ---
 

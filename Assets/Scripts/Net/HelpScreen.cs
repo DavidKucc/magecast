@@ -64,7 +64,9 @@ namespace MageCast
         const string Controls =
             "<b>Pohyb</b>\n" +
             "WASD - chůze,  Shift - sprint,  mezerník - skok\n" +
-            "Myš - míření\n\n" +
+            "Myš - míření\n" +
+            "Šplhání: skoč proti hraně a drž směr k ní - vytáhneš se na cokoli do 2,4 m. Během šplhání nekreslíš; " +
+            "zásah tě shodí dolů.\n\n" +
             "<b>Kouzlo - všechno levým tlačítkem</b>\n" +
             "1.  Drž levé tlačítko a nakresli runu. Kamera stojí, jdeš pomaleji a nemůžeš sprintovat ani skákat.\n" +
             "2.  Pusť - kouzlo máš v ruce. Nahoře vlevo vidíš, co a v jakém tieru (I / II / III).\n" +
@@ -78,7 +80,10 @@ namespace MageCast
             "F6 - schová / ukáže tabulku run vpravo nahoře\n" +
             "V tréninku: F1-F5 cvičný cíl pro záznam, F7 přepne rozpoznávání run (čáry a úhly / starý $P)";
 
-        const string Rules =
+        static readonly string Rules =
+            "<b>Zápas</b>\n" +
+            "Kdo první zabije " + MatchDirector.KillsToWin + "x, vyhrává. Pak se skóre vynuluje a začíná nový zápas. " +
+            "Po smrti jsi za 3 s zpátky na spawnu, který soupeř nevidí. Mapu vybírá hostitel v menu.\n\n" +
             "<b>Runy</b>\n" +
             "Runa se kreslí jedním tahem. Nezáleží, na kterém konci začneš. Hra tah rozloží na rovné čáry a porovná jejich " +
             "úhly s runou - každá čára smí být nejvýš 35° vedle. Hotové čáry se hned narovnají.\n" +

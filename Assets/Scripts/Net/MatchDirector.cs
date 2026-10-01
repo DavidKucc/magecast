@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
@@ -15,6 +16,13 @@ namespace MageCast
     public class MatchDirector : MonoBehaviour
     {
         static MatchDirector instance;
+
+        /// <summary>A match is won by the first to this many kills; then everyone starts over.</summary>
+        public const int KillsToWin = 5;
+        /// <summary>How long the result stays up before the next match starts.</summary>
+        public const float IntermissionSeconds = 6f;
+
+        bool matchOver;
 
         NetworkManager manager;
         readonly List<Transform> spawns = new List<Transform>();
@@ -89,8 +97,59 @@ namespace MageCast
         }
 
         /// <summary>
-        /// The spawn point furthest from every other living player, so nobody appears in somebody's
-        /// crosshair. The first player in gets the middle A spawn, which faces into the arena.
+        /// Server: a kill was just counted. At the limit the match ends -- the result goes up everywhere,
+        /// and a few seconds later the scores are wiped and everyone starts again from opposite spawns.
+        /// Training has no matches.
+        /// </summary>
+        public static void Scored(PlayerNet killer)
+        {
+            if (instance == null || instance.matchOver || killer == null) return;
+            if (NetSession.Instance != null && NetSession.Instance.Current == NetSession.Mode.Training) return;
+            if (killer.Kills.Value < KillsToWin) return;
+
+            instance.matchOver = true;
+            var score = new System.Text.StringBuilder();
+            foreach (PlayerNet p in PlayerNet.All)
+            {
+                if (score.Length > 0) score.Append("    ");
+                score.Append(p.DisplayName).Append(' ').Append(p.Kills.Value);
+            }
+            killer.MatchWonClientRpc(killer.DisplayName, score.ToString());
+            instance.StartCoroutine(instance.NextMatch());
+        }
+
+        IEnumerator NextMatch()
+        {
+            yield return new WaitForSeconds(IntermissionSeconds);
+            matchOver = false;
+
+            var players = new List<PlayerNet>(PlayerNet.All);
+            players.Sort((a, b) => a.OwnerClientId.CompareTo(b.OwnerClientId));
+            for (int i = 0; i < players.Count; i++)
+            {
+                players[i].Kills.Value = 0;
+                players[i].Deaths.Value = 0;
+                players[i].ServerRespawnAt(StartSpawn(i));
+            }
+            Debug.Log("[Match] next match, " + players.Count + " players");
+        }
+
+        /// <summary>
+        /// Where the i-th player starts a match: the two middle spawns first (the fair 1v1 pair, facing
+        /// each other across the map), then the side ones, alternating sides.
+        /// </summary>
+        static Transform StartSpawn(int i)
+        {
+            string[] order = { "SpawnA_1", "SpawnB_1", "SpawnA_0", "SpawnB_0", "SpawnA_2", "SpawnB_2" };
+            if (i < order.Length)
+                foreach (Transform t in instance.spawns) if (t.name == order[i]) return t;
+            return instance.spawns.Count > 0 ? instance.spawns[i % instance.spawns.Count] : null;
+        }
+
+        /// <summary>
+        /// The spawn point furthest from every other living player that none of them can see, so nobody
+        /// appears in somebody's crosshair. Only when every point is in sight does it settle for the
+        /// furthest one. The first player in gets the middle A spawn, which faces into the arena.
         /// </summary>
         public static Transform PickSpawn(PlayerNet forWhom)
         {
@@ -112,14 +171,35 @@ namespace MageCast
             }
 
             Transform best = null;
-            float bestDistance = -1f;
+            float bestScore = float.MinValue;
             foreach (Transform t in instance.spawns)
             {
                 float nearest = float.MaxValue;
-                foreach (Vector3 o in others) nearest = Mathf.Min(nearest, Vector3.Distance(t.position, o));
-                if (nearest > bestDistance) { bestDistance = nearest; best = t; }
+                bool seen = false;
+                foreach (Vector3 o in others)
+                {
+                    nearest = Mathf.Min(nearest, Vector3.Distance(t.position, o));
+                    if (!seen && InSight(o + Vector3.up * 1.6f, t.position + Vector3.up * 1.6f)) seen = true;
+                }
+                float score = nearest - (seen ? 1000f : 0f);
+                if (score > bestScore) { bestScore = score; best = t; }
             }
             return best;
+        }
+
+        /// <summary>A clear line between two eyes: only the map counts, not people, dummies or barriers.</summary>
+        static bool InSight(Vector3 from, Vector3 to)
+        {
+            Vector3 d = to - from;
+            foreach (RaycastHit h in Physics.RaycastAll(from, d.normalized, d.magnitude, ~0, QueryTriggerInteraction.Ignore))
+            {
+                Collider c = h.collider;
+                if (c.GetComponentInParent<PlayerNet>() != null) continue;
+                if (c.GetComponentInParent<Combat.TrainingDummy>() != null) continue;
+                if (c.GetComponentInParent<Gestures.CastShield>() != null) continue;
+                return false;
+            }
+            return true;
         }
     }
 }

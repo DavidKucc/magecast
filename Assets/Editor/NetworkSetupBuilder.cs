@@ -175,7 +175,8 @@ namespace MageCast.EditorTools
             var scenes = new List<EditorBuildSettingsScene>
             {
                 new EditorBuildSettingsScene(MenuScenePath, true),
-                new EditorBuildSettingsScene(ArenaScenePath, true)
+                new EditorBuildSettingsScene(ArenaScenePath, true),
+                new EditorBuildSettingsScene(ArenaTempleBuilder.ScenePath, true)
             };
             EditorBuildSettings.scenes = scenes.ToArray();
         }
