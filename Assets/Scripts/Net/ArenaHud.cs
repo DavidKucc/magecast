@@ -160,9 +160,37 @@ namespace MageCast
 
                 Vector3 s = cam.WorldToScreenPoint(p.transform.position + Vector3.up * 2.95f);
                 if (s.z <= 0.1f || s.z > 60f) continue;
+                // not through walls: a name over the cover gives away who is hiding behind it
+                if (!InSight(cam.transform.position, p)) continue;
                 Shadowed(new Rect(s.x - 100f, Screen.height - s.y - 12f, 200f, 24f), p.DisplayName, nameTag,
                          new Color(1f, 0.55f, 0.5f));
             }
+        }
+
+        /// <summary>
+        /// Whether anything solid stands between the camera and somebody's head or chest. Their own body
+        /// does not count, nor yours, nor a barrier (it is see-through energy).
+        /// </summary>
+        static bool InSight(Vector3 eye, PlayerNet p)
+        {
+            foreach (float height in new[] { 1.6f, 1.0f })
+            {
+                Vector3 target = p.transform.position + Vector3.up * height;
+                Vector3 toward = target - eye;
+                bool blocked = false;
+                foreach (RaycastHit h in Physics.RaycastAll(eye, toward.normalized, toward.magnitude, ~0,
+                                                            QueryTriggerInteraction.Ignore))
+                {
+                    Transform t = h.collider.transform;
+                    if (t.IsChildOf(p.transform)) continue;
+                    if (PlayerNet.Local != null && t.IsChildOf(PlayerNet.Local.transform)) continue;
+                    if (h.collider.GetComponentInParent<Gestures.CastShield>() != null) continue;
+                    blocked = true;
+                    break;
+                }
+                if (!blocked) return true;
+            }
+            return false;
         }
 
         void KillFeed()

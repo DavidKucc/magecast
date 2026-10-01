@@ -51,6 +51,11 @@ namespace MageCast
         Gestures.GestureCaster caster;
         float shownHold;
 
+        static readonly int DeadHash = Animator.StringToHash("Dead");
+        static readonly int DeathDirHash = Animator.StringToHash("DeathDir");
+        Combat.Health health;
+        bool shownDead;
+
         /// <summary>How hard she has to be backing away for the jump to read as a backward leap, in m/s.
         /// Above a drift, below a committed backpedal.</summary>
         [SerializeField] float backwardJumpThreshold = 1f;
@@ -77,6 +82,7 @@ namespace MageCast
             motor = GetComponent<PlayerMotor>();
             net = GetComponent<PlayerNet>();
             caster = GetComponent<Gestures.GestureCaster>();
+            health = GetComponent<Combat.Health>();
             if (animator != null) castLayer = animator.GetLayerIndex("Cast");
         }
 
@@ -85,6 +91,20 @@ namespace MageCast
             if (animator == null || motor == null) return;
 
             bool remote = net != null && net.IsRemote;
+
+            // Dying: the whole body falls, the arms included, and stays down until the respawn.
+            bool dead = health != null && health.IsDead;
+            if (dead != shownDead)
+            {
+                shownDead = dead;
+                if (dead) animator.SetInteger(DeathDirHash, FallDirection());
+                animator.SetBool(DeadHash, dead);
+            }
+            if (dead)
+            {
+                if (castLayer >= 0) animator.SetLayerWeight(castLayer, 0f);
+                return;
+            }
             Vector2 velocity = remote ? RemoteLocalVelocity() : motor.LocalPlanarVelocity;
             float speed = velocity.magnitude;
             if (remote) SetDrawing(net.Drawing.Value);
@@ -148,6 +168,27 @@ namespace MageCast
             float weight = Mathf.Lerp(animator.GetLayerWeight(castLayer), wantCast ? 1f : 0f,
                                       1f - Mathf.Exp(-castLayerFade * Time.deltaTime));
             animator.SetLayerWeight(castLayer, weight);
+        }
+
+        /// <summary>
+        /// Which way to fall, from where the nearest opponent stands -- the shot most likely came from
+        /// them: hit from the front she falls back, from behind forward, from a side away from it.
+        /// 0 backward, 1 forward, 2 to the left, 3 to the right.
+        /// </summary>
+        int FallDirection()
+        {
+            PlayerNet nearest = null;
+            float best = float.MaxValue;
+            foreach (PlayerNet p in PlayerNet.All)
+            {
+                if (p == null || p.gameObject == gameObject) continue;
+                float d = (p.transform.position - transform.position).sqrMagnitude;
+                if (d < best) { best = d; nearest = p; }
+            }
+            if (nearest == null) return 0;
+            Vector3 from = transform.InverseTransformPoint(nearest.transform.position);
+            if (Mathf.Abs(from.z) >= Mathf.Abs(from.x)) return from.z >= 0f ? 0 : 1;
+            return from.x >= 0f ? 2 : 3;
         }
 
         static Vector2 Rotate(Vector2 v, float degrees)

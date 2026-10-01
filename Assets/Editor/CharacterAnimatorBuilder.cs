@@ -266,6 +266,8 @@ namespace MageCast.EditorTools
             ctrl.AddParameter("LeftHand", AnimatorControllerParameterType.Bool);   // mirrors the send
             ctrl.AddParameter("Hold", AnimatorControllerParameterType.Float);      // 1 = a spell in hand: walk
             ctrl.AddParameter("JumpRun", AnimatorControllerParameterType.Bool);    // took off sprinting
+            ctrl.AddParameter("Dead", AnimatorControllerParameterType.Bool);
+            ctrl.AddParameter("DeathDir", AnimatorControllerParameterType.Int);    // 0 back, 1 fwd, 2 left, 3 right
 
             var sm = ctrl.layers[0].stateMachine;
 
@@ -382,6 +384,30 @@ namespace MageCast.EditorTools
             else
             {
                 Debug.LogWarning("[Animator] no usable jump clips - the character will keep running in mid-air");
+            }
+
+            // --- dying ---
+            //
+            // The pack's four falls, picked by where the hit most likely came from (PlayerAnimation
+            // decides). Entered from anywhere, held on the last frame -- lying on the floor -- until the
+            // respawn clears Dead.
+            string[] falls = { "Standing React Death Backward", "Standing React Death Forward",
+                               "Standing React Death Left", "Standing React Death Right" };
+            for (int i = 0; i < falls.Length; i++)
+            {
+                AnimationClip fall = PackClip(falls[i]);
+                if (fall == null) continue;
+                BakeIntoPose(fall);
+                fall = PackClip(falls[i]);          // reimported: fetch the clip again
+                var down = sm.AddState("Death" + i);
+                down.motion = fall;
+                var enter = sm.AddAnyStateTransition(down);
+                enter.AddCondition(AnimatorConditionMode.If, 0f, "Dead");
+                enter.AddCondition(AnimatorConditionMode.Equals, i, "DeathDir");
+                enter.duration = 0.1f; enter.hasExitTime = false; enter.canTransitionToSelf = false;
+                var up = down.AddTransition(locomotion);
+                up.AddCondition(AnimatorConditionMode.IfNot, 0f, "Dead");
+                up.duration = 0.1f; up.hasExitTime = false;
             }
 
             // --- casting, as an upper-body layer over the top ---
@@ -1855,6 +1881,33 @@ namespace MageCast.EditorTools
             MakeHumanoid(JumpFolder, false, true);
             MakeHumanoid(CastFolder, false, true);
             MakeHumanoid(PackFolder, false, true);
+        }
+
+        /// <summary>
+        /// Keeps a clip's whole movement in the pose -- the drop to the floor, the stagger back, the turn.
+        /// For a fall, which has to end lying where it lands: left to root motion (which this character
+        /// does not use), the body would fall over in mid-air at standing height.
+        /// </summary>
+        static void BakeIntoPose(AnimationClip clip)
+        {
+            string path = AssetDatabase.GetAssetPath(clip);
+            var imp = AssetImporter.GetAtPath(path) as ModelImporter;
+            if (imp == null) return;
+            ModelImporterClipAnimation[] clips = imp.clipAnimations;
+            if (clips == null || clips.Length == 0) clips = imp.defaultClipAnimations;
+            bool changed = false;
+            foreach (ModelImporterClipAnimation c in clips)
+            {
+                if (c.lockRootHeightY && c.lockRootPositionXZ && c.lockRootRotation && !c.loopTime) continue;
+                c.lockRootHeightY = true; c.keepOriginalPositionY = true;
+                c.lockRootPositionXZ = true; c.keepOriginalPositionXZ = true;
+                c.lockRootRotation = true; c.keepOriginalOrientation = true;
+                c.loopTime = false;
+                changed = true;
+            }
+            if (!changed) return;
+            imp.clipAnimations = clips;
+            imp.SaveAndReimport();
         }
 
         /// <summary>The one clip in PackFolder/name.fbx, or null if the pack is not there.</summary>

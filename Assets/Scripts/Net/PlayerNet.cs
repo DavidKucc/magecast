@@ -58,7 +58,6 @@ namespace MageCast
         CharacterController body;
         OwnerNetworkTransform netTransform;
         GlyphDisplay glyph;
-        Renderer[] renderers;
 
         readonly List<Vector2> pendingPoints = new List<Vector2>();
         float nextStrokeSend;
@@ -86,7 +85,6 @@ namespace MageCast
             health = GetComponent<Health>();
             body = GetComponent<CharacterController>();
             netTransform = GetComponent<OwnerNetworkTransform>();
-            renderers = GetComponentsInChildren<Renderer>(true);
         }
 
         public override void OnNetworkSpawn()
@@ -447,13 +445,11 @@ namespace MageCast
         }
 
         /// <summary>
-        /// A dead player is taken out of the world rather than left standing: invisible, and without a
-        /// collider, so they neither soak up shots nor block a doorway for three seconds.
+        /// A dead player falls where they stood (PlayerAnimation plays the death) and lies there until
+        /// the respawn -- but without a collider, so the body neither soaks up shots nor blocks a doorway.
         /// </summary>
         void ApplyAlive(bool alive)
         {
-            foreach (Renderer r in renderers)
-                if (r != null && !(r is LineRenderer)) r.enabled = alive;
             if (body != null) body.enabled = alive;
             if (IsOwner) GameInput.LocalDead = !alive;
         }
