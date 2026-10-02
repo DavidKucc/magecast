@@ -325,7 +325,7 @@ Trvalý důvod někde stát pořád chybí, a za mě je to **největší chyběj
 kryty, průhledy, plochy i zábrany.
 
 **Blízkost přebíjí všechno ostatní.** Na 10 m se střele uhne, na 6 m ne — doba letu klesá rychleji než
-schopnost uhnout. A hlavně: couvání je nejvýš 5,6 m/s (se Shiftem) proti sprintu vpřed 9,3 m/s, takže **jakmile se k tobě někdo
+schopnost uhnout. A hlavně: couvání je nejvýš 4,8 m/s (se Shiftem) proti sprintu vpřed 8,0 m/s, takže **jakmile se k tobě někdo
 dostane, nemůžeš odejít**. To není o obtížnosti, to je chybějící možnost.
 
 **Slovník se hroutí na blízko.** Pod šesti metry není čas na nic delšího než nejrychlejší gesto, takže

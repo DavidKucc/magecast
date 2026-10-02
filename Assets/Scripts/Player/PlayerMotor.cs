@@ -39,8 +39,11 @@ namespace MageCast
         // sprint on the same clip, until a real sprint clip is in the folder.
         // Then 4.3 / 6.2 after playing it: still too slow to get out of the way. Backing off and strafing
         // keep their multipliers, so they rise in step.
-        [SerializeField] float jogSpeed = 4.3f;
-        [SerializeField] float runSpeed = 6.2f;
+        // Then slowed by 15%, everything on the ground together, asked for after playing the Temple:
+        // 4.3 / 6.2 felt hurried on a map with climbing and drops. The animator builder mirrors the two
+        // numbers, so the legs slow by the same 15% and the feet slide no more than before.
+        [SerializeField] float jogSpeed = 3.65f;
+        [SerializeField] float runSpeed = 5.3f;
 
         /// <summary>
         /// The body moves this much faster than the legs are animated for. On purpose, as a test: the
@@ -109,7 +112,7 @@ namespace MageCast
         /// </summary>
         [SerializeField] float climbReach = 1.3f;
         /// <summary>Pulling up, start to crouching on top. Long enough to be shot during, on purpose.</summary>
-        [SerializeField] float climbSeconds = 0.6f;
+        [SerializeField] float climbSeconds = 0.7f;
 
         /// <summary>Pulling up onto a ledge: no casting, and a direct hit drops you (CancelClimb).</summary>
         public bool IsClimbing { get; private set; }

@@ -48,7 +48,7 @@ namespace MageCast.EditorTools
         const string ClimbFolder = "Assets/Animation/Climb";
 
         /// <summary>How long the stand-up after a climb plays, cut down to the part where she rises.</summary>
-        const float ClimbStandSeconds = 0.5f;
+        const float ClimbStandSeconds = 0.6f;
 
         /// <summary>A landing faster than this (m/s, downwards) while moving rolls -- a drop of about 3 m.</summary>
         const float HardLanding = 11f;
@@ -77,7 +77,7 @@ namespace MageCast.EditorTools
         // These must mirror PlayerMotor, including its backward and strafe multipliers -- a blend tree
         // authored at speeds the character never actually reaches would blend two clips forever and
         // never settle on either.
-        const float JogSpeed = 4.3f;    // plain WASD
+        const float JogSpeed = 3.65f;   // plain WASD (was 4.3; everything slowed by 15%)
 
         /// <summary>
         /// Every locomotion clip plays at this share of the rate that would match its stride to the
@@ -86,7 +86,7 @@ namespace MageCast.EditorTools
         /// adds over the animation -- so this and PlayerMotor.paceOverAnimation are the two knobs.
         /// </summary>
         const float StridePlayback = 0.85f;
-        const float RunSpeed = 6.2f;    // held Shift
+        const float RunSpeed = 5.3f;    // held Shift (was 6.2)
         const float BackMultiplier = 0.6f;
         const float StrafeMultiplier = 0.85f;
 
@@ -389,7 +389,7 @@ namespace MageCast.EditorTools
             {
                 landRoll = sm.AddState("LandRoll");
                 landRoll.motion = roll;
-                landRoll.speed = 1.3f;
+                landRoll.speed = 1.1f;
                 var rollDone = landRoll.AddTransition(locomotion);
                 rollDone.hasExitTime = true; rollDone.exitTime = 0.85f; rollDone.duration = 0.15f;
             }
