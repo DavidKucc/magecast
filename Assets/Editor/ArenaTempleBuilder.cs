@@ -283,7 +283,10 @@ namespace MageCast.EditorTools
             RenderSettings.ambientEquatorColor = new Color(0.46f, 0.43f, 0.44f);
             RenderSettings.ambientGroundColor = new Color(0.26f, 0.23f, 0.22f);
 
-            RenderSettings.fog = true;
+            // No fog. The effect packs' particle shaders are surface shaders with their own blend mode,
+            // and Unity fogs them as if they were opaque: the see-through part of every smoke and glow
+            // quad takes the fog colour, and in the distance each particle shows as a square.
+            RenderSettings.fog = false;
             RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogColor = new Color(0.62f, 0.56f, 0.60f);
             RenderSettings.fogStartDistance = 35f;

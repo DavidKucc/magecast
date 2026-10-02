@@ -42,7 +42,35 @@ namespace MageCast
         static readonly int HoldHash = Animator.StringToHash("Hold");
         static readonly int JumpRunHash = Animator.StringToHash("JumpRun");
         static readonly int ClimbHash = Animator.StringToHash("Climb");
-        bool hasClimb;
+        static readonly int ClimbSpeedHash = Animator.StringToHash("ClimbSpeed");
+        static readonly int ClimbStateHash = Animator.StringToHash("Climb");
+        static readonly int FallSpeedHash = Animator.StringToHash("FallSpeed");
+        bool hasClimb, hasFallSpeed;
+
+        // --- the climb clip ("Braced Hang To Crouch"), measured with the animator builder's root curve ---
+        //
+        // Baked into the pose, the clip moves the body from hanging (centre of mass 0.80 m over the clip's
+        // own floor) to crouching on a ledge (2.20 m), 0.65 m forward. Crouched on the floor the same body
+        // sits 0.50 m up (Crouch To Stand, frame 0), so the ledge in the clip is 1.70 m high.
+        const float ClipLedgeHeight = 1.70f;
+        /// <summary>How far out from the wall face the clip's origin sits, so the hands land on the edge.</summary>
+        const float ClipHangBack = 0.40f;
+        /// <summary>Centre-of-mass height through the clip, 17 even samples. For starting part-way in on
+        /// a low ledge: hanging would put the feet under the floor.</summary>
+        static readonly float[] ClipRise = { 0.80f, 0.84f, 0.98f, 1.18f, 1.38f, 1.54f, 1.68f, 1.80f, 1.90f,
+                                             1.98f, 2.05f, 2.11f, 2.16f, 2.19f, 2.20f, 2.19f, 2.16f };
+        /// <summary>A hanging body's centre of mass is this far above its feet.</summary>
+        const float HangFeetBelow = 1.1f;
+        const float ClipLength = 1.13f;
+
+        bool shownClimb;
+        Vector3 climbBase;
+        Quaternion climbFacing;
+        float bodyRelease = 1f;          // 0 = pinned to the ledge, 1 = back on the capsule
+        Vector3 bodyHome;
+        Quaternion bodyHomeRot;
+        Vector3 releaseFrom;
+        Quaternion releaseFromRot;
 
         /// <summary>Effort above this at take-off is a sprint, and the running jump plays.</summary>
         const float SprintEffort = 1.2f;
@@ -87,7 +115,16 @@ namespace MageCast
             health = GetComponent<Combat.Health>();
             if (animator != null) castLayer = animator.GetLayerIndex("Cast");
             if (animator != null)
-                foreach (AnimatorControllerParameter p in animator.parameters) if (p.nameHash == ClimbHash) hasClimb = true;
+                foreach (AnimatorControllerParameter p in animator.parameters)
+                {
+                    if (p.nameHash == ClimbHash) hasClimb = animator.HasState(0, ClimbStateHash);
+                    if (p.nameHash == FallSpeedHash) hasFallSpeed = true;
+                }
+            if (animator != null && animator.transform != transform)
+            {
+                bodyHome = animator.transform.localPosition;
+                bodyHomeRot = animator.transform.localRotation;
+            }
         }
 
         void Update()
@@ -155,8 +192,15 @@ namespace MageCast
             // feet or stepping off a ledge looks the same as jumping -- which it should.
             bool airborne = remote ? !net.Grounded.Value : !motor.IsGrounded;
 
+            // how hard she is coming down, held through the landing: a drop off a roof rolls
+            if (hasFallSpeed && airborne)
+            {
+                float down = remote ? -remoteVelocity.y : -motor.VerticalSpeed;
+                animator.SetFloat(FallSpeedHash, Mathf.Max(0f, down));
+            }
+
             // the pull-up has its own clip once one is in the folder (the animator builder adds it)
-            if (hasClimb) animator.SetBool(ClimbHash, remote ? net.Climbing.Value : motor.IsClimbing);
+            if (hasClimb) Climb(remote);
 
             // Latched at the moment the feet leave the ground and held for the whole flight. Deciding
             // it every frame instead would let a mid-air steer swap the animation halfway through a jump.
@@ -196,6 +240,74 @@ namespace MageCast
             Vector3 from = transform.InverseTransformPoint(nearest.transform.position);
             if (Mathf.Abs(from.z) >= Mathf.Abs(from.x)) return from.z >= 0f ? 0 : 1;
             return from.x >= 0f ? 2 : 3;
+        }
+
+        /// <summary>
+        /// Starts and ends the climb clip, and works out where to hang it. The clip is baked whole into
+        /// the pose, so where the body is drawn depends only on where the clip is anchored: at the ledge,
+        /// the edge 1.7 m above the anchor and the anchor 0.4 m out from the wall. The capsule moves
+        /// its own smooth way meanwhile (the camera follows that); LateUpdate pins the drawn body here.
+        /// </summary>
+        void Climb(bool remote)
+        {
+            bool climbing = remote ? net.Climbing.Value : motor.IsClimbing;
+            if (climbing == shownClimb) return;
+            shownClimb = climbing;
+            animator.SetBool(ClimbHash, climbing);
+            if (!climbing)
+            {
+                // Up on top: straight back onto the capsule, in the same frame the animator cuts to the
+                // stand-up (the two crouches match). Knocked off: eased, since the fall starts elsewhere.
+                bool fell = remote ? !net.Grounded.Value : !motor.IsGrounded;
+                bodyRelease = fell ? 0f : 0.999f;
+                releaseFrom = animator.transform.position;
+                releaseFromRot = animator.transform.rotation;
+                return;
+            }
+
+            Vector3 edge, into; float floor;
+            if (remote)
+            {
+                Vector4 e = net.ClimbEdge.Value;
+                edge = new Vector3(e.x, e.y, e.z); floor = e.w; into = net.ClimbInto.Value;
+            }
+            else { edge = motor.ClimbEdge; floor = motor.ClimbFloor; into = motor.ClimbInto; }
+            into.y = 0f;
+            if (into.sqrMagnitude < 0.01f) into = transform.forward;
+            into.Normalize();
+
+            climbBase = edge - into * ClipHangBack - Vector3.up * ClipLedgeHeight;
+            climbFacing = Quaternion.LookRotation(into);
+
+            // A low ledge: skip the part of the hang that would have the feet below the floor.
+            float start = 0f;
+            for (int i = 0; i < ClipRise.Length; i++)
+            {
+                if (climbBase.y + ClipRise[i] - HangFeetBelow >= floor - 0.05f) { start = i / (ClipRise.Length - 1f); break; }
+                start = 1f;
+            }
+            start = Mathf.Min(start, 0.7f);
+            animator.SetFloat(ClimbSpeedHash, ClipLength * (1f - start) / Mathf.Max(0.1f, motor.ClimbSeconds));
+            animator.Play(ClimbStateHash, 0, start);
+            bodyRelease = 0f;
+        }
+
+        void LateUpdate()
+        {
+            if (animator == null || animator.transform == transform) return;
+            Transform body = animator.transform;
+            if (shownClimb)
+            {
+                body.SetPositionAndRotation(climbBase, climbFacing);
+                return;
+            }
+            if (bodyRelease >= 1f) return;
+            bodyRelease = Mathf.Min(1f, bodyRelease + Time.deltaTime / 0.15f);
+            Vector3 home = transform.TransformPoint(bodyHome);
+            Quaternion homeRot = transform.rotation * bodyHomeRot;
+            float k = Mathf.SmoothStep(0f, 1f, bodyRelease);
+            body.SetPositionAndRotation(Vector3.Lerp(releaseFrom, home, k), Quaternion.Slerp(releaseFromRot, homeRot, k));
+            if (bodyRelease >= 1f) { body.localPosition = bodyHome; body.localRotation = bodyHomeRot; }
         }
 
         static Vector2 Rotate(Vector2 v, float degrees)

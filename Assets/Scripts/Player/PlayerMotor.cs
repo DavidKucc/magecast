@@ -108,11 +108,18 @@ namespace MageCast
         /// that is there to block sight, and not a 4 m storey.
         /// </summary>
         [SerializeField] float climbReach = 1.3f;
-        /// <summary>Pulling up, start to standing on top. Long enough to be shot during, on purpose.</summary>
-        [SerializeField] float climbSeconds = 0.55f;
+        /// <summary>Pulling up, start to crouching on top. Long enough to be shot during, on purpose.</summary>
+        [SerializeField] float climbSeconds = 0.6f;
 
         /// <summary>Pulling up onto a ledge: no casting, and a direct hit drops you (CancelClimb).</summary>
         public bool IsClimbing { get; private set; }
+        public float ClimbSeconds { get { return climbSeconds; } }
+
+        /// <summary>The climb being made: the edge (on the wall face, at the height of the top), the
+        /// direction into the wall, and the floor it started over. The animation hangs the hands on it.</summary>
+        public Vector3 ClimbEdge { get; private set; }
+        public Vector3 ClimbInto { get; private set; }
+        public float ClimbFloor { get; private set; }
 
         Vector3 climbFrom, climbUp, climbTo;
         float climbStarted;
@@ -125,6 +132,9 @@ namespace MageCast
         public bool SprintLocked { get; set; }
         public bool JumpLocked { get; set; }
         public bool IsGrounded { get; private set; }
+
+        /// <summary>Up is positive, in m/s -- for the animator to tell a hop from a drop off a roof.</summary>
+        public float VerticalSpeed { get { return velocity.y; } }
 
         /// <summary>Ground speed in metres per second, for the animator's blend tree to read.</summary>
         public float PlanarSpeed
@@ -455,6 +465,10 @@ namespace MageCast
             Vector3 land = new Vector3(wall.point.x, top.point.y + 0.05f, wall.point.z) + into * (r + 0.15f);
             if (Blocked(up) || Blocked(land)) return false;
 
+            RaycastHit floor;
+            ClimbFloor = Cast(feet + Vector3.up * 0.1f, Vector3.down, 4f, out floor) ? floor.point.y : feet.y - 1f;
+            ClimbEdge = new Vector3(wall.point.x, top.point.y, wall.point.z);
+            ClimbInto = into;
             IsClimbing = true;
             climbStarted = Time.time;
             climbFrom = feet;
@@ -476,6 +490,8 @@ namespace MageCast
             if (k < 1f) return;
             IsClimbing = false;
             velocity = new Vector3(0f, -2f, 0f);
+            cc.Move(Vector3.down * 0.1f);       // feet onto the top now, so the animator sees a landing, not a fall
+            IsGrounded = cc.isGrounded;
             lastGroundedTime = Time.time;
         }
 

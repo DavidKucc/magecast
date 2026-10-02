@@ -37,7 +37,12 @@ namespace MageCast
         public readonly NetworkVariable<bool> Holding = new NetworkVariable<bool>(false,
             NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
-        /// <summary>Pulling up onto a ledge, for everyone else's animator.</summary>
+        /// <summary>Pulling up onto a ledge, for everyone else's animator: the edge (w = the floor below)
+        /// and the direction into the wall. Written before Climbing, so they are there when it turns on.</summary>
+        public readonly NetworkVariable<Vector4> ClimbEdge = new NetworkVariable<Vector4>(Vector4.zero,
+            NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        public readonly NetworkVariable<Vector3> ClimbInto = new NetworkVariable<Vector3>(Vector3.forward,
+            NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         public readonly NetworkVariable<bool> Climbing = new NetworkVariable<bool>(false,
             NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
@@ -157,6 +162,12 @@ namespace MageCast
 
             // NetworkVariables only send when the value actually changes, so writing every frame is free
             if (motor != null) Grounded.Value = motor.IsGrounded;
+            if (motor != null && motor.IsClimbing)
+            {
+                Vector3 e = motor.ClimbEdge;
+                ClimbEdge.Value = new Vector4(e.x, e.y, e.z, motor.ClimbFloor);
+                ClimbInto.Value = motor.ClimbInto;
+            }
             if (motor != null) Climbing.Value = motor.IsClimbing;
             if (caster != null) Holding.Value = caster.HeldSpell != null;
 

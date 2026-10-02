@@ -42,13 +42,19 @@ namespace MageCast.EditorTools
         const string PackFolder = "Assets/Animation/Pro Magic Pack";
 
         /// <summary>
-        /// The pull-up onto a ledge: whatever single clip is in this folder (Mixamo "Climbing To Top" or
-        /// "Braced Hang To Crouch"). Without one, a climb shows the airborne pose.
+        /// The pull-up onto a ledge: a hang-to-crouch clip ("Braced Hang To Crouch") and a stand-up
+        /// ("Crouch To Stand"), told apart by name. Without them a climb shows the airborne pose.
         /// </summary>
         const string ClimbFolder = "Assets/Animation/Climb";
 
-        /// <summary>PlayerMotor.climbSeconds: the clip is played at whatever rate fits it into the pull-up.</summary>
-        const float ClimbSeconds = 0.55f;
+        /// <summary>How long the stand-up after a climb plays, cut down to the part where she rises.</summary>
+        const float ClimbStandSeconds = 0.5f;
+
+        /// <summary>A landing faster than this (m/s, downwards) while moving rolls -- a drop of about 3 m.</summary>
+        const float HardLanding = 11f;
+
+        /// <summary>Set while the jump chains are built: the roll they hand a hard, moving landing to.</summary>
+        static AnimatorState landRoll;
 
         /// <summary>
         /// How fast she moves with a spell in hand, as a share of the jog. Must match
@@ -276,6 +282,9 @@ namespace MageCast.EditorTools
             ctrl.AddParameter("Hold", AnimatorControllerParameterType.Float);      // 1 = a spell in hand: walk
             ctrl.AddParameter("JumpRun", AnimatorControllerParameterType.Bool);    // took off sprinting
             ctrl.AddParameter("Dead", AnimatorControllerParameterType.Bool);
+            ctrl.AddParameter("FallSpeed", AnimatorControllerParameterType.Float);  // m/s down, held after landing
+            ctrl.AddParameter("Climb", AnimatorControllerParameterType.Bool);
+            ctrl.AddParameter("ClimbSpeed", AnimatorControllerParameterType.Float); // fits the pull-up into the motor's time
             ctrl.AddParameter("DeathDir", AnimatorControllerParameterType.Int);    // 0 back, 1 fwd, 2 left, 3 right
 
             var sm = ctrl.layers[0].stateMachine;
@@ -370,6 +379,21 @@ namespace MageCast.EditorTools
             // It used to be Jump01 alone, on loop, for the whole flight -- so the character crouched and
             // pushed off over and over while airborne. At 0.30s a clip and roughly 0.70s of hang time
             // that is a bit over two takeoffs per jump, which is exactly what it looked like.
+            // A hard landing while moving rolls instead of absorbing: from the bridges and the tower roofs
+            // a stand-still knee bend under a body still travelling looked like a crash. Cut to the part
+            // from the impact to back on the feet; the roll forward is left out of the pose (the body is
+            // already moving), the dip to the floor is kept in it.
+            landRoll = null;
+            AnimationClip roll = TrimByHeight(JumpFolder + "/Falling To Roll.fbx", "LandRoll", TrimRoll, false);
+            if (roll != null)
+            {
+                landRoll = sm.AddState("LandRoll");
+                landRoll.motion = roll;
+                landRoll.speed = 1.3f;
+                var rollDone = landRoll.AddTransition(locomotion);
+                rollDone.hasExitTime = true; rollDone.exitTime = 0.85f; rollDone.duration = 0.15f;
+            }
+
             RepairJumpFiles();
             JumpPhases forward = ResolveJump("Jump", false);
             JumpPhases backward = ResolveJump("JumpBack", true);
@@ -424,20 +448,56 @@ namespace MageCast.EditorTools
             // Only when a clip is in the folder. The body is moved by PlayerMotor, not by the clip, so the
             // clip's own rise is left out of the pose (root motion, which this character does not apply)
             // -- kept in, it would lift the body a second time on top of the capsule.
-            AnimationClip climb = FolderClip(ClimbFolder);
+            //
+            // Both clips are baked whole into the pose -- the rise and the step forward included -- and
+            // PlayerAnimation pins the body to the ledge for the length of the climb, so the hands stay on
+            // the edge whatever the capsule underneath is doing. It also starts the clip itself, part-way
+            // in for a low ledge (no hanging below the floor), so there is no transition into it here.
+            AnimationClip climb = null, stand = null;
+            foreach (AnimationClip c in FolderClips(ClimbFolder))
+            {
+                string n = AssetDatabase.GetAssetPath(c).ToLowerInvariant();
+                if (n.Contains("hang")) climb = c;
+                else if (n.Contains("stand")) stand = TrimByHeight(AssetDatabase.GetAssetPath(c), "ClimbStand", TrimStandUp, true);
+            }
             if (climb != null)
             {
-                ctrl.AddParameter("Climb", AnimatorControllerParameterType.Bool);
+                BakeIntoPose(climb);
+                climb = FolderClip(ClimbFolder, "hang");
                 var climbState = sm.AddState("Climb");
                 climbState.motion = climb;
-                climbState.speed = climb.length / ClimbSeconds;
-                var climbIn = sm.AddAnyStateTransition(climbState);
-                climbIn.AddCondition(AnimatorConditionMode.If, 0f, "Climb");
-                climbIn.duration = 0.05f; climbIn.hasExitTime = false; climbIn.canTransitionToSelf = false;
-                var climbOut = climbState.AddTransition(locomotion);
+                climbState.speedParameterActive = true;
+                climbState.speedParameter = "ClimbSpeed";
+                AnimatorState after = locomotion;
+                if (stand != null)
+                {
+                    var standState = sm.AddState("ClimbStand");
+                    standState.motion = stand;
+                    standState.speed = stand.length / ClimbStandSeconds;
+                    var standFall = standState.AddTransition(locomotion);
+                    standFall.AddCondition(AnimatorConditionMode.If, 0f, "Airborne");
+                    standFall.duration = 0.1f; standFall.hasExitTime = false;
+                    var walkAway = standState.AddTransition(locomotion);
+                    walkAway.AddCondition(AnimatorConditionMode.Greater, MovingLanding, "Speed");
+                    walkAway.duration = 0.12f; walkAway.hasExitTime = false;
+                    var stood = standState.AddTransition(locomotion);
+                    stood.hasExitTime = true; stood.exitTime = 0.9f; stood.duration = 0.12f;
+                    after = standState;
+                }
+                // knocked off the ledge: straight back to the legs, which hand over to the fall
+                var letGo = climbState.AddTransition(locomotion);
+                letGo.AddCondition(AnimatorConditionMode.IfNot, 0f, "Climb");
+                letGo.AddCondition(AnimatorConditionMode.If, 0f, "Airborne");
+                letGo.duration = 0.1f; letGo.hasExitTime = false;
+                // A cut, not a blend. The last frame of the climb and the first of the stand-up are the
+                // same crouch to within 0.15 m -- but drawn from two different anchors (the ledge, then
+                // the capsule), and blending the two poses across the anchor change sank the feet 0.3 m
+                // into the ledge for a tenth of a second. Measured, then cut.
+                var climbOut = climbState.AddTransition(after);
                 climbOut.AddCondition(AnimatorConditionMode.IfNot, 0f, "Climb");
-                climbOut.duration = 0.12f; climbOut.hasExitTime = false;
-                Debug.Log("[Anim] climb: " + climb.name + " " + climb.length.ToString("F2") + " s at x" + climbState.speed.ToString("F1"));
+                climbOut.duration = 0f; climbOut.hasExitTime = false;
+                Debug.Log("[Anim] climb: " + AssetDatabase.GetAssetPath(climb) + " " + climb.length.ToString("F2")
+                          + " s, stand-up " + (stand != null ? stand.length.ToString("F2") + " s" : "none"));
             }
 
             // --- casting, as an upper-body layer over the top ---
@@ -968,6 +1028,8 @@ namespace MageCast.EditorTools
 
                 ModelImporterClipAnimation[] cas = imp.clipAnimations;
                 if (cas == null || cas.Length == 0) continue;    // untouched, still a usable source
+                // one named cut (a trimmed take-off, landing or roll) is deliberate, not a broken split
+                if (cas.Length == 1) continue;
 
                 bool valid = cas.Length == 3
                              && cas[0].name.EndsWith("Up")
@@ -1356,6 +1418,15 @@ namespace MageCast.EditorTools
             // were added, so the moving case is added first.
             foreach (AnimatorState from in new[] { sUp, sAir })
             {
+                if (landRoll != null)
+                {
+                    var hard = from.AddTransition(landRoll);
+                    hard.AddCondition(AnimatorConditionMode.IfNot, 0f, "Airborne");
+                    hard.AddCondition(AnimatorConditionMode.Greater, HardLanding, "FallSpeed");
+                    hard.AddCondition(AnimatorConditionMode.Greater, MovingLanding, "Speed");
+                    hard.duration = 0.06f; hard.hasExitTime = false;
+                }
+
                 var runOut = from.AddTransition(locomotion);
                 runOut.AddCondition(AnimatorConditionMode.IfNot, 0f, "Airborne");
                 runOut.AddCondition(AnimatorConditionMode.Greater, MovingLanding, "Speed");
@@ -1942,17 +2013,94 @@ namespace MageCast.EditorTools
         }
 
         /// <summary>The one clip in PackFolder/name.fbx, or null if the pack is not there.</summary>
-        /// <summary>The first clip of the first FBX in a folder, or null.</summary>
-        static AnimationClip FolderClip(string folder)
+        /// <summary>The first clip of every FBX in a folder.</summary>
+        static List<AnimationClip> FolderClips(string folder)
         {
-            if (!AssetDatabase.IsValidFolder(folder)) return null;
+            var list = new List<AnimationClip>();
+            if (!AssetDatabase.IsValidFolder(folder)) return list;
             foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { folder }))
                 foreach (Object o in AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GUIDToAssetPath(guid)))
                 {
                     AnimationClip c = o as AnimationClip;
-                    if (c != null && !c.name.StartsWith("__")) return c;
+                    if (c != null && !c.name.StartsWith("__")) { list.Add(c); break; }
                 }
+            return list;
+        }
+
+        /// <summary>The clip of the FBX in a folder whose file name contains <paramref name="part"/>.</summary>
+        static AnimationClip FolderClip(string folder, string part)
+        {
+            foreach (AnimationClip c in FolderClips(folder))
+                if (AssetDatabase.GetAssetPath(c).ToLowerInvariant().Contains(part)) return c;
             return null;
+        }
+
+        /// <summary>
+        /// Cuts one clip out of a file, between two frames picked from its own root-height curve, and
+        /// names it. <paramref name="pick"/> gets the curve and frame count and returns first and last.
+        /// Idempotent: once the named clip is there it is returned as it is.
+        /// </summary>
+        static AnimationClip TrimByHeight(string path, string name, System.Func<AnimationCurve, float, int, Vector2Int> pick,
+                                          bool bakeHorizontal)
+        {
+            var imp = AssetImporter.GetAtPath(path) as ModelImporter;
+            if (imp == null) return null;
+            AnimationClip named = FindClipIn(path, name);
+            if (named != null) return named;
+
+            AnimationClip whole = SingleClip(path);
+            ModelImporterClipAnimation[] source = imp.defaultClipAnimations;
+            if (whole == null || source == null || source.Length == 0) return null;
+            AnimationCurve height = RootCurve(whole, "RootT.y");
+            if (height == null) return null;
+
+            float fps = whole.frameRate > 1f ? whole.frameRate : 30f;
+            int frames = Mathf.RoundToInt(whole.length * fps);
+            Vector2Int range = pick(height, fps, frames);
+            int offset = Mathf.RoundToInt(source[0].firstFrame);
+
+            ModelImporterClipAnimation s = Slice(source[0], name, offset + range.x, offset + range.y, false, true);
+            s.lockRootPositionXZ = bakeHorizontal; s.keepOriginalPositionXZ = true;
+            s.lockRootRotation = true; s.keepOriginalOrientation = true;
+            imp.clipAnimations = new[] { s };
+            imp.SaveAndReimport();
+            Debug.Log(string.Format("[Animator] {0}: cut {1} to frames {2}-{3} of {4}", name,
+                                    System.IO.Path.GetFileName(path), range.x, range.y, frames));
+            return FindClipIn(path, name);
+        }
+
+        static AnimationClip FindClipIn(string path, string name)
+        {
+            foreach (Object o in AssetDatabase.LoadAllAssetsAtPath(path))
+            {
+                AnimationClip c = o as AnimationClip;
+                if (c != null && c.name == name) return c;
+            }
+            return null;
+        }
+
+        /// <summary>A stand-up: from just before the hips start to rise until they stop.</summary>
+        static Vector2Int TrimStandUp(AnimationCurve y, float fps, int frames)
+        {
+            float low = y.Evaluate(0f), high = y.Evaluate(frames / fps);
+            int first = 0, last = frames;
+            for (int i = 0; i <= frames; i++) if (y.Evaluate(i / fps) > low + 0.02f) { first = Mathf.Max(0, i - 2); break; }
+            for (int i = first; i <= frames; i++) if (y.Evaluate(i / fps) >= high - 0.02f) { last = i; break; }
+            return new Vector2Int(first, last);
+        }
+
+        /// <summary>A fall into a roll: from the impact (the drop stops being steep) to back on the feet.</summary>
+        static Vector2Int TrimRoll(AnimationCurve y, float fps, int frames)
+        {
+            int first = 0;
+            for (int i = 1; i <= frames; i++)
+                if ((y.Evaluate(i / fps) - y.Evaluate((i - 1) / fps)) * fps > -0.8f) { first = Mathf.Max(0, i - 2); break; }
+            int lowest = first; float lowY = float.MaxValue;
+            for (int i = first; i <= frames; i++) { float v = y.Evaluate(i / fps); if (v < lowY) { lowY = v; lowest = i; } }
+            float end = y.Evaluate(frames / fps);
+            int last = frames;
+            for (int i = lowest; i <= frames; i++) if (y.Evaluate(i / fps) >= end - 0.03f) { last = i; break; }
+            return new Vector2Int(first, last);
         }
 
         static AnimationClip PackClip(string name)
