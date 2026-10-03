@@ -296,6 +296,10 @@ připojí kódem, jde tam, kde je hostitel.
 - **boční uličky:** půlka je propadlina 1,2 m (kouzla létají nad tebou, plochy se v ní drží), půlka ruina
   (zeď 2,4 m na vyšplhání, padlý sloup, kryt po prsa).
 
+**Pohyb:** chůze 5,0 m/s, sprint (Shift) 7,2 m/s. Sprint stojí staminu (žlutý pruh nad životy):
+plná vydrží 4 s sprintu, doplní se za 3,5 s od chvíle, kdy přestaneš (s pauzou 0,8 s). Když ji
+vyčerpáš, sprintovat jde znovu až od 30 %. Skok z běhu vpřed (i bez Shiftu) má animaci skoku z běhu.
+
 **Šplhání:** skoč proti hraně a drž směr k ní. Na cokoli, co má vršek do 1,3 m nad tvýma nohama ve
 skoku (tj. hrany do ~2,6 m), se vytáhneš za 0,55 s. Během šplhání nekreslíš ani neposíláš (kouzlo v
 ruce zůstává) a přímý zásah tě pustí dolů. Na 2,8 m zeď ani na 4 m patro se vyšplhat nedá.
@@ -325,7 +329,7 @@ Trvalý důvod někde stát pořád chybí, a za mě je to **největší chyběj
 kryty, průhledy, plochy i zábrany.
 
 **Blízkost přebíjí všechno ostatní.** Na 10 m se střele uhne, na 6 m ne — doba letu klesá rychleji než
-schopnost uhnout. A hlavně: couvání je nejvýš 4,8 m/s (se Shiftem) proti sprintu vpřed 8,0 m/s, takže **jakmile se k tobě někdo
+schopnost uhnout. A hlavně: couvání je nejvýš 4,3 m/s (se Shiftem) proti sprintu vpřed 7,2 m/s, takže **jakmile se k tobě někdo
 dostane, nemůžeš odejít**. To není o obtížnosti, to je chybějící možnost.
 
 **Slovník se hroutí na blízko.** Pod šesti metry není čas na nic delšího než nejrychlejší gesto, takže

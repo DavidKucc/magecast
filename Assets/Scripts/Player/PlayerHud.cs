@@ -18,11 +18,13 @@ namespace MageCast
         [SerializeField] float margin = 16f;
 
         Health health;
+        PlayerMotor motor;
         GUIStyle style;
 
         void Awake()
         {
             health = GetComponent<Health>();
+            motor = GetComponent<PlayerMotor>();
         }
 
         void OnGUI()
@@ -43,6 +45,17 @@ namespace MageCast
             style.normal.textColor = Color.white;
             GUI.Label(new Rect(margin + 8f, y - 1f, barWidth, barHeight + 4f),
                       Mathf.CeilToInt(health.Current) + " / " + Mathf.CeilToInt(health.Max), style);
+
+            // stamina, a thin bar right over the health: only there while it is not full
+            if (motor != null && motor.Stamina < 0.999f)
+            {
+                float sy = y - 12f;
+                GUI.color = new Color(0f, 0f, 0f, 0.6f);
+                GUI.DrawTexture(new Rect(margin - 2f, sy - 2f, barWidth + 4f, 8f + 4f), Texture2D.whiteTexture);
+                GUI.color = motor.Winded ? new Color(0.75f, 0.4f, 0.25f) : new Color(1f, 0.85f, 0.35f);
+                GUI.DrawTexture(new Rect(margin, sy, barWidth * motor.Stamina, 8f), Texture2D.whiteTexture);
+                GUI.color = Color.white;
+            }
         }
     }
 }

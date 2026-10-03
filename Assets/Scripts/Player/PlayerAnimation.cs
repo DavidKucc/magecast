@@ -75,6 +75,9 @@ namespace MageCast
         /// <summary>Effort above this at take-off is a sprint, and the running jump plays.</summary>
         const float SprintEffort = 1.2f;
 
+        /// <summary>Moving forward at least this hard at take-off plays the running jump (a jog is 1).</summary>
+        const float RunningJumpEffort = 0.5f;
+
         /// <summary>How fast the legs change between the jog and the spell-in-hand walk, per second.</summary>
         const float HoldBlendSpeed = 5f;
 
@@ -207,7 +210,9 @@ namespace MageCast
             if (airborne && wasGrounded)
             {
                 animator.SetBool(JumpBackHash, velocity.y < -backwardJumpThreshold);
-                animator.SetBool(JumpRunHash, effort > SprintEffort);
+                // The leaping jump for any run forward, not only the sprint: from a jog the plain
+                // jump read as a hop on the spot with the body sailing on underneath it.
+                animator.SetBool(JumpRunHash, effort > RunningJumpEffort && velocity.y > Mathf.Abs(velocity.x));
             }
             wasGrounded = !airborne;
 

@@ -42,8 +42,26 @@ namespace MageCast
         // Then slowed by 15%, everything on the ground together, asked for after playing the Temple:
         // 4.3 / 6.2 felt hurried on a map with climbing and drops. The animator builder mirrors the two
         // numbers, so the legs slow by the same 15% and the feet slide no more than before.
-        [SerializeField] float jogSpeed = 3.65f;
-        [SerializeField] float runSpeed = 5.3f;
+        // And another 10% two days later (3.65 / 5.3 before), with sprinting now on a stamina bar.
+        [SerializeField] float jogSpeed = 3.3f;
+        [SerializeField] float runSpeed = 4.8f;
+
+        [Header("Stamina")]
+        /// <summary>A full bar is this many seconds of sprinting.</summary>
+        [SerializeField] float sprintSeconds = 4f;
+        /// <summary>Empty to full, in seconds, once you stop sprinting.</summary>
+        [SerializeField] float staminaRefill = 3.5f;
+        /// <summary>How long after the last sprint the bar starts filling again.</summary>
+        [SerializeField] float refillDelay = 0.8f;
+        /// <summary>Run dry, and the bar has to come back this far before Shift works again -- otherwise
+        /// holding Shift would stutter between a sprint and a jog every few frames.</summary>
+        [SerializeField, Range(0f, 1f)] float sprintAgainAt = 0.3f;
+
+        /// <summary>0..1, for the HUD.</summary>
+        public float Stamina { get; private set; }
+        /// <summary>Ran the bar dry and waiting for it to come back to sprintAgainAt.</summary>
+        public bool Winded { get; private set; }
+        float lastSprintTime = -99f;
 
         /// <summary>
         /// The body moves this much faster than the legs are animated for. On purpose, as a test: the
@@ -321,6 +339,8 @@ namespace MageCast
             external = Vector3.zero;
             tossed = false;
             IsClimbing = false;
+            Stamina = 1f;
+            Winded = false;
             slowUntil = -99f;
             gripUntil = -99f;
         }
@@ -330,6 +350,7 @@ namespace MageCast
             net = GetComponent<PlayerNet>();
             cc = GetComponent<CharacterController>();
             SpeedMultiplier = 1f;
+            Stamina = 1f;
             if (cam == null) cam = FindObjectOfType<ThirdPersonCamera>();
         }
 
@@ -368,7 +389,9 @@ namespace MageCast
 
             // Shift runs in every direction, not only forward: it is the old default speed, and this
             // character spends most of a fight strafing, so a forward-only run would rarely apply.
-            bool sprinting = hands && !SprintLocked && Input.GetKey(KeyCode.LeftShift) && input.sqrMagnitude > 0.01f;
+            bool sprinting = hands && !SprintLocked && !Winded && Stamina > 0f
+                             && Input.GetKey(KeyCode.LeftShift) && input.sqrMagnitude > 0.01f;
+            Breathe(sprinting);
 
             // shaped before the basis rotation, so the limits apply to the character's own axes
             Vector3 shaped = input;
@@ -428,6 +451,21 @@ namespace MageCast
             // exponential bleed-off, framerate independent
             external *= Mathf.Exp(-externalDamping * Time.deltaTime);
             if (external.sqrMagnitude < 0.01f) external = Vector3.zero;
+        }
+
+        /// <summary>Sprinting drains the bar; anything else refills it after a short pause.</summary>
+        void Breathe(bool sprinting)
+        {
+            if (sprinting)
+            {
+                lastSprintTime = Time.time;
+                Stamina = Mathf.Max(0f, Stamina - Time.deltaTime / sprintSeconds);
+                if (Stamina <= 0f) Winded = true;
+                return;
+            }
+            if (Time.time - lastSprintTime < refillDelay) return;
+            Stamina = Mathf.Min(1f, Stamina + Time.deltaTime / staminaRefill);
+            if (Winded && Stamina >= sprintAgainAt) Winded = false;
         }
 
         // ---------------------------------------------------------------- climbing

@@ -119,8 +119,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 21f36ddc32a2cb249a4e930223777a4a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  jogSpeed: 3.65
-  runSpeed: 5.3
+  jogSpeed: 3.3
+  runSpeed: 4.8
   paceOverAnimation: 1.5
   groundAcceleration: 30
   groundDeceleration: 38

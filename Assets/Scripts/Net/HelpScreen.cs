@@ -63,7 +63,7 @@ namespace MageCast
 
         const string Controls =
             "<b>Pohyb</b>\n" +
-            "WASD - chůze,  Shift - sprint,  mezerník - skok\n" +
+            "WASD - chůze,  Shift - sprint (stojí staminu: žlutý pruh nad životy),  mezerník - skok\n" +
             "Myš - míření\n" +
             "Šplhání: skoč proti hraně a drž směr k ní - vytáhneš se na cokoli do 2,4 m. Během šplhání nekreslíš; " +
             "zásah tě shodí dolů.\n\n" +

@@ -77,7 +77,7 @@ namespace MageCast.EditorTools
         // These must mirror PlayerMotor, including its backward and strafe multipliers -- a blend tree
         // authored at speeds the character never actually reaches would blend two clips forever and
         // never settle on either.
-        const float JogSpeed = 3.65f;   // plain WASD (was 4.3; everything slowed by 15%)
+        const float JogSpeed = 3.3f;    // plain WASD (was 4.3, then 3.65; slowed twice on request)
 
         /// <summary>
         /// Every locomotion clip plays at this share of the rate that would match its stride to the
@@ -86,7 +86,7 @@ namespace MageCast.EditorTools
         /// adds over the animation -- so this and PlayerMotor.paceOverAnimation are the two knobs.
         /// </summary>
         const float StridePlayback = 0.85f;
-        const float RunSpeed = 5.3f;    // held Shift (was 6.2)
+        const float RunSpeed = 4.8f;    // held Shift (was 6.2, then 5.3)
         const float BackMultiplier = 0.6f;
         const float StrafeMultiplier = 0.85f;
 
