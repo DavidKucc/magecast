@@ -183,14 +183,26 @@ namespace MageCast.Gestures
             if (distance > 1e-5f)
             {
                 Vector3 heading = step / distance;
-                RaycastHit[] hits = Physics.SphereCastAll(transform.position, radius, heading, distance,
+                // Two sweeps. People and barriers are hit by the whole ball -- that is what makes a slow
+                // fat spell easy to land. The map is hit only by its core: by the whole ball, a 0.8 m air
+                // spell aimed past the edge of a pillar stopped on it while the crosshair was clearly
+                // beside it, and a shot over cover clipped the top.
+                RaycastHit[] full = Physics.SphereCastAll(transform.position, radius, heading, distance,
                                                           ~0, QueryTriggerInteraction.Ignore);
+                float coreRadius = Mathf.Min(radius, WallCore);
+                RaycastHit[] core = Physics.SphereCastAll(transform.position, coreRadius, heading, distance,
+                                                          ~0, QueryTriggerInteraction.Ignore);
+                RaycastHit[] hits = new RaycastHit[full.Length + core.Length];
+                full.CopyTo(hits, 0);
+                core.CopyTo(hits, full.Length);
                 float nearest = float.MaxValue;
                 RaycastHit best = new RaycastHit();
                 bool hitSomething = false;
 
                 for (int i = 0; i < hits.Length; i++)
                 {
+                    // whole ball for targets, core for everything else
+                    if (IsTarget(hits[i].collider) != (i < full.Length)) continue;
                     Transform t = hits[i].transform;
                     // Destroy() on our own collider only takes effect at the end of the frame, so on the
                     // first Update it is still there and a sweep from inside it reports a zero-distance
@@ -254,6 +266,9 @@ namespace MageCast.Gestures
             remaining -= dt;
             if (remaining <= 0f) End();
         }
+
+        /// <summary>How fat a spell is to walls, pillars and cover, whatever its size to people.</summary>
+        const float WallCore = 0.12f;
 
         /// <summary>
         /// Whether a sweep hit is the ball touching the floor. A normal hit says so by its normal; a hit

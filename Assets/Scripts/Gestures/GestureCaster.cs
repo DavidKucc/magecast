@@ -603,7 +603,9 @@ namespace MageCast.Gestures
             Spell spell = heldSpell;
             ClearHeld();
             if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Sent, IndexOf(spell));
-            Cast(spell, ResolveAim(), heldPrecision, heldQuality, heldMetrics);
+            Vector3 from;
+            Vector3 aim = ResolveAim(out from);
+            Cast(spell, aim, heldPrecision, heldQuality, heldMetrics, from);
             Headline(spell.displayName + "  SENT", spell.colour, 1.2f);
         }
 
@@ -907,7 +909,8 @@ namespace MageCast.Gestures
         /// The owner's side of a cast: everything a spell needs is decided here, where the aim is, and
         /// packed up so every machine can produce the same one.
         /// </summary>
-        void Cast(Spell spell, Vector3 direction, float precision, CastQuality quality, StrokeMetrics metrics)
+        void Cast(Spell spell, Vector3 direction, float precision, CastQuality quality, StrokeMetrics metrics,
+                  Vector3? from = null)
         {
             CastData data = new CastData
             {
@@ -915,7 +918,7 @@ namespace MageCast.Gestures
                 Quality = (byte)quality,
                 Precision = precision,
                 SizeScale = SizeScale(metrics),
-                Muzzle = Muzzle(),
+                Muzzle = from ?? Muzzle(),
                 Direction = direction,
                 Feet = transform.position,
                 SentAt = Networked ? Unity.Netcode.NetworkManager.Singleton.ServerTime.Time : 0.0,
@@ -1042,7 +1045,7 @@ namespace MageCast.Gestures
         /// forward. The camera sits half a metre off the shoulder, so those are different lines, and
         /// firing along the second one makes close-range casts visibly miss the crosshair.
         /// </summary>
-        Vector3 ResolveAim()
+        Vector3 ResolveAim(out Vector3 from)
         {
             Vector3 origin = cam.AimOrigin;
             Vector3 forward = cam.AimDirection;
@@ -1052,8 +1055,38 @@ namespace MageCast.Gestures
                              ? hit.point
                              : origin + forward * 200f;
 
-            Vector3 dir = target - Muzzle();
+            // The hand is not where the eye is. Aimed past the edge of a pillar, the camera sees round
+            // it while the line from the hand still runs into it -- the shot stopped on the pillar with
+            // the crosshair plainly beside it. When the hand's line is blocked well short of what the
+            // crosshair is on, the spell leaves from the camera's line instead, level with the hand:
+            // a few tens of centimetres off, and it goes exactly where the crosshair says.
+            from = Muzzle();
+            if (BlockedShort(from, target))
+            {
+                Vector3 onSight = origin + forward * Mathf.Max(0f, Vector3.Dot(from - origin, forward));
+                if (!BlockedShort(onSight, target)) from = onSight;
+            }
+
+            Vector3 dir = target - from;
             return dir.sqrMagnitude < 0.01f ? forward : dir.normalized;
+        }
+
+        /// <summary>Whether a spell's core from <paramref name="a"/> would hit the map more than a metre
+        /// short of <paramref name="b"/>. People and barriers do not count: hitting those is the point.</summary>
+        bool BlockedShort(Vector3 a, Vector3 b)
+        {
+            Vector3 d = b - a;
+            float length = d.magnitude;
+            if (length < 1.5f) return false;
+            foreach (RaycastHit h in Physics.SphereCastAll(a, 0.12f, d / length, length - 1f, ~0, QueryTriggerInteraction.Ignore))
+            {
+                Collider c = h.collider;
+                if (c.transform.IsChildOf(transform)) continue;
+                if (c.GetComponentInParent<Combat.Health>() != null || c.GetComponentInParent<PlayerMotor>() != null
+                    || c.GetComponentInParent<CastShield>() != null) continue;
+                return true;
+            }
+            return false;
         }
 
         // ---------------------------------------------------------------- reporting
