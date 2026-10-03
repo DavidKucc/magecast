@@ -1,6 +1,6 @@
 # Mage Cast — o čem ta hra je
 
-Stav k 17. 9. 2026.
+Stav k 4. 10. 2026.
 
 Dokument je úvod do hry, ne specifikace. Je rozdělený na tři části, protože se snadno slijí do jedné:
 **co je postavené**, **co je rozhodnuté ale nepostavené** a **co je otevřené**. Čísla nejsou odhady —
@@ -50,8 +50,11 @@ Rozdíl mezi kliknutím a podržením je **0,45 s**; při držení se vlevo naho
 plný, puštění kouzlo zahodí. Dokud kouzlo držíš, **jen jdeš** (52 % rychlosti, animace chůze) a **nejde
 sprint** — buď máš připravené kouzlo, nebo jsi rychlý, ne obojí.
 
-Bariéra se staví gestem bloku (zvednout ruce, spustit), skok při sprintu (Shift) má vlastní animaci
-skoku z běhu.
+Bariéra se staví gestem bloku (zvednout ruce, spustit), skok z běhu vpřed má vlastní animaci skoku z
+běhu.
+
+Když by čára z ruky narazila (třeba do hrany sloupu, kolem kterého kamera vidí), kouzlo vyletí z čáry
+kamery vedle ruky — letí vždycky tam, kam ukazuje crosshair.
 
 Kouzlo letí **z ruky na straně, kam kamera kouká přes rameno** — výchozí je pravá. **Kliknutí kolečkem
 myši** přehodí kameru přes druhé rameno a kouzla pak letí z levé ruky (animace je zrcadlená).
@@ -174,8 +177,9 @@ schopnost uhýbat, takže kdo na něm kreslí, je terč; a je to plocha, na kter
   aréna za půl minuty nezměnila v kaši, kde nikdo neví, na čem stojí.
 - **Stěna, nebo zem, rozhoduje sklon povrchu.** Co míří nahoru, je zem; zbytek je stěna.
 - **Na zem kouzlo dopadne tam, kam míří jeho střed** — tedy tam, kam míří crosshair. Dřív velké kouzlo
-  (hlavně vzduch) škrtlo okrajem o zem o 2–4 m dřív a do cíle nedoletělo. Lidi, zdi a bariéry dál zasahuje
-  celou šířkou.
+  (hlavně vzduch) škrtlo okrajem o zem o 2–4 m dřív a do cíle nedoletělo.
+- **Lidi a bariéry zasahuje celou šířkou, mapu jen jádrem (0,12 m).** Kouzlo těsně kolem sloupu nebo
+  přes hranu krytu proletí; do člověka stačí trefit okrajem.
 - **Kombinace stačí, když se kouzlo plochy dotkne** okrajem, nemusí trefit středem.
 - **Plochy zasáhnou i toho, kdo je seslal.** Oheň pod vlastníma nohama není zadarmo.
 - **Vzdušný proud vyhodí každého jen jednou**, jinak by z plochy byla trampolína.
@@ -298,10 +302,11 @@ připojí kódem, jde tam, kde je hostitel.
 
 **Pohyb:** chůze 5,0 m/s, sprint (Shift) 7,2 m/s. Sprint stojí staminu (žlutý pruh nad životy):
 plná vydrží 4 s sprintu, doplní se za 3,5 s od chvíle, kdy přestaneš (s pauzou 0,8 s). Když ji
-vyčerpáš, sprintovat jde znovu až od 30 %. Skok z běhu vpřed (i bez Shiftu) má animaci skoku z běhu.
+vyčerpáš, sprintovat jde znovu až od 30 %. Skok z běhu vpřed (i bez Shiftu) má animaci skoku z běhu. Tvrdý dopad (pád z ~3 m a víc) v pohybu je
+kotoul.
 
 **Šplhání:** skoč proti hraně a drž směr k ní. Na cokoli, co má vršek do 1,3 m nad tvýma nohama ve
-skoku (tj. hrany do ~2,6 m), se vytáhneš za 0,55 s. Během šplhání nekreslíš ani neposíláš (kouzlo v
+skoku (tj. hrany do ~2,6 m), se vytáhneš za 0,7 s (ruce na hraně, podřep, vstaneš). Během šplhání nekreslíš ani neposíláš (kouzlo v
 ruce zůstává) a přímý zásah tě pustí dolů. Na 2,8 m zeď ani na 4 m patro se vyšplhat nedá.
 
 ---
