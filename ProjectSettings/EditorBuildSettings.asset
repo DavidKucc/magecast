@@ -14,4 +14,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Arena_Temple.unity
     guid: 899d93626211c2a4d9afd858548b5821
+  - enabled: 1
+    path: Assets/Scenes/Arena_Crossing.unity
+    guid: 08c0f67a714f530489d5df517f7b226a
   m_configObjects: {}

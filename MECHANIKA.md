@@ -288,7 +288,7 @@ ale soupeři to nepřipíše. Jméno soupeře nad hlavou vidíš, jen když ho v
 **Zápas:** první na 5 zabití vyhrává. Všem se ukáže vítěz a skóre, 6 s se nikdo nehýbe, pak se skóre
 vynuluje a všichni začnou znovu z protilehlých spawnů. V tréninku zápasy nejsou.
 
-**Mapy:** hostitel (a trénink) vybírá v menu — *Blockout* (původní šedá aréna) a *Temple*. Kdo se
+**Mapy:** hostitel (a trénink) vybírá v menu — *Blockout* (původní šedá aréna), *Temple* a *Crossing*. Kdo se
 připojí kódem, jde tam, kde je hostitel.
 
 **Temple** (generuje `Tools/Arena/Build Temple Map`, měří `Tools/Arena/Audit Temple`): zřícený chrám
@@ -299,6 +299,16 @@ připojí kódem, jde tam, kde je hostitel.
 - **mosty:** ze střechy každé věže dolů na roh oltáře. Výhled, ale žádný kryt — a vzduch tě z nich shodí,
 - **boční uličky:** půlka je propadlina 1,2 m (kouzla létají nad tebou, plochy se v ní drží), půlka ruina
   (zeď 2,4 m na vyšplhání, padlý sloup, kryt po prsa).
+
+**Crossing** (`Tools/Arena/Build Crossing Map`, `Audit Crossing`): nádvoří 48 × 40 m s vyschlým
+korytem řeky (1,2 m) napříč středem. Polovina otočená o 180° — tým B na +z, tým A na −z.
+- **brod:** prostředních 6 m koryta je pevná zem se sochou,
+- **mosty:** na x = ±15 ve výšce 2,4 m, pod nimi se dá projít korytem; jeden konec ústí na terasu s
+  cimbuřím, druhý sestupuje po schodech,
+- **břehy:** kolonáda, zřícená kaple bez střechy, ruiny brány vzadu (za nimi spawny), v korytě kameny.
+- **vzhled je záměrně tlumený** (šedomodrý kámen, šedozelený mech, jen pár slabých teplých lamp), aby
+  nejbarevnější věc na obrazovce byla kouzla; nic nesvítí studeně, protože tyrkysová čára vypadá jako led.
+  Slunce svítí z boku, aby oba týmy měly stejné světlo.
 
 **Pohyb:** chůze 5,0 m/s, sprint (Shift) 7,2 m/s. Sprint stojí staminu (žlutý pruh nad životy):
 plná vydrží 4 s sprintu, doplní se za 3,5 s od chvíle, kdy přestaneš (s pauzou 0,8 s). Když ji

@@ -91,11 +91,11 @@ namespace MageCast.EditorTools
             Debug.Log("[Temple] built: " + (root.GetComponentsInChildren<Transform>().Length - 1) + " objects\n" + Audit());
         }
 
-        static void EnsureInBuild()
+        internal static void EnsureInBuild(string scenePath = ScenePath)
         {
             var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
-            foreach (var s in scenes) if (s.path == ScenePath) return;
-            scenes.Add(new EditorBuildSettingsScene(ScenePath, true));
+            foreach (var s in scenes) if (s.path == scenePath) return;
+            scenes.Add(new EditorBuildSettingsScene(scenePath, true));
             EditorBuildSettings.scenes = scenes.ToArray();
         }
 
@@ -328,9 +328,10 @@ namespace MageCast.EditorTools
             fireMat = Glow("Temple_Fire", new Color(2.4f, 1.1f, 0.35f));
         }
 
-        static Material Stone(string name, Texture2D pattern, float scale, Color side, Color top, float grime)
+        internal static Material Stone(string name, Texture2D pattern, float scale, Color side, Color top, float grime,
+                                       string folder = "Assets/Materials/Temple")
         {
-            string path = "Assets/Materials/Temple/" + name + ".mat";
+            string path = folder + "/" + name + ".mat";
             Material m = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (m == null)
             {
@@ -348,9 +349,9 @@ namespace MageCast.EditorTools
             return m;
         }
 
-        static Material Glow(string name, Color emission)
+        internal static Material Glow(string name, Color emission, string folder = "Assets/Materials/Temple")
         {
-            string path = "Assets/Materials/Temple/" + name + ".mat";
+            string path = folder + "/" + name + ".mat";
             Material m = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (m == null)
             {
@@ -370,7 +371,7 @@ namespace MageCast.EditorTools
         /// slabs, each a little lighter or darker than its neighbours, mortar between them and grain on
         /// top. Running bond (every other row shifted half a slab) for bricks.
         /// </summary>
-        static Texture2D PatternTexture(string path, int cols, int rows, bool runningBond, int seed)
+        internal static Texture2D PatternTexture(string path, int cols, int rows, bool runningBond, int seed)
         {
             Texture2D existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
             if (existing != null) return existing;
@@ -431,22 +432,26 @@ namespace MageCast.EditorTools
         [MenuItem("Tools/Arena/Audit Temple")]
         public static void AuditMenu() { Debug.Log(Audit()); }
 
-        public static string Audit()
+        public static string Audit() { return AuditArea("[Temple]", Half, Half); }
+
+        /// <summary>The same audit for any map built the same way: an "Arena" root with "Spawns", outer
+        /// walls named Wall_*, inside -halfX..halfX by -halfZ..halfZ. Lines start with <paramref name="tag"/>.</summary>
+        internal static string AuditArea(string tag, float halfX, float halfZ)
         {
             Physics.SyncTransforms();
             GameObject root = GameObject.Find(RootName);
-            if (root == null) return "[Temple] no '" + RootName + "' in the open scene";
+            if (root == null) return tag + " no '" + RootName + "' in the open scene";
 
             const float step = 0.5f;
-            int n = Mathf.RoundToInt(Half * 2f / step);
+            int nx = Mathf.RoundToInt(halfX * 2f / step), nz = Mathf.RoundToInt(halfZ * 2f / step);
             var spots = new List<Spot>();
-            var byCell = new List<int>[n * n];
+            var byCell = new List<int>[nx * nz];
             int mask = ~0;
-            for (int i = 0; i < n; i++)
+            for (int i = 0; i < nx; i++)
             {
-                for (int j = 0; j < n; j++)
+                for (int j = 0; j < nz; j++)
                 {
-                    float x = -Half + (i + 0.5f) * step, z = -Half + (j + 0.5f) * step;
+                    float x = -halfX + (i + 0.5f) * step, z = -halfZ + (j + 0.5f) * step;
                     RaycastHit[] hits = Physics.RaycastAll(new Vector3(x, 15f, z), Vector3.down, 30f, mask, QueryTriggerInteraction.Ignore);
                     foreach (RaycastHit h in hits)
                     {
@@ -455,7 +460,7 @@ namespace MageCast.EditorTools
                         Vector3 p = h.point;
                         if (Physics.CheckCapsule(p + Vector3.up * 0.45f, p + Vector3.up * 1.6f, 0.35f, mask, QueryTriggerInteraction.Ignore))
                             continue;
-                        int cell = i * n + j;
+                        int cell = i * nz + j;
                         if (byCell[cell] == null) byCell[cell] = new List<int>();
                         byCell[cell].Add(spots.Count);
                         spots.Add(new Spot { p = p, cell = cell });
@@ -475,8 +480,8 @@ namespace MageCast.EditorTools
                 }
                 if (best >= 0) starts.Add(best);
             }
-            bool[] withClimb = Flood(spots, byCell, n, starts, MantleReach);
-            bool[] withoutClimb = Flood(spots, byCell, n, starts, JumpReach);
+            bool[] withClimb = Flood(spots, byCell, nx, nz, starts, MantleReach);
+            bool[] withoutClimb = Flood(spots, byCell, nx, nz, starts, JumpReach);
             int reached = 0, needsClimb = 0;
             var stranded = new List<Vector3>();
             for (int k = 0; k < spots.Count; k++)
@@ -500,7 +505,7 @@ namespace MageCast.EditorTools
             var highExposed = new List<Vector3>();
             for (int k = 0; k < spots.Count; k++)
             {
-                int i = spots[k].cell / n, j = spots[k].cell % n;
+                int i = spots[k].cell / nz, j = spots[k].cell % nz;
                 if (i % 2 != 0 || j % 2 != 0 || !withClimb[k]) continue;     // only where somebody can stand
                 measured++;
                 Vector3 p = spots[k].p;
@@ -534,14 +539,14 @@ namespace MageCast.EditorTools
             }
 
             var sb = new System.Text.StringBuilder();
-            sb.AppendFormat("[Temple] standable spots: {0}, reachable from a spawn: {1} ({2:F1}%), of those only by climbing: {3}\n",
+            sb.AppendFormat(tag + " standable spots: {0}, reachable from a spawn: {1} ({2:F1}%), of those only by climbing: {3}\n",
                 spots.Count, reached, 100f * reached / Mathf.Max(1, spots.Count), needsClimb);
-            if (stranded.Count > 0) sb.Append("[Temple] UNREACHABLE: ").Append(Clusters(stranded)).Append("\n");
-            sb.AppendFormat("[Temple] cover: worst {0:F1} m at {1}, {2} of {3} samples over {4} m -> {5}\n",
+            if (stranded.Count > 0) sb.Append(tag + " UNREACHABLE: ").Append(Clusters(stranded)).Append("\n");
+            sb.AppendFormat(tag + " cover: worst {0:F1} m at {1}, {2} of {3} samples over {4} m -> {5}\n",
                 worstCover, worstAt.ToString("F1"), over, measured, MaxCoverDist, over == 0 ? "PASS" : "FAIL");
-            if (exposed.Count > 0) sb.Append("[Temple] ground without cover: ").Append(Clusters(exposed)).Append("\n");
-            if (highExposed.Count > 0) sb.Append("[Temple] high ground without cover (INFO): ").Append(Clusters(highExposed)).Append("\n");
-            sb.AppendFormat("[Temple] sightline: longest {0:F1} m {1} -> {2}  INFO",
+            if (exposed.Count > 0) sb.Append(tag + " ground without cover: ").Append(Clusters(exposed)).Append("\n");
+            if (highExposed.Count > 0) sb.Append(tag + " high ground without cover (INFO): ").Append(Clusters(highExposed)).Append("\n");
+            sb.AppendFormat(tag + " sightline: longest {0:F1} m {1} -> {2}  INFO",
                 longest, longFrom.ToString("F0"), longTo.ToString("F0"));
             return sb.ToString();
         }
@@ -570,7 +575,7 @@ namespace MageCast.EditorTools
         /// height (you can always drop), up a step by walking, up to <paramref name="upReach"/> by a jump
         /// or a climb. Two cells, because a ledge is climbed from the cell in front of it.
         /// </summary>
-        static bool[] Flood(List<Spot> spots, List<int>[] byCell, int n, List<int> starts, float upReach)
+        static bool[] Flood(List<Spot> spots, List<int>[] byCell, int nx, int nz, List<int> starts, float upReach)
         {
             bool[] seen = new bool[spots.Count];
             var queue = new Queue<int>();
@@ -579,7 +584,7 @@ namespace MageCast.EditorTools
             {
                 int k = queue.Dequeue();
                 Spot a = spots[k];
-                int ai = a.cell / n, aj = a.cell % n;
+                int ai = a.cell / nz, aj = a.cell % nz;
                 for (int di = -2; di <= 2; di++)
                 {
                     for (int dj = -2; dj <= 2; dj++)
@@ -587,8 +592,8 @@ namespace MageCast.EditorTools
                         if (di == 0 && dj == 0) continue;
                         bool near = Mathf.Abs(di) <= 1 && Mathf.Abs(dj) <= 1;
                         int bi = ai + di, bj = aj + dj;
-                        if (bi < 0 || bj < 0 || bi >= n || bj >= n) continue;
-                        List<int> there = byCell[bi * n + bj];
+                        if (bi < 0 || bj < 0 || bi >= nx || bj >= nz) continue;
+                        List<int> there = byCell[bi * nz + bj];
                         if (there == null) continue;
                         foreach (int m in there)
                         {
@@ -614,14 +619,14 @@ namespace MageCast.EditorTools
 
         // ------------------------------------------------------------------ helpers
 
-        static Transform Group(string name, Transform parent)
+        internal static Transform Group(string name, Transform parent)
         {
             GameObject g = new GameObject(name);
             g.transform.SetParent(parent, false);
             return g.transform;
         }
 
-        static GameObject Box(string name, Transform parent, Material m, Vector3 pos, Vector3 size, float yaw = 0f)
+        internal static GameObject Box(string name, Transform parent, Material m, Vector3 pos, Vector3 size, float yaw = 0f)
         {
             GameObject g = GameObject.CreatePrimitive(PrimitiveType.Cube);
             g.name = name;
@@ -648,7 +653,7 @@ namespace MageCast.EditorTools
         }
 
         /// <summary>Looks only: no collider, so spells and players go through it.</summary>
-        static GameObject Deco(string name, Transform parent, Material m, Vector3 pos, Vector3 size)
+        internal static GameObject Deco(string name, Transform parent, Material m, Vector3 pos, Vector3 size)
         {
             GameObject g = Box(name, parent, m, pos, size);
             Object.DestroyImmediate(g.GetComponent<Collider>());
@@ -657,7 +662,7 @@ namespace MageCast.EditorTools
         }
 
         /// <summary>A sloped slab whose walking surface runs from <paramref name="low"/> to <paramref name="high"/>.</summary>
-        static void Ramp(string name, Transform parent, Material m, Vector3 low, Vector3 high, float width, float thick)
+        internal static void Ramp(string name, Transform parent, Material m, Vector3 low, Vector3 high, float width, float thick)
         {
             Vector3 along = high - low;
             Quaternion rot = Quaternion.LookRotation(along.normalized, Vector3.up);
@@ -671,7 +676,7 @@ namespace MageCast.EditorTools
             g.isStatic = true;
         }
 
-        static void Marker(string name, Transform parent, Vector3 pos, float yaw)
+        internal static void Marker(string name, Transform parent, Vector3 pos, float yaw)
         {
             GameObject g = new GameObject(name);
             g.transform.SetParent(parent, false);
@@ -679,7 +684,7 @@ namespace MageCast.EditorTools
             g.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
         }
 
-        static void Dummy(string name, Transform parent, Vector3 pos)
+        internal static void Dummy(string name, Transform parent, Vector3 pos)
         {
             Physics.SyncTransforms();
             if (Physics.CheckCapsule(pos + Vector3.up * -0.4f, pos + Vector3.up * 0.5f, 0.45f, ~0, QueryTriggerInteraction.Ignore))
@@ -701,7 +706,7 @@ namespace MageCast.EditorTools
             g.AddComponent<Unity.Netcode.NetworkObject>();
         }
 
-        static void EnsureFolder(string path)
+        internal static void EnsureFolder(string path)
         {
             if (AssetDatabase.IsValidFolder(path)) return;
             string parent = System.IO.Path.GetDirectoryName(path).Replace('\\', '/');
