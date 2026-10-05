@@ -52,7 +52,7 @@ namespace MageCast
                 I = "odhoz",
                 II = "+ updraft plocha (vyhodí toho, kdo na ni vstoupí, a odkloní střely nahoru); do ohně: sfoukne ho jako ohnivou vlnu, " +
                      "která se 8 m převalí ve směru větru, zapálí a odhodí každého v cestě; na ledu rozklouže lidi",
-                III = "+ dopadne-li do jakékoli plochy: vzduchová bomba - všechny v ní a do " + SpellTiers.BombReachBeyondPatch + " m od ní hodí do jejího středu (i tebe)" },
+                III = "+ dopadne-li do jakékoli plochy: vzduchová bomba - všechny v ní a do " + SpellTiers.BombReachBeyondPatch + " m od ní hodí do jejího středu (i tebe), po " + SpellTiers.BombDelay + " s" },
             new SpellInfo { Rune = GestureTemplates.Uruz, Name = "BARRIER", Czech = "Uruz (síla) - bariéra",
                 Colour = new Color(1f, 0.85f, 0.4f),
                 Basics = "Zastaví kouzla z obou stran, dokud ji zásahy neprorazí. Jedna na hráče.",
@@ -74,7 +74,7 @@ namespace MageCast
             "     Podrž levé a pusť - kouzlo zahodíš a ruku máš prázdnou.\n\n" +
             "Pravé tlačítko během kreslení - zruší rozkreslenou runu.\n" +
             "Kliknutí kolečkem myši - kamera přeskočí přes druhé rameno a kouzla letí z druhé ruky (výchozí je pravá).\n" +
-            "S kouzlem v ruce jen jdeš (asi poloviční rychlostí) a nedá se sprintovat.\n\n" +
+            "S kouzlem v ruce jen jdeš (70 % rychlosti) a nedá se sprintovat.\n\n" +
             "<b>Ostatní</b>\n" +
             "Esc - menu (nastavení, nápověda, odchod)\n" +
             "F6 - schová / ukáže tabulku run vpravo nahoře\n" +
@@ -87,7 +87,7 @@ namespace MageCast
             "<b>Runy</b>\n" +
             "Runa se kreslí jedním tahem. Nezáleží, na kterém konci začneš. Hra tah rozloží na rovné čáry a porovná jejich " +
             "úhly s runou - každá čára smí být nejvýš 35° vedle. Hotové čáry se hned narovnají.\n" +
-            "Špatně nakreslená runa nevyjde (FIZZLE). Krátké cuknutí kreslení zruší.\n\n" +
+            "Špatně nakreslená runa nevyjde (FIZZLE) a další jde začít až po 0,5 s. Krátké cuknutí kreslení zruší.\n\n" +
             "<b>Tiery</b>\n" +
             "Podle toho, jak přesně runu nakreslíš, dostane kouzlo tier I, II nebo III. Tier mění, co kouzlo dělá " +
             "(viz Kouzla); poškození samo se hýbe jen 0,8-1,2x.\n" +

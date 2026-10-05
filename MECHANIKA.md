@@ -47,7 +47,7 @@ Všechno je na **levém tlačítku**:
 Míření je pořád jedno a to samé: z kamery jde paprsek dopředu a kde trefí, tam kouzlo letí.
 
 Rozdíl mezi kliknutím a podržením je **0,45 s**; při držení se vlevo nahoře plní proužek, a jakmile je
-plný, puštění kouzlo zahodí. Dokud kouzlo držíš, **jen jdeš** (52 % rychlosti, animace chůze) a **nejde
+plný, puštění kouzlo zahodí. Dokud kouzlo držíš, **jen jdeš** (70 % rychlosti, animace chůze) a **nejde
 sprint** — buď máš připravené kouzlo, nebo jsi rychlý, ne obojí.
 
 Bariéra se staví gestem bloku (zvednout ruce, spustit), skok z běhu vpřed má vlastní animaci skoku z
@@ -80,7 +80,7 @@ malou abecedu, ne pět náhodných čmáranic.
 **Vzduch nedává poškození, nikdy.** Kdyby dával, stal by se kouzlem na všechno. Takhle sám nikdy
 nevyhraje, ale je u všech dobrých momentů — je to kouzlo, kterým soupeře **doručíš do svého ohně**.
 
-Špatně nakreslený tvar prostě **nevyjde (fizzle)**. Dřív z něj létal náhodný „misfire“; ten je pryč —
+Špatně nakreslený tvar prostě **nevyjde (fizzle)** a další runu jde začít až po 0,5 s. Dřív z něj létal náhodný „misfire“; ten je pryč —
 odměnou za kreslení jsou jen tiery těch tvarů, které vyjdou.
 
 Všechno jsou runy — kolečko pro bariéru nahradila Uruz, aby byla celá abeceda runová.
@@ -95,7 +95,7 @@ Tier mění, **co kouzlo dělá**, ne jen kolik ubere — poškození samo se s 
 | **oheň** | zásah | + hoření na zasaženém (4/s na 3 s), plocha, odraz od zdi | + výbuch: všichni do 2,5 m kromě zasaženého dostanou polovinu zásahu (i autor), bariéru opotřebí 1,5× |
 | **led** | zásah | + zpomalení, plocha | + zamrznutí na 0,6 s: nehýbe se ani neskočí, kreslit může |
 | **blesk** | zásah | + přeskočí na nejbližší jiný cíl do 6 m za polovinu; do země nechá **elektrickou plochu** (2,2 m, 4 s, 4/s, kdo v ní stojí, nemůže kreslit) | + elektrická plocha se objeví přímo pod zasaženým |
-| **vzduch** | odhoz | + updraft plocha; do ohně **ohnivá vlna** (oheň zmizí a 8 m po větru se převalí stěna plamenů, zapálí a odhodí každého v cestě, zastaví ji zeď); na ledu rozklouže lidi | + v jakékoli ploše **vzduchová bomba**: všechny v ploše a do 1,5 m od ní jednou hodí do jejího středu (i autora) |
+| **vzduch** | odhoz | + updraft plocha; do ohně **ohnivá vlna** (oheň zmizí a 8 m po větru se převalí stěna plamenů, zapálí a odhodí každého v cestě, zastaví ji zeď); na ledu rozklouže lidi | + v jakékoli ploše **vzduchová bomba**: všechny v ploše a do 1,5 m od ní jednou hodí do jejího středu (i autora) — **po 0,4 s**, aby se dalo uhnout |
 | **bariéra** | stěna | větší stěna (1,35× šířka), víc výdrže | **kopule** kolem tebe na 4,5 s, chodí s tebou, tvoje kouzla propouští, cizí zastaví |
 
 - **Tier I je holé kouzlo**: žádná plocha, žádný odraz, žádná kombinace (voda, ohnivá vlna...). Blesk do

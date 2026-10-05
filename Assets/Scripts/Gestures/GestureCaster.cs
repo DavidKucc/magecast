@@ -376,7 +376,7 @@ namespace MageCast.Gestures
                 return;
             }
 
-            if (!drawing && Input.GetMouseButtonDown(castButton)) BeginDraw();
+            if (!drawing && Input.GetMouseButtonDown(castButton) && Time.time >= fizzleUntil) BeginDraw();
             else if (drawing && Input.GetMouseButton(castButton)) ContinueDraw();
             else if (drawing && !Input.GetMouseButton(castButton)) EndDraw();
         }
@@ -553,6 +553,8 @@ namespace MageCast.Gestures
 
             if (quality == CastQuality.Fizzle)
             {
+                // a moment before the next rune can start: scribbling fast and hoping stops paying
+                fizzleUntil = Time.time + FizzleRecovery;
                 motor.SprintLocked = false;
                 Headline("FIZZLE", FailColour);
                 WorldPopups.Word(transform, "FIZZLE", FailColour);
@@ -669,7 +671,14 @@ namespace MageCast.Gestures
         /// With a spell in hand she walks: this share of the jog, and no sprint. Must match HoldPace in
         /// CharacterAnimatorBuilder, which plays the walk at this speed.
         /// </summary>
-        public const float HoldSpeed = 0.52f;
+        // 0.52 until 5 Oct: with a spell in hand you were the slowest thing on the map -- 2.6 m/s
+        // against a 7.2 m/s sprint -- and could never close on anybody. Not higher than 0.7, because
+        // a spell can be held for ever: near full speed, an empty hand would stop being worth having.
+        public const float HoldSpeed = 0.7f;
+
+        /// <summary>After a fizzle, how long before a new rune can be started.</summary>
+        public const float FizzleRecovery = 0.5f;
+        float fizzleUntil = -99f;
 
         void ClearHeld()
         {

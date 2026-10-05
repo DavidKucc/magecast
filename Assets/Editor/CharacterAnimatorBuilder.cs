@@ -60,7 +60,7 @@ namespace MageCast.EditorTools
         /// How fast she moves with a spell in hand, as a share of the jog. Must match
         /// GestureCaster.HoldSpeed, which applies it to the motor; here it sets the walk's playback.
         /// </summary>
-        const float HoldPace = 0.52f;
+        const float HoldPace = 0.7f;
 
         /// <summary>
         /// A character pack whose clips may be borrowed for roles the library has not filled yet.

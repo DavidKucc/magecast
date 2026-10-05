@@ -494,16 +494,29 @@ namespace MageCast.Gestures
         /// </summary>
         void AirBomb(SpellZone zone)
         {
+            // Not at once: the bomb winds up for BombDelay first. It reaches 1.5 m past the patch, so
+            // somebody walking round your fire a metre off was pulled in with no chance to react; now
+            // they see the air land, the burst gather, and have that long to step out of reach.
+            // The pack's own wind-up is the telegraph -- most of it is kept this time, so it ends on the bang.
             Vector3 centre = zone.transform.position;
+            float radius = zone.Radius;
             if (fxEntry != null && fxEntry.special != null)
             {
-                SpellFx.PlayBurst(fxEntry.special, centre, fxEntry.specialScale * zone.Radius / 3f, fxEntry.specialLeadIn);
-                SpellFx.OneShot(fxEntry.specialSound, centre);
+                SpellFx.PlayBurst(fxEntry.special, centre, fxEntry.specialScale * radius / 3f,
+                                  Mathf.Max(0f, fxEntry.specialLeadIn - SpellTiers.BombDelay));
+                AudioClip bang = fxEntry.specialSound;
+                Delayed.Run(SpellTiers.BombDelay, () => SpellFx.OneShot(bang, centre));
             }
-            else FlashAt(centre, colour, zone.Radius * 2f, 1.6f);
+            else FlashAt(centre, colour, radius * 2f, 1.6f);
 
             if (!authoritative) return;
-            float reach = zone.Radius + SpellTiers.BombReachBeyondPatch;
+            Delayed.Run(SpellTiers.BombDelay, () => BombToss(centre, radius));
+        }
+
+        /// <summary>The bang itself: everyone in reach thrown once into the middle.</summary>
+        static void BombToss(Vector3 centre, float radius)
+        {
+            float reach = radius + SpellTiers.BombReachBeyondPatch;
             float airTime = 2f * SpellTiers.BombLift / PlayerMotor.Gravity;
             foreach (PlayerMotor m in FindObjectsOfType<PlayerMotor>())
             {

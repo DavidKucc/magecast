@@ -53,6 +53,8 @@ namespace MageCast.Gestures
         // air
         public const float BombReachBeyondPatch = 1.5f;
         public const float BombLift = 6.5f;              // m/s up; with the motor's gravity, ~0.6 s in the air
+        /// <summary>From the air landing in the patch to the bang: the time to get out of reach.</summary>
+        public const float BombDelay = 0.4f;
 
         // barrier
         public const float WallWidthII = 1.35f;
