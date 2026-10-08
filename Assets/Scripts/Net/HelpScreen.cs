@@ -29,27 +29,27 @@ namespace MageCast
         {
             new SpellInfo { Rune = GestureTemplates.Kenaz, Name = "FIRE", Czech = "Kenaz (pochodeň) - oheň",
                 Colour = new Color(1f, 0.45f, 0.15f),
-                Basics = "22 poškození, 26 m/s. Běžný útok.",
-                I = "zásah",
+                Basics = "16 poškození, 26 m/s (tier I 34 m/s). Běžný útok.",
+                I = "zásah, rychlejší let; dopad na zem, zeď nebo bariéru zraní každého do " + SpellTiers.SplashRadius + " m (i tebe)",
                 II = "+ hoření na zasaženém (" + SpellTiers.BurnPerSecond + "/s na " + SpellTiers.BurnSeconds + " s), hořící plocha na zemi, jednou se odrazí od zdi",
                 III = "+ výbuch: všichni do " + SpellTiers.ExplosionRadius + " m kromě zasaženého dostanou polovinu zásahu - i ty, když stojíš blízko" },
             new SpellInfo { Rune = GestureTemplates.Laguz, Name = "ICE", Czech = "Laguz (voda) - led",
                 Colour = new Color(0.55f, 0.85f, 1f),
-                Basics = "30 poškození, 17 m/s. Pomalý a tlustý, dá se uhnout.",
-                I = "zásah",
-                II = "+ zpomalení zasaženého, kluzká ledová plocha na zemi",
+                Basics = "22 poškození, 17 m/s (tier I 24 m/s). Pomalý a tlustý, dá se uhnout. Zasažený se vždy zpomalí.",
+                I = "zásah se zpomalením, rychlejší let; dopad na zem, zeď nebo bariéru zraní každého do " + SpellTiers.SplashRadius + " m (i tebe)",
+                II = "+ kluzká ledová plocha na zemi",
                 III = "+ zmrazí na " + SpellTiers.FreezeSeconds + " s: nehne se ani neskočí, kreslit ale může" },
             new SpellInfo { Rune = GestureTemplates.Sowulo, Name = "LIGHTNING", Czech = "Sowulo (slunce) - blesk",
                 Colour = new Color(1f, 0.9f, 0.35f),
-                Basics = "12 poškození, 44 m/s - skoro se nedá uhnout. Do ledu nebo vody vybije všechny, kdo na ní stojí.",
-                I = "zásah",
+                Basics = "12 poškození, 44 m/s (tier I 52 m/s) - skoro se nedá uhnout. Do ledu nebo vody vybije všechny, kdo na ní stojí.",
+                I = "zásah, rychlejší let",
                 II = "+ přeskočí na nejbližší jiný cíl do " + SpellTiers.ChainRange + " m za polovinu; do země nechá elektrickou plochu " +
                      "(" + SpellTiers.ShockPerSecond + "/s, kdo v ní stojí, nemůže kreslit)",
                 III = "+ elektrická plocha se objeví přímo pod zasaženým" },
             new SpellInfo { Rune = GestureTemplates.Ehwaz, Name = "AIR", Czech = "Ehwaz (pohyb) - vzduch",
                 Colour = new Color(0.8f, 0.95f, 0.9f),
                 Basics = "Žádné poškození, nikdy. Odhodí a vždycky přeruší kreslení.",
-                I = "odhoz",
+                I = "odhoz, rychlejší let",
                 II = "+ updraft plocha (vyhodí toho, kdo na ni vstoupí, a odkloní střely nahoru); do ohně: sfoukne ho jako ohnivou vlnu, " +
                      "která se 8 m převalí ve směru větru, zapálí a odhodí každého v cestě; na ledu rozklouže lidi",
                 III = "+ dopadne-li do jakékoli plochy: vzduchová bomba - všechny v ní a do " + SpellTiers.BombReachBeyondPatch + " m od ní hodí do jejího středu (i tebe), po " + SpellTiers.BombDelay + " s" },
@@ -91,7 +91,10 @@ namespace MageCast
             "<b>Tiery</b>\n" +
             "Podle toho, jak přesně runu nakreslíš, dostane kouzlo tier I, II nebo III. Tier mění, co kouzlo dělá " +
             "(viz Kouzla); poškození samo se hýbe jen 0,8-1,2x.\n" +
-            "Tier I je holé kouzlo: žádná plocha, žádný odraz, žádná kombinace.\n" +
+            "Tier I je holé kouzlo: žádná plocha, žádný odraz, žádná kombinace - ale letí rychleji a oheň s ledem " +
+            "při dopadu mimo člověka zraní okolí (splash).\n" +
+            "Cooldown: stejný prvek jde poslat znovu až " + SpellTiers.ElementCooldown + " s po minulém. Kreslit a držet ho můžeš i mezitím, " +
+            "ostatní prvky jsou volné. Tabulka run ukazuje, co ještě čeká.\n" +
             "Tier III v ruce vydrží " + "4" + " s, pak spadne na II. Tier II vydrží napořád.\n" +
             "Když tě cokoli trefí přímým zásahem, tier kouzla v ruce klesne o jeden - a kouzlo s tierem I zmizí.\n\n" +
             "<b>Soupeř tě čte</b>\n" +

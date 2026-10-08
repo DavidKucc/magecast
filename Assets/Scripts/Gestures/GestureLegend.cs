@@ -52,14 +52,21 @@ namespace MageCast.Gestures
             float y = panel.y + 28f;
             foreach (GestureCaster.VocabularyEntry entry in vocabulary)
             {
+                // an element that cannot be sent yet is greyed out, with the time it still needs
+                bool cooling = entry.Cooldown > 0f;
+                Color colour = cooling ? Color.Lerp(entry.Colour, new Color(0.45f, 0.45f, 0.47f), 0.75f) : entry.Colour;
                 Texture2D glyph = GlyphFor(entry.Id, entry.Colour);
                 if (glyph != null)
+                {
+                    if (cooling) GUI.color = new Color(1f, 1f, 1f, 0.3f);
                     GUI.DrawTexture(new Rect(panel.x + 10f, y + (rowHeight - glyphSize) * 0.5f,
                                              glyphSize, glyphSize), glyph);
+                    GUI.color = Color.white;
+                }
 
-                nameStyle.normal.textColor = entry.Colour;
+                nameStyle.normal.textColor = colour;
                 GUI.Label(new Rect(panel.x + 10f + glyphSize + 10f, y + 8f, panelWidth, 20f),
-                          entry.SpellName, nameStyle);
+                          cooling ? entry.SpellName + "   " + entry.Cooldown.ToString("0.0") + " s" : entry.SpellName, nameStyle);
                 GUI.Label(new Rect(panel.x + 10f + glyphSize + 10f, y + 26f, panelWidth, 20f),
                           entry.Id, runeStyle);
                 y += rowHeight;

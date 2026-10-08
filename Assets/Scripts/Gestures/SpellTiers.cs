@@ -33,9 +33,21 @@ namespace MageCast.Gestures
         /// <summary>Precision a tier II is left with when a hit knocks it to I -- just under the II line.</summary>
         public const float KnockedPrecision = 0.64f;
 
-        // fire
-        public const float BurnPerSecond = 4f;
-        public const float BurnSeconds = 3f;
+        // Every element's own button-down: a spell of the same element cannot be SENT again until this
+        // long after the last one was. Drawing is free meanwhile -- you may draw it and hold it -- and
+        // the other elements are free, so it stops Kenaz-Kenaz-Kenaz without slowing the game down.
+        public const float ElementCooldown = 2f;
+
+        // Tier I's splash: a fire or ice that lands on the map (floor, wall, barrier) rather than on a
+        // person hurts whoever is near, the caster included. The middle gets this share of the hit,
+        // falling to nothing at the edge; a barrier or a wall in between stops it. Damage only -- no
+        // burning, no slow, no patch -- and it never knocks the tier of what anybody is holding.
+        public const float SplashRadius = 2f;
+        public const float SplashShare = 0.3f;
+
+        // fire (5 Oct: 4/s for 3 s down to 3/s for 2 s, with the hit itself down to 16)
+        public const float BurnPerSecond = 3f;
+        public const float BurnSeconds = 2f;
         public const float ExplosionRadius = 2.5f;
         public const float ExplosionShare = 0.5f;        // of the hit's damage, to everyone else in reach
         public const float ExplosionBarrierWear = 1.5f;  // times the usual
@@ -48,7 +60,7 @@ namespace MageCast.Gestures
         public const float ChainShare = 0.5f;
         public const float ShockRadius = 2.2f;
         public const float ShockSeconds = 4f;
-        public const float ShockPerSecond = 4f;
+        public const float ShockPerSecond = 3f;          // 4 s of it is 12: never more than the bolt itself
 
         // air
         public const float BombReachBeyondPatch = 1.5f;

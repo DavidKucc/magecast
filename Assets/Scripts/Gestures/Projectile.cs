@@ -314,6 +314,7 @@ namespace MageCast.Gestures
                 if (authoritative) shield.Wear(BarrierWear());
                 Flash(at, 1.1f, 2.2f);
                 if (IsFire && tier >= 3) Explode(at, null);
+                Splash(at, -heading);
                 End();
                 return true;
             }
@@ -370,8 +371,9 @@ namespace MageCast.Gestures
                     // rather than shunted sideways.
                     motor.AddImpulse((heading + Vector3.up * 0.45f).normalized * knockback);
 
-                // ice: slowed from tier II, frozen in place at III -- which still lets you draw
-                if (spell != null && spell.hitSlowDuration > 0f && spell.hitSlow < 1f && tier >= 2)
+                // ice: slowed at every tier (tier I's one effect besides the hit), frozen in place at
+                // III -- which still lets you draw
+                if (spell != null && spell.hitSlowDuration > 0f && spell.hitSlow < 1f)
                 {
                     if (tier >= 3) motor.ApplySlow(0f, SpellTiers.FreezeSeconds);
                     else motor.ApplySlow(spell.hitSlow, spell.hitSlowDuration);
@@ -468,6 +470,40 @@ namespace MageCast.Gestures
         /// Fire III: a blast around where it struck. Everyone in reach but the one it hit directly takes
         /// half the hit -- the caster too, if they are that close: point-blank fire costs.
         /// </summary>
+        /// <summary>
+        /// Tier I fire or ice landing on the map: whoever is within SplashRadius takes a share of the
+        /// hit, most in the middle, nothing at the edge -- the caster too. Anything solid in between
+        /// (a wall, a barrier) shields them. Damage only, and it is not a direct hit: nobody's held
+        /// spell drops a tier from it. <paramref name="outward"/> points away from the surface struck.
+        /// </summary>
+        void Splash(Vector3 at, Vector3 outward)
+        {
+            if (!authoritative || tier > 1 || damage <= 0f || !(IsFire || IsIce)) return;
+            Vector3 origin = at + outward.normalized * 0.25f;
+            float reach = SpellTiers.SplashRadius;
+            var done = new System.Collections.Generic.HashSet<Health>();
+            foreach (Collider c in Physics.OverlapSphere(origin, reach, ~0, QueryTriggerInteraction.Ignore))
+            {
+                Health hp = c.GetComponentInParent<Health>();
+                if (hp == null || hp.IsDead || !done.Add(hp)) continue;
+                float d = Vector3.Distance(origin, c.ClosestPoint(origin));
+                if (d >= reach) continue;
+                if (Shielded(origin, c.bounds.center, hp.transform)) continue;
+                hp.TakeDamage(damage * SpellTiers.SplashShare * (1f - d / reach), attacker);
+            }
+        }
+
+        /// <summary>Whether something solid that is not <paramref name="target"/> lies between two points.</summary>
+        static bool Shielded(Vector3 from, Vector3 to, Transform target)
+        {
+            Vector3 d = to - from;
+            float length = d.magnitude;
+            if (length < 0.01f) return false;
+            foreach (RaycastHit h in Physics.RaycastAll(from, d / length, length, ~0, QueryTriggerInteraction.Ignore))
+                if (!h.transform.IsChildOf(target)) return true;
+            return false;
+        }
+
         void Explode(Vector3 at, Health exclude)
         {
             if (fxEntry != null && fxEntry.special != null)
@@ -549,6 +585,7 @@ namespace MageCast.Gestures
             if (spell != null && spell.wallBurstRadius > 0f)
                 WallBurst(at, normal, spell.wallBurstRadius * sizeScale);
             if (IsFire && tier >= 3) Explode(at, null);
+            Splash(at, normal);
 
             if (areaRadius > 0f && authoritative)
                 PoisonPuddle.Spawn(at, areaRadius, areaLifetime, colour);
@@ -718,10 +755,11 @@ namespace MageCast.Gestures
 
             if (IsFire && tier >= 3) Explode(at, null);
 
-            // tier I leaves nothing on the floor
+            // tier I leaves nothing on the floor -- only its splash
             if (spell != null && spell.groundEffect != GroundEffect.None && tier < 2)
             {
                 Flash(at, 1f, 2f);
+                Splash(at, Vector3.up);
             }
             else if (spell != null && spell.groundEffect != GroundEffect.None && !authoritative)
             {

@@ -51,6 +51,8 @@ namespace MageCast.Gestures
 
         [Header("Projectile / Ballistic")]
         public float speed = 20f;
+        /// <summary>Flight speed at tier I; 0 = the same as <see cref="speed"/>.</summary>
+        public float speedTierI = 0f;
         public float radius = 0.3f;
         public float lifetime = 4f;
         public float gravity = 0f;          // Ballistic only; per-spell, not the world's
@@ -199,8 +201,12 @@ namespace MageCast.Gestures
 
         [Header("Spells -- the four runes")]
         // Every area effect below obeys one rule: standing in it for its whole life costs LESS than a
-        // direct hit. Fire's patch does 4/s for 5 s = 20 against a direct 22, at every quality. Aiming
+        // direct hit. Fire's patch does 3/s for 5 s = 15 against a direct 16, at every quality. Aiming
         // at the person has to pay better than aiming next to them, or nobody would aim.
+        //
+        // Damage cut on 5 Oct (fire 22 -> 16, ice 30 -> 22) for 100 health: four or five hits a kill
+        // with fire II or ice, time enough for combinations to happen. speedTierI is the sloppy cast's
+        // one advantage: it leaves nothing behind, but it flies faster.
         //
         // Patches last 5-6 s and each player may have two down; the third takes the oldest away.
 
@@ -208,11 +214,11 @@ namespace MageCast.Gestures
         // corner rather than over it. On the floor it leaves a burning patch.
         [SerializeField] Spell fire = new Spell {
             gesture = GestureTemplates.Kenaz, displayName = "FIRE", kind = SpellKind.Projectile,
-            colour = new Color(1f, 0.45f, 0.15f), speed = 26f, radius = 0.38f, lifetime = 4f,
-            damage = 22f,
+            colour = new Color(1f, 0.45f, 0.15f), speed = 26f, speedTierI = 34f, radius = 0.38f, lifetime = 4f,
+            damage = 16f,
             wallBounces = 1, bounceDamageKeep = 0.8f,
             barrierWear = 1.5f,
-            groundEffect = GroundEffect.Burn, zoneRadius = 2.5f, zoneLifetime = 5f, zoneStrength = 4f };
+            groundEffect = GroundEffect.Burn, zoneRadius = 2.5f, zoneLifetime = 5f, zoneStrength = 3f };
 
         // Laguz. Slower and fatter than fire, so it hits harder but is far easier to sidestep at range.
         // Its patch is slippery rather than slow: you keep your speed and lose your grip -- 12% of the
@@ -220,8 +226,8 @@ namespace MageCast.Gestures
         // sidestep. In a game about dodging, that is control. It is also what lightning is waiting for.
         [SerializeField] Spell ice = new Spell {
             gesture = GestureTemplates.Laguz, displayName = "ICE", kind = SpellKind.Projectile,
-            colour = new Color(0.55f, 0.85f, 1f), speed = 17f, radius = 0.55f, lifetime = 4f,
-            damage = 30f,
+            colour = new Color(0.55f, 0.85f, 1f), speed = 17f, speedTierI = 24f, radius = 0.55f, lifetime = 4f,
+            damage = 22f,
             hitSlow = 0.5f, hitSlowDuration = 1.2f,
             barrierWear = 1f,
             groundEffect = GroundEffect.Ice, zoneRadius = 3f, zoneLifetime = 6f, zoneStrength = 0.12f };
@@ -235,7 +241,7 @@ namespace MageCast.Gestures
         // in the game, because it costs two casts and the target had seconds to step off the ice.
         [SerializeField] Spell lightning = new Spell {
             gesture = GestureTemplates.Sowulo, displayName = "LIGHTNING", kind = SpellKind.Projectile,
-            colour = new Color(0.75f, 0.7f, 1f), speed = 44f, radius = 0.18f, lifetime = 2.5f,
+            colour = new Color(0.75f, 0.7f, 1f), speed = 44f, speedTierI = 52f, radius = 0.18f, lifetime = 2.5f,
             damage = 12f,
             chargeDamage = 40f,
             barrierWear = 0.5f };
@@ -249,7 +255,7 @@ namespace MageCast.Gestures
         // deliver somebody into your fire. It still knocks a glyph out of the hand of anyone drawing.
         [SerializeField] Spell air = new Spell {
             gesture = GestureTemplates.Ehwaz, displayName = "AIR", kind = SpellKind.Projectile,
-            colour = new Color(0.8f, 0.95f, 0.9f), speed = 30f, radius = 0.7f, lifetime = 3f,
+            colour = new Color(0.8f, 0.95f, 0.9f), speed = 30f, speedTierI = 38f, radius = 0.7f, lifetime = 3f,
             knockback = 12f, damage = 0f,
             interruptsDrawing = true,
             wallBurstRadius = 3f,
@@ -470,7 +476,9 @@ namespace MageCast.Gestures
             if (segmentRecognition)
             {
                 RuneSegments.Match m = RuneSegments.Recognise(stroke);
-                trail.SetPreview(m.Name == null ? (Color?)null : PreviewColour(m.Name, PrecisionTier(m.Precision)));
+                trail.SetPreview(m.Name == null ? (Color?)null
+                                 : CooldownLeft(m.Name) > 0f ? CoolingColour
+                                 : PreviewColour(m.Name, PrecisionTier(m.Precision)));
                 return;
             }
 
@@ -603,6 +611,15 @@ namespace MageCast.Gestures
         void Send()
         {
             Spell spell = heldSpell;
+            float wait = CooldownLeft(spell);
+            if (wait > 0f)
+            {
+                // Not yet: nothing is spent, the spell stays in the hand.
+                Headline(spell.displayName + "  " + wait.ToString("0.0") + " s", FailColour, 0.8f);
+                Announce(spell.displayName + " is cooling down");
+                return;
+            }
+            readyAt[IndexOf(spell)] = Time.time + SpellTiers.ElementCooldown;
             ClearHeld();
             if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Sent, IndexOf(spell));
             Vector3 from;
@@ -811,6 +828,9 @@ namespace MageCast.Gestures
             return CastQuality.Weak;
         }
 
+        /// <summary>The line while drawing a rune whose element cannot be sent yet.</summary>
+        static readonly Color CoolingColour = new Color(0.85f, 0.25f, 0.2f, 0.9f);
+
         Color PreviewColour(string gestureId, CastQuality q)
         {
             Color baseColour = q == CastQuality.Misfire ? misfire.colour : SpellFor(gestureId).colour;
@@ -842,6 +862,7 @@ namespace MageCast.Gestures
             public string Id;
             public string SpellName;
             public Color Colour;
+            public float Cooldown;      // seconds until it can be sent again
         }
 
         public List<VocabularyEntry> Vocabulary()
@@ -852,7 +873,8 @@ namespace MageCast.Gestures
             foreach (string id in ids)
             {
                 Spell s = SpellFor(id);
-                list.Add(new VocabularyEntry { Id = id, SpellName = s.displayName, Colour = s.colour });
+                list.Add(new VocabularyEntry { Id = id, SpellName = s.displayName, Colour = s.colour,
+                                               Cooldown = CooldownLeft(s) });
             }
             return list;
         }
@@ -882,6 +904,21 @@ namespace MageCast.Gestures
                 case AirId: return air;
                 default: return misfire;
             }
+        }
+
+        /// <summary>When each element may next be sent, by spell index.</summary>
+        readonly Dictionary<byte, float> readyAt = new Dictionary<byte, float>();
+
+        /// <summary>Seconds until a spell of this element can be sent again; 0 when it can.</summary>
+        public float CooldownLeft(Spell spell)
+        {
+            float t;
+            return spell != null && readyAt.TryGetValue(IndexOf(spell), out t) ? Mathf.Max(0f, t - Time.time) : 0f;
+        }
+
+        public float CooldownLeft(string gestureId)
+        {
+            return gestureId == null ? 0f : CooldownLeft(SpellFor(gestureId));
         }
 
         public byte IndexOf(Spell spell)
@@ -1010,8 +1047,9 @@ namespace MageCast.Gestures
                              null, false);
 
             bool ballistic = spell.kind == SpellKind.Ballistic;
+            bool firstTier = SpellTiers.Of(quality) <= 1;
             Projectile shot = Projectile.Spawn(data.Muzzle, direction,
-                             spell.speed,
+                             firstTier && spell.speedTierI > 0f ? spell.speedTierI : spell.speed,
                              spell.radius * sizeScale,
                              spell.lifetime, colour, transform, power,
                              spell.gravity,
@@ -1146,9 +1184,13 @@ namespace MageCast.Gestures
                 bool willDrop = pressing && held >= dropHold;
 
                 int tier = SpellTiers.Of(heldQuality);
-                bigStyle.normal.textColor = willDrop ? FailColour : heldSpell.colour;
+                float wait = CooldownLeft(heldSpell);
+                bigStyle.normal.textColor = willDrop ? FailColour
+                                          : wait > 0f ? Color.Lerp(heldSpell.colour, Color.grey, 0.6f)
+                                          : heldSpell.colour;
                 GUI.Label(new Rect(14f, 10f, 700f, 40f),
-                          heldSpell.displayName + " " + SpellTiers.Roman(tier) + (willDrop ? "  - RELEASE TO DROP" : "  READY"),
+                          heldSpell.displayName + " " + SpellTiers.Roman(tier)
+                          + (willDrop ? "  - RELEASE TO DROP" : wait > 0f ? "  " + wait.ToString("0.0") + " s" : "  READY"),
                           bigStyle);
 
                 // a tier III runs down to II: shown as a draining bar under the name

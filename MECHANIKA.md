@@ -71,8 +71,8 @@ malou abecedu, ne pět náhodných čmáranic.
 
 | runa | tvar | kouzlo | poškození | rychlost | vlastnost |
 |---|---|---|---|---|---|
-| **Kenaz** (pochodeň) | `<` | oheň | 22 | 26 m/s | běžný útok |
-| **Laguz** (voda) | stonek s větví | led | 30 | 17 m/s | pomalé a tlusté, snadno se uhne |
+| **Kenaz** (pochodeň) | `<` | oheň | 16 | 26 m/s (tier I 34) | běžný útok |
+| **Laguz** (voda) | stonek s větví | led | 22 | 17 m/s (tier I 24) | pomalé a tlusté, snadno se uhne; vždy zpomalí |
 | **Sowulo** (slunce) | klikatice | blesk | 12 | 44 m/s | skoro se nedá uhnout, málo ubere |
 | **Ehwaz** (pohyb) | `M` | vzduch | **0** | 30 m/s | odhodí — vytáhne z krytu, shodí rozkreslené kouzlo |
 | **Uruz** (síla, vytrvalost) | brána `∩` se šikmou střechou | bariéra | — | — | zavře směr na 6 s, dokud ji zásahy neprorazí |
@@ -92,13 +92,20 @@ Tier mění, **co kouzlo dělá**, ne jen kolik ubere — poškození samo se s 
 
 | | I | II | III |
 |---|---|---|---|
-| **oheň** | zásah | + hoření na zasaženém (4/s na 3 s), plocha, odraz od zdi | + výbuch: všichni do 2,5 m kromě zasaženého dostanou polovinu zásahu (i autor), bariéru opotřebí 1,5× |
-| **led** | zásah | + zpomalení, plocha | + zamrznutí na 0,6 s: nehýbe se ani neskočí, kreslit může |
-| **blesk** | zásah | + přeskočí na nejbližší jiný cíl do 6 m za polovinu; do země nechá **elektrickou plochu** (2,2 m, 4 s, 4/s, kdo v ní stojí, nemůže kreslit) | + elektrická plocha se objeví přímo pod zasaženým |
-| **vzduch** | odhoz | + updraft plocha; do ohně **ohnivá vlna** (oheň zmizí a 8 m po větru se převalí stěna plamenů, zapálí a odhodí každého v cestě, zastaví ji zeď); na ledu rozklouže lidi | + v jakékoli ploše **vzduchová bomba**: všechny v ploše a do 1,5 m od ní jednou hodí do jejího středu (i autora) — **po 0,4 s**, aby se dalo uhnout |
+| **oheň** | zásah, rychlejší let, splash | + hoření na zasaženém (3/s na 2 s), plocha, odraz od zdi | + výbuch: všichni do 2,5 m kromě zasaženého dostanou polovinu zásahu (i autor), bariéru opotřebí 1,5× |
+| **led** | zásah se zpomalením, rychlejší let, splash | + kluzká plocha | + zamrznutí na 0,6 s: nehýbe se ani neskočí, kreslit může |
+| **blesk** | zásah, rychlejší let | + přeskočí na nejbližší jiný cíl do 6 m za polovinu; do země nechá **elektrickou plochu** (2,2 m, 4 s, 3/s, kdo v ní stojí, nemůže kreslit) | + elektrická plocha se objeví přímo pod zasaženým |
+| **vzduch** | odhoz, rychlejší let | + updraft plocha; do ohně **ohnivá vlna** (oheň zmizí a 8 m po větru se převalí stěna plamenů, zapálí a odhodí každého v cestě, zastaví ji zeď); na ledu rozklouže lidi | + v jakékoli ploše **vzduchová bomba**: všechny v ploše a do 1,5 m od ní jednou hodí do jejího středu (i autora) — **po 0,4 s**, aby se dalo uhnout |
 | **bariéra** | stěna | větší stěna (1,35× šířka), víc výdrže | **kopule** kolem tebe na 4,5 s, chodí s tebou, tvoje kouzla propouští, cizí zastaví |
 
-- **Tier I je holé kouzlo**: žádná plocha, žádný odraz, žádná kombinace (voda, ohnivá vlna...). Blesk do
+- **Tier I je rychlá střela**: letí rychleji (oheň 34, led 24, blesk 52, vzduch 38 m/s), ale nezanechá
+  žádnou plochu, odraz ani kombinaci (voda, ohnivá vlna...). Oheň a led tieru I mají **splash**: když
+  dopadnou na zem, zeď nebo bariéru (ne do člověka), každý do 2 m dostane až 30 % zásahu (uprostřed
+  nejvíc, na kraji nic), **i autor**. Zeď nebo bariéra mezi tím ho zastaví. Splash nesnižuje tier
+  drženého kouzla a nic nezapaluje ani nezpomaluje.
+- **Cooldown 2 s na prvek**: stejný prvek jde poslat znovu až 2 s po minulém. Kreslit a držet ho můžeš
+  i mezitím (čára je při kreslení červená), ostatní prvky jsou volné. Tabulka run (F6) ukazuje zbývající
+  čas. Kenaz–Kenaz–Kenaz nejde, Kenaz–Sowulo–Kenaz ano. Blesk do
   ledu se vybije na každém tieru — je to jeho hlavní použití.
 - **Vzduch přeruší kreslení** při každém zásahu, na každém tieru.
 - **Tier III v ruce vydrží 4 s**, pak spadne na tier II (proužek pod názvem ukazuje, kolik zbývá). Jinak
@@ -122,8 +129,8 @@ led klouže, blesk se uzemní, vzduch zvedá.
 
 | | do soupeře | do stěny | na zem |
 |---|---|---|---|
-| **oheň** | 22 | odrazí se jednou, zbyde 80 % | hořící plocha — 2,5 m, 5 s, 4/s |
-| **led** | 30 + zpomalení na 50 % na 1,2 s | nic | **kluzká plocha** — 3 m, 6 s |
+| **oheň** | 16 | odrazí se jednou, zbyde 80 % | hořící plocha — 2,5 m, 5 s, 3/s |
+| **led** | 22 + zpomalení na 50 % na 1,2 s (každý tier) | nic | **kluzká plocha** — 3 m, 6 s |
 | **blesk** | 12 | nic | nic, uzemní se — **kromě ledu** |
 | **vzduch** | odhoz + **shodí rozkreslené kouzlo** | výbuch 3 m, odfoukne od stěny | vzdušný proud — 2 m, 5 s, vyhodí ~2 m |
 
@@ -171,7 +178,7 @@ schopnost uhýbat, takže kdo na něm kreslí, je terč; a je to plocha, na kter
 
 **Pravidla, aby to drželo:**
 
-- **Plocha nikdy nedá víc než přímý zásah.** Kdo stojí v ohni celých 5 s, dostane 20 — míň než přímých 22.
+- **Plocha nikdy nedá víc než přímý zásah.** Kdo stojí v ohni celých 5 s, dostane 15 — míň než přímých 16.
   Platí to při každé kvalitě, protože hoření roste se silou tahu stejně jako zásah.
 - **Plochy žijí 5–6 s a každý hráč smí mít dole nejvýš dvě.** Třetí smaže tu nejstarší — aby se
   aréna za půl minuty nezměnila v kaši, kde nikdo neví, na čem stojí.
