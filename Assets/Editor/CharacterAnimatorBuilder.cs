@@ -397,7 +397,7 @@ namespace MageCast.EditorTools
             RepairJumpFiles();
             JumpPhases forward = ResolveJump("Jump", false);
             JumpPhases backward = ResolveJump("JumpBack", true);
-            JumpPhases running = ResolveRunningJump();
+            JumpPhases running = ResolveRunningJump(forward.Air);
 
             if (forward.Complete)
             {
@@ -1164,21 +1164,37 @@ namespace MageCast.EditorTools
         /// It carries its own leap -- the root rises 1.1 m and travels 4 m -- which the slices leave out
         /// of the pose (see Slice): the CharacterController does the leaping.
         /// </summary>
-        static JumpPhases ResolveRunningJump()
+        static JumpPhases ResolveRunningJump(AnimationClip fallLoop)
         {
             var phases = new JumpPhases();
-            phases.Up = FindClipNamed(PackFolder, "JumpRunUp");
-            phases.Air = FindClipNamed(PackFolder, "JumpRunAir");
-            phases.Land = FindClipNamed(PackFolder, "JumpRunLand");
-            if (phases.Complete) return phases;
-
             string path = PackFolder + "/Jump (2).fbx";
-            if (AssetDatabase.LoadAssetAtPath<GameObject>(path) == null) return phases;
-            SliceJump(path, "JumpRun", ref phases, PackFolder);
+            var imp = AssetImporter.GetAtPath(path) as ModelImporter;
+            if (imp == null) return phases;
+
+            // The first cut ran the take-off only up to the apex and then held the apex frame for the
+            // whole way down -- a frozen pose gliding through the air, reported as "not a natural
+            // jump". The clip's own flight, take-off to touchdown, is 0.70 s, and so is the motor's
+            // (1.35 m at 22 m/s^2), so it plays whole now. A cut with that frozen hold in it is undone.
+            foreach (ModelImporterClipAnimation c in imp.clipAnimations)
+                if (c.name == "JumpRunAir")
+                {
+                    imp.clipAnimations = new ModelImporterClipAnimation[0];
+                    imp.SaveAndReimport();
+                    break;
+                }
+
+            phases.Up = FindClipNamed(PackFolder, "JumpRunUp");
+            phases.Land = FindClipNamed(PackFolder, "JumpRunLand");
+            if (phases.Up == null || phases.Land == null)
+                SliceJump(path, "JumpRun", ref phases, PackFolder, true);
+            // falling for longer than a jump (off a ledge, off a bridge): the same falling loop as the
+            // plain jump, not a held frame
+            phases.Air = fallLoop;
             return phases;
         }
 
-        static bool SliceJump(string path, string prefix, ref JumpPhases phases, string folder = JumpFolder)
+        static bool SliceJump(string path, string prefix, ref JumpPhases phases, string folder = JumpFolder,
+                              bool wholeFlight = false)
         {
             var imp = AssetImporter.GetAtPath(path) as ModelImporter;
             if (imp == null) return false;
@@ -1229,24 +1245,32 @@ namespace MageCast.EditorTools
             }
 
             var slices = new List<ModelImporterClipAnimation>();
-            slices.Add(Slice(existing[0], prefix + "Up", first, first + apex, false));
-            // a two-frame hold at the apex, not a slice of the arc: the fall lasts as long as the motor
-            // says, and looping any real movement here would show as a twitch every fifth of a second
-            slices.Add(Slice(existing[0], prefix + "Air", first + apex, first + apex + 1, true));
+            if (wholeFlight)
+            {
+                // the whole flight in one, take-off to touchdown; the fall after it is somebody else's
+                slices.Add(Slice(existing[0], prefix + "Up", first, first + touchdown, false));
+            }
+            else
+            {
+                slices.Add(Slice(existing[0], prefix + "Up", first, first + apex, false));
+                // a two-frame hold at the apex, not a slice of the arc: the fall lasts as long as the motor
+                // says, and looping any real movement here would show as a twitch every fifth of a second
+                slices.Add(Slice(existing[0], prefix + "Air", first + apex, first + apex + 1, true));
+            }
             slices.Add(Slice(existing[0], prefix + "Land", first + touchdown, first + frames, false));
 
             imp.clipAnimations = slices.ToArray();
             imp.SaveAndReimport();
 
             phases.Up = FindClipNamed(folder, prefix + "Up");
-            phases.Air = FindClipNamed(folder, prefix + "Air");
+            if (!wholeFlight) phases.Air = FindClipNamed(folder, prefix + "Air");
             phases.Land = FindClipNamed(folder, prefix + "Land");
 
             Debug.Log(string.Format(System.Globalization.CultureInfo.InvariantCulture,
                 "[Animator] {0}: sliced {1} ({2} frames) -- rise 0-{3}, apex {3}, land {4}-{2}",
                 prefix, System.IO.Path.GetFileName(path), frames, apex, touchdown));
 
-            return phases.Complete;
+            return wholeFlight ? phases.Up != null && phases.Land != null : phases.Complete;
         }
 
         /// <summary>
@@ -1404,8 +1428,13 @@ namespace MageCast.EditorTools
             if (onlyIf != null) toAir.AddCondition(AnimatorConditionMode.If, 0f, onlyIf);
             toAir.duration = 0.06f; toAir.hasExitTime = false;
 
+            // Only while still in the air, and a landing may cut it short: a running jump's rise is the
+            // whole flight, so it ends just as the feet touch, and a hand-over to the fall loop started
+            // there kept her "falling" on the ground for a fifth of a second.
             var upToAir = sUp.AddTransition(sAir);
             upToAir.hasExitTime = true; upToAir.exitTime = 0.95f; upToAir.duration = 0.08f;
+            upToAir.AddCondition(AnimatorConditionMode.If, 0f, "Airborne");
+            upToAir.interruptionSource = TransitionInterruptionSource.Destination;
 
             // Short hops and steps off a low kerb never reach the hang at all, so the rise needs its own
             // way down, or the character would finish a push-off she has already landed from.
@@ -1431,21 +1460,26 @@ namespace MageCast.EditorTools
                 runOut.AddCondition(AnimatorConditionMode.IfNot, 0f, "Airborne");
                 runOut.AddCondition(AnimatorConditionMode.Greater, MovingLanding, "Speed");
                 runOut.duration = 0.10f; runOut.hasExitTime = false;
+                runOut.interruptionSource = TransitionInterruptionSource.Destination;
 
                 var land = from.AddTransition(sLand);
                 land.AddCondition(AnimatorConditionMode.IfNot, 0f, "Airborne");
                 land.duration = from == sUp ? 0.08f : 0.10f; land.hasExitTime = false;
+                land.interruptionSource = TransitionInterruptionSource.Destination;   // jump again at once
             }
 
             // A standing landing that starts moving is let go of at once, for the same reason.
             var landMove = sLand.AddTransition(locomotion);
             landMove.AddCondition(AnimatorConditionMode.Greater, MovingLanding, "Speed");
             landMove.duration = 0.12f; landMove.hasExitTime = false;
+            // a jump straight out of a landing must not wait for the hand-back to the legs to finish
+            landMove.interruptionSource = TransitionInterruptionSource.Destination;
 
             // Left early, at 80%: the tail of the recovery is a stand-up the locomotion blend does
             // better anyway, and holding it longer makes running away from a landing feel stuck.
             var landDone = sLand.AddTransition(locomotion);
             landDone.hasExitTime = true; landDone.exitTime = 0.8f; landDone.duration = 0.12f;
+            landDone.interruptionSource = TransitionInterruptionSource.Destination;
 
             var landToUp = sLand.AddTransition(sUp);
             landToUp.AddCondition(AnimatorConditionMode.If, 0f, "Airborne");
