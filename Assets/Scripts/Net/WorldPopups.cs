@@ -139,6 +139,8 @@ namespace MageCast
                 if (age >= p.Life) { popups.RemoveAt(i); continue; }
 
                 if (p.Anchor != null) p.Point = p.Anchor.position;
+                // "FIRE III", "FIZZLE" over another player tell you what they hold: only in sight
+                if (!p.IsDamage && Sight.IsOtherPlayer(p.Anchor) && !Sight.Sees(p.Anchor)) continue;
                 float t = age / p.Life;
 
                 // eased up and out: fast at first, then hanging while it fades

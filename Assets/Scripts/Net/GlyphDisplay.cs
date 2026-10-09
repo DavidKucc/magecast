@@ -128,6 +128,11 @@ namespace MageCast
 
         void LateUpdate()
         {
+            // What they are drawing, and once drawn what they hold, is only yours to read while you
+            // can see them: behind cover the rune over their head disappears with them.
+            bool seen = Sight.Sees(transform);
+            if (holder.gameObject.activeSelf != seen) holder.gameObject.SetActive(seen);
+
             if (fadeFrom >= 0f)
             {
                 float t = (Time.time - fadeFrom) / FadeSeconds;

@@ -17,6 +17,10 @@ namespace MageCast.Combat
         [SerializeField] float width = 1.4f;         // metres
         [SerializeField] float thickness = 0.16f;
         [SerializeField] float hideBeyond = 45f;     // metres; no point drawing a bar you cannot read
+        /// <summary>How long the bar stays up after the crosshair leaves, so a flick off and back does not blink it.</summary>
+        [SerializeField] float lingerSeconds = 0.6f;
+
+        float aimedAt = -99f;
 
         Health health;
         Transform holder;
@@ -46,6 +50,10 @@ namespace MageCast.Combat
 
             canvas = go.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
+            // Adding a Canvas swaps the object's Transform for a RectTransform, and the Transform read
+            // above is destroyed with it. Kept as it was, holder read as null from then on and the
+            // update below bailed out every frame: the bar never turned to face anybody, never hid.
+            holder = go.transform;
 
             RectTransform crt = (RectTransform)go.transform;
             crt.sizeDelta = new Vector2(width, thickness);
@@ -103,14 +111,18 @@ namespace MageCast.Combat
             Camera cam = Camera.main;
             if (cam == null) return;
 
+            // Only for whatever the crosshair is on (and a moment after): a bar over everybody all the
+            // time told you how hurt someone was without ever having to look for them.
+            if (MageCast.Sight.Aimed() == health) aimedAt = Time.time;
             float distance = Vector3.Distance(cam.transform.position, holder.position);
-            bool visible = distance <= hideBeyond;
+            bool visible = distance <= hideBeyond && Time.time - aimedAt <= lingerSeconds && !health.IsDead;
             if (canvas.enabled != visible) canvas.enabled = visible;
             if (!visible) return;
 
-            // Face the camera plane, not the camera position. Aiming at the position makes the bar
-            // rock as you strafe past it; matching the camera's own forward keeps every bar parallel.
-            holder.rotation = cam.transform.rotation;
+            // Turned to face you: towards the camera itself, so the bar is square-on from wherever
+            // you look at it, near or far, above or below.
+            Vector3 away = holder.position - cam.transform.position;
+            if (away.sqrMagnitude > 0.0001f) holder.rotation = Quaternion.LookRotation(away, Vector3.up);
         }
     }
 }
