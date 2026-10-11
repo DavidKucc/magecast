@@ -122,15 +122,15 @@ MonoBehaviour:
   jogSpeed: 3.3
   runSpeed: 4.8
   paceOverAnimation: 1.5
-  groundAcceleration: 30
-  groundDeceleration: 38
+  groundAcceleration: 9.5
+  groundDeceleration: 13.5
   backwardMultiplier: 0.6
   strafeMultiplier: 0.85
   jumpHeight: 1.35
   gravity: -22
   coyoteTime: 0.12
   jumpBuffer: 0.12
-  airAcceleration: 4
+  airAcceleration: 2
   bodyTurnSpeed: 720
   cam: {fileID: 0}
   externalDamping: 3.5

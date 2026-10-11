@@ -83,8 +83,15 @@ namespace MageCast
         /// legs speed up together. 20 reaches a jog in 0.13 s, which still reads as instant on a key.
         /// </summary>
         // Raised with the speeds, so a dodge still takes the same eighth of a second to reach full pace.
-        [SerializeField] float groundAcceleration = 30f;
-        [SerializeField] float groundDeceleration = 38f;
+        //
+        // Then lowered three-fold on purpose (11 Oct), for the aim rather than the legs. Measured with
+        // Tools > Arena > Audit Movement, the body went from standing to a full jog in 0.10 s and turned
+        // a sideways dodge round in 0.18 s with 16 cm of carry -- faster than any spell flies, so nobody
+        // could be led and nothing hit. Now (times the 1.5 pace factor): 14 m/s^2 speeding up, 20 braking
+        // a jog in ~0.35 s, a stop in ~0.25 s, a dodge turned round in ~0.5 s with ~0.45 m of carry.
+        // Still quick enough to dodge what you see coming; too slow to dodge on a coin flip.
+        [SerializeField] float groundAcceleration = 9.5f;
+        [SerializeField] float groundDeceleration = 13.5f;
 
         /// <summary>
         /// Backing away and strafing are slower than running forward. Standard in shooters, and here it
@@ -111,7 +118,9 @@ namespace MageCast
         /// quarter of a second -- the body glided sideways in a held jump pose with nothing moving it.
         /// At 4 a jump keeps most of the momentum it left the ground with, and steering is a nudge.
         /// </summary>
-        [SerializeField] float airAcceleration = 4f;
+        // And 4 -> 2 (11 Oct): at 4 a jogging jump could be pulled back to a standstill before landing,
+        // so a jump hid where you would come down. Now a jump is a commitment that can only be nudged.
+        [SerializeField] float airAcceleration = 2f;
 
         /// <summary>
         /// How fast the body turns to face where the camera looks, in degrees per second.
@@ -153,6 +162,14 @@ namespace MageCast
         public bool SprintLocked { get; set; }
         public bool JumpLocked { get; set; }
         public bool IsGrounded { get; private set; }
+
+        /// <summary>
+        /// Stand-ins for the keyboard, for Tools > Arena > Audit Movement: it drives the body through
+        /// starts, stops, turns and jumps and times them. Unset, the keyboard is read as always.
+        /// </summary>
+        public Vector2? ScriptedMove { get; set; }
+        public bool ScriptedSprint { get; set; }
+        public bool ScriptedJump { get; set; }
 
         /// <summary>Up is positive, in m/s -- for the animator to tell a hop from a drop off a roof.</summary>
         public float VerticalSpeed { get { return velocity.y; } }
@@ -396,6 +413,7 @@ namespace MageCast
             if (IsGrounded) lastGroundedTime = Time.time;
             bool hands = !GameInput.Blocked;
             if (hands && Input.GetButtonDown("Jump")) lastJumpPressedTime = Time.time;
+            if (ScriptedJump) { ScriptedJump = false; lastJumpPressedTime = Time.time; }
 
             float yaw = cam != null ? cam.Yaw : transform.eulerAngles.y;
             Quaternion basis = Quaternion.Euler(0f, yaw, 0f);
@@ -416,14 +434,15 @@ namespace MageCast
             if (IsClimbing) { ClimbStep(); return; }
 
             // With a menu open the keys belong to the menu; the body still falls and still slides to a stop.
-            Vector3 input = hands ? new Vector3(Input.GetAxisRaw("Horizontal"), 0f, Input.GetAxisRaw("Vertical"))
+            Vector3 input = ScriptedMove.HasValue ? new Vector3(ScriptedMove.Value.x, 0f, ScriptedMove.Value.y)
+                          : hands ? new Vector3(Input.GetAxisRaw("Horizontal"), 0f, Input.GetAxisRaw("Vertical"))
                                   : Vector3.zero;
             if (input.sqrMagnitude > 1f) input.Normalize();
 
             // Shift runs in every direction, not only forward: it is the old default speed, and this
             // character spends most of a fight strafing, so a forward-only run would rarely apply.
             bool sprinting = hands && !SprintLocked && !Winded && Stamina > 0f
-                             && Input.GetKey(KeyCode.LeftShift) && input.sqrMagnitude > 0.01f;
+                             && (ScriptedSprint || Input.GetKey(KeyCode.LeftShift)) && input.sqrMagnitude > 0.01f;
             Breathe(sprinting);
 
             // shaped before the basis rotation, so the limits apply to the character's own axes
@@ -443,11 +462,7 @@ namespace MageCast
             }
             else if (IsGrounded)
             {
-                Vector3 flat = new Vector3(velocity.x, 0f, velocity.z);
-                // speeding up (or turning) uses the acceleration, only letting go uses the braking
-                float rate = wanted.sqrMagnitude > flat.sqrMagnitude * 0.99f ? groundAcceleration
-                                                                              : groundDeceleration;
-                flat = Vector3.MoveTowards(flat, wanted, rate * paceOverAnimation * CurrentGrip * Time.deltaTime);
+                Vector3 flat = Steer(new Vector3(velocity.x, 0f, velocity.z), wanted);
                 velocity.x = flat.x;
                 velocity.z = flat.z;
                 if (velocity.y < 0f) velocity.y = -2f;   // keep it pinned down so isGrounded stays honest
@@ -484,6 +499,29 @@ namespace MageCast
             // exponential bleed-off, framerate independent
             external *= Mathf.Exp(-externalDamping * Time.deltaTime);
             if (external.sqrMagnitude < 0.01f) external = Vector3.zero;
+        }
+
+        /// <summary>
+        /// One frame of ground movement towards <paramref name="wanted"/>, split along the way the body
+        /// is already going and across it. Along it, slowing down (or turning back) brakes and speeding
+        /// up accelerates; across it, the new direction builds up at the acceleration. So a change of
+        /// direction is an arc that reads before it happens, and a reversal is a stop and a start rather
+        /// than a snap -- something to lead a shot against.
+        /// </summary>
+        Vector3 Steer(Vector3 flat, Vector3 wanted)
+        {
+            float accel = groundAcceleration * paceOverAnimation * CurrentGrip * Time.deltaTime;
+            float brake = groundDeceleration * paceOverAnimation * CurrentGrip * Time.deltaTime;
+            if (flat.sqrMagnitude < 0.0004f)
+                return Vector3.MoveTowards(flat, wanted, accel);
+
+            Vector3 dir = flat.normalized;
+            float along = Vector3.Dot(flat, dir), wantAlong = Vector3.Dot(wanted, dir);
+            Vector3 across = flat - dir * along, wantAcross = wanted - dir * wantAlong;
+
+            along = Mathf.MoveTowards(along, wantAlong, wantAlong > along ? accel : brake);
+            across = Vector3.MoveTowards(across, wantAcross, wantAcross.sqrMagnitude > across.sqrMagnitude ? accel : brake);
+            return dir * along + across;
         }
 
         /// <summary>Sprinting drains the bar; anything else refills it after a short pause.</summary>

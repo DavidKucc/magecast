@@ -326,7 +326,7 @@ na úpatí neviditelná hranice. Polovina otočená o 180°, tým B na +z, tým 
   tráva, **zbořené zdi** a jedna u každého spawnu,
 - tlumené barvy (tráva ztlumená, šedé kameny), slunce z boku, bez mlhy.
 
-**Pohyb:** chůze 5,0 m/s, sprint (Shift) 7,2 m/s. Sprint stojí staminu (žlutý pruh nad životy):
+**Pohyb:** chůze 5,0 m/s, sprint (Shift) 7,2 m/s. Rozjezd do klusu ~0,3 s, do sprintu ~0,5 s, zastavení ~0,2 s, otočka úhybu ~0,5 s (setrvačnost ~0,4 m), zatáčka o 90° ~0,3 s; změna směru je oblouk, ne zlom, aby se dal soupeř předvídat. Ve vzduchu se dá skok jen trochu ovlivnit. Měří to `Tools/Arena/Audit Movement`. Sprint stojí staminu (žlutý pruh nad životy):
 plná vydrží 4 s sprintu, doplní se za 3,5 s od chvíle, kdy přestaneš (s pauzou 0,8 s). Když ji
 vyčerpáš, sprintovat jde znovu až od 30 %. Skok z běhu vpřed (i bez Shiftu) má animaci skoku z běhu. Tvrdý dopad (pád z ~3 m a víc) v pohybu je
 kotoul.
