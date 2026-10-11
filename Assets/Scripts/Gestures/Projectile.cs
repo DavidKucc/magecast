@@ -60,6 +60,34 @@ namespace MageCast.Gestures
         int tier = 2;
 
         /// <summary>Sets the tier. A tier I spell is the plain hit: it does not bounce.</summary>
+        /// <summary>Set on the caster's own copy only: the shot's fate goes into <see cref="HitStats"/>.</summary>
+        string statsName;
+        bool statsDone;
+
+        public void CountForStats(string spellName) { statsName = spellName; }
+
+        void Tally(ShotOutcome outcome)
+        {
+            if (statsName == null || statsDone) return;
+            statsDone = true;
+            HitStats.Record(statsName, outcome);
+        }
+
+        /// <summary>A shot that hit nothing it wanted: near somebody, or a clean miss.</summary>
+        void TallyMiss(Vector3 at)
+        {
+            if (statsName == null || statsDone) return;
+            foreach (Collider c in Physics.OverlapSphere(at, HitStats.NearRadius, ~0, QueryTriggerInteraction.Ignore))
+            {
+                Health h = c.GetComponentInParent<Health>();
+                if (h == null || h.IsDead) continue;
+                if (owner != null && c.transform.IsChildOf(owner)) continue;
+                Tally(ShotOutcome.Near);
+                return;
+            }
+            Tally(ShotOutcome.Miss);
+        }
+
         public void SetTier(int value)
         {
             tier = Mathf.Clamp(value, 1, 3);
@@ -137,6 +165,7 @@ namespace MageCast.Gestures
 
         void End()
         {
+            TallyMiss(transform.position);      // anything not already counted as a hit
             ended = true;
             Destroy(gameObject);
         }
@@ -310,6 +339,7 @@ namespace MageCast.Gestures
             if (shield != null)
             {
                 // the ripple first: a hit that breaks it should still be seen landing
+                Tally(ShotOutcome.Barrier);
                 shield.Struck(at, BarrierWear() / 30f);
                 if (authoritative) shield.Wear(BarrierWear());
                 Flash(at, 1.1f, 2.2f);
@@ -321,6 +351,8 @@ namespace MageCast.Gestures
 
             if (hp != null || motor != null)
             {
+                Tally(motor == null && hp != null && hp.GetComponent<Combat.TrainingDummy>() != null
+                      ? ShotOutcome.Dummy : ShotOutcome.Player);
                 if (authoritative) HitPerson(hp, motor, heading);
                 Flash(at, 1.4f, 2.5f);
                 TierHit(hp, at);

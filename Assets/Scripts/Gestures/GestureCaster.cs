@@ -1059,6 +1059,8 @@ namespace MageCast.Gestures
                              dealt,
                              spell, sizeScale, authoritative, attacker);
             if (shot != null) shot.SetTier(SpellTiers.Of(quality));
+            // your own shots, on your own machine, feed the accuracy numbers in the pause menu
+            if (shot != null && (!Networked || net.IsOwner)) shot.CountForStats(spell.displayName);
 
             // A cast that arrived over the network is as old as its trip here: the copy is moved on by
             // that much, so it flies -- and lands, and hits -- where the caster's own shot is, instead of

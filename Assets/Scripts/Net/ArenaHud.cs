@@ -235,6 +235,40 @@ namespace MageCast
                      "back in " + Mathf.CeilToInt(left), mid, Color.white);
         }
 
+        bool statsCopied;
+        float statsCopiedAt;
+        GUIStyle statsStyle;
+
+        /// <summary>
+        /// How often your spells landed this session, in the pause menu's top left: the number that says
+        /// whether aiming is fun or a chore. Copyable, for passing on.
+        /// </summary>
+        void Accuracy()
+        {
+            if (statsStyle == null)
+                statsStyle = new GUIStyle(GUI.skin.label) { fontSize = 13, wordWrap = false };
+            statsStyle.normal.textColor = Color.white;
+
+            string report = Gestures.HitStats.Report();
+            int lines = report.Split('\n').Length;
+            float pw = Mathf.Min(Screen.width - 24f, 760f), ph = 64f + lines * 18f;
+            var panel = new Rect(12f, Screen.height - ph - 12f, pw, ph);   // bottom left, clear of the menu
+            Box(panel);
+            Shadowed(new Rect(panel.x + 10f, panel.y + 6f, pw, 22f), "ACCURACY, THIS SESSION  (your own shots)", small, new Color(1f, 0.85f, 0.45f));
+            GUI.Label(new Rect(panel.x + 10f, panel.y + 28f, pw - 20f, lines * 18f + 4f), report, statsStyle);
+
+            float by = panel.y + ph - 30f;
+            if (GUI.Button(new Rect(panel.x + 10f, by, 120f, 24f), "Copy"))
+            {
+                WebClipboard.Copy(report);
+                statsCopied = true;
+                statsCopiedAt = Time.time;
+            }
+            if (GUI.Button(new Rect(panel.x + 140f, by, 120f, 24f), "Reset")) Gestures.HitStats.Reset();
+            if (statsCopied && Time.time - statsCopiedAt < 2f)
+                Shadowed(new Rect(panel.x + 270f, by, 120f, 24f), "copied", small, new Color(0.6f, 1f, 0.6f));
+        }
+
         void Menu(NetSession session, NetworkManager nm)
         {
             GUI.color = new Color(0f, 0f, 0f, 0.55f);
@@ -295,6 +329,8 @@ namespace MageCast
                 y += h + 10f;
             }
             y += 10f;
+
+            Accuracy();
 
             if (nm != null)
             {
