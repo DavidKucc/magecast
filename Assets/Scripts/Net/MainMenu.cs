@@ -88,8 +88,8 @@ namespace MageCast
             if (name != NetSession.PlayerName) NetSession.PlayerName = name;
             y += 64f;
 
-            // The map for training and for a room you host. Joining needs no choice: you go where the host is.
-            GUI.Label(new Rect(x, y, w, 24f), "Map", label);
+            // The map for training. A room you host chooses its map in the lobby (starting from this one).
+            GUI.Label(new Rect(x, y, w, 24f), "Training map  (online: chosen in the lobby)", label);
             y += 26f;
             int maps = NetSession.ArenaScenes.Length;
             float mw = (w - 8f * (maps - 1)) / maps;

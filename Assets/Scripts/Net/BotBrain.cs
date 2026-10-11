@@ -106,6 +106,7 @@ namespace MageCast
             {
                 if (p == null || p == self || !p.IsSpawned) continue;
                 if (IgnoreHumans && !p.IsBot) continue;
+                if (Teams.Allies(self, p)) continue;
                 Health h = p.GetComponent<Health>();
                 if (h == null || h.IsDead) continue;
                 float d = Vector3.Distance(p.transform.position, transform.position);

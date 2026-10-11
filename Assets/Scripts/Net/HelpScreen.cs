@@ -81,9 +81,16 @@ namespace MageCast
             "V tréninku: F1-F5 cvičný cíl pro záznam, F7 přepne rozpoznávání run (čáry a úhly / starý $P)";
 
         static readonly string Rules =
+            "<b>Lobby</b>\n" +
+            "Online hra začíná v lobby: hostitel pošle kód, hráči se připojí. Hostitel vybírá mapu, režim a počet " +
+            "killů a přidává boty; každý si vybere tým a dá Ready. Hostitel spustí zápas, až jsou všichni ready. " +
+            "Když hostitel změní nastavení, ready se všem zruší. Po zápase se všichni vrátí do lobby.\n\n" +
             "<b>Zápas</b>\n" +
-            "Kdo první zabije " + MatchDirector.KillsToWin + "x, vyhrává. Pak se skóre vynuluje a začíná nový zápas. " +
-            "Po smrti jsi za 3 s zpátky na spawnu, který soupeř nevidí. Mapu vybírá hostitel v menu.\n\n" +
+            "Každý proti každému: kdo první dosáhne nastaveného počtu killů (výchozí " + MatchDirector.KillsToWin + "), vyhrává. " +
+            "Týmy (Modří proti Červeným, max 3 na tým): počítají se killy celého týmu (výchozí 10). " +
+            "Kouzla spoluhráčů ti nikdy neublíží ani tě neodhodí - střely tebou proletí. Jejich led ale klouže i tobě " +
+            "a jejich updraft tě vyhodí vysoko jako je samotné. Jména spoluhráčů vidíš i přes zdi.\n" +
+            "Po smrti jsi za 3 s zpátky na spawnu, který soupeř nevidí (v týmech na straně tvého týmu).\n\n" +
             "<b>Runy</b>\n" +
             "Runa se kreslí jedním tahem. Nezáleží, na kterém konci začneš. Hra tah rozloží na rovné čáry a porovná jejich " +
             "úhly s runou - každá čára smí být nejvýš 35° vedle. Hotové čáry se hned narovnají.\n" +

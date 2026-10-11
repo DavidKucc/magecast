@@ -74,6 +74,8 @@ namespace MageCast.Combat
         public void TakeDamage(float amount, ulong attacker)
         {
             if (!HasAuthority || amount <= 0f || IsDead) return;
+            // a teammate's spell, whatever form it took -- the one place every kind of damage passes
+            if (MageCast.Teams.Spares(attacker, this)) return;
 
             LastAttacker = attacker;
             Set(Mathf.Max(0f, Current - amount));

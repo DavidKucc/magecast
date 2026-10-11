@@ -84,6 +84,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_ProtocolType: 0
+  m_UseWebSockets: 0
+  m_UseEncryption: 0
   m_MaxPacketQueueSize: 128
   m_MaxPayloadSize: 6144
   m_HeartbeatTimeoutMS: 500
@@ -111,3 +113,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerPrefab: {fileID: 2611380818393119548, guid: c49ffc3d2d03aa0428e78e41dabfaf59, type: 3}
+  lobbyPrefab: {fileID: 3032094113560737110, guid: e5d6a5b598a913f418ec7207c1063010, type: 3}

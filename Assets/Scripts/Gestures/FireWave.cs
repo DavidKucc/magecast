@@ -73,6 +73,9 @@ namespace MageCast.Gestures
             foreach (Collider c in Physics.OverlapSphere(transform.position + Vector3.up * 0.9f, Reach, ~0,
                                                           QueryTriggerInteraction.Ignore))
             {
+                // the fire's own player's teammates walk through it
+                if (MageCast.Teams.Spares(attacker, c)) continue;
+
                 Health h = c.GetComponentInParent<Health>();
                 if (h != null && burnt.Add(h)) Burning.Apply(h, burnPerSecond, SpellTiers.BurnSeconds, attacker, authoritative, look);
 

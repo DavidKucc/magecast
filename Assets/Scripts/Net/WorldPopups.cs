@@ -110,6 +110,13 @@ namespace MageCast
             return Mathf.RoundToInt(Mathf.Lerp(18f, 34f, Mathf.Clamp01(amount / 40f)));
         }
 
+        void Awake()
+        {
+            // Lives across scenes; what was rising over somebody in the arena must not hang over the
+            // lobby (or the next map) at the spot where they stood.
+            UnityEngine.SceneManagement.SceneManager.activeSceneChanged += (from, to) => popups.Clear();
+        }
+
         void Add(Popup p)
         {
             p.Born = Time.time;

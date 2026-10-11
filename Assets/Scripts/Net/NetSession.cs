@@ -27,6 +27,9 @@ namespace MageCast
     {
         public const string MenuScene = "MainMenu";
 
+        /// <summary>Where an online room waits between matches (see Lobby).</summary>
+        public const string LobbyScene = "Lobby";
+
         /// <summary>The maps, by scene: what the menu offers, in the order it offers them.</summary>
         public static readonly string[] ArenaScenes = { "Arena_Blockout", "Arena_Temple", "Arena_Crossing", "Arena_Valley" };
         public static readonly string[] ArenaTitles = { "Blockout", "Temple", "Crossing", "Valley" };
@@ -43,8 +46,11 @@ namespace MageCast
             return Array.IndexOf(ArenaScenes, scene) >= 0;
         }
 
-        /// <summary>Players besides the host. Relay reserves room for exactly this many.</summary>
-        const int MaxGuests = 3;
+        /// <summary>
+        /// Players besides the host. Relay reserves room for exactly this many: with the host, a full
+        /// lobby -- three a side.
+        /// </summary>
+        const int MaxGuests = Lobby.MaxPlayers - 1;
 
         /// <summary>
         /// How everyone talks to Relay: secure WebSockets, on every platform.
@@ -74,6 +80,7 @@ namespace MageCast
         public static NetSession Instance { get; private set; }
 
         [SerializeField] GameObject playerPrefab;
+        [SerializeField] GameObject lobbyPrefab;
 
         public GameObject PlayerPrefab { get { return playerPrefab; } }
         public Mode Current { get; private set; }
@@ -162,6 +169,8 @@ namespace MageCast
 
             if (playerPrefab != null && !manager.NetworkConfig.Prefabs.Contains(playerPrefab))
                 manager.AddNetworkPrefab(playerPrefab);
+            if (lobbyPrefab != null && !manager.NetworkConfig.Prefabs.Contains(lobbyPrefab))
+                manager.AddNetworkPrefab(lobbyPrefab);
 
             manager.OnClientDisconnectCallback += OnClientDisconnect;
             manager.OnTransportFailure += OnTransportFailure;
@@ -197,7 +206,7 @@ namespace MageCast
             if (loadArena) LoadArena();
         }
 
-        /// <summary>Opens a room on Unity Relay and starts hosting it. The code appears in the arena.</summary>
+        /// <summary>Opens a room on Unity Relay and starts hosting it, in the lobby, where the code is shown.</summary>
         public void HostOnline()
         {
             HostRelay(Mode.Host);
@@ -255,7 +264,7 @@ namespace MageCast
                 Current = mode;
                 JoinCode = mode == Mode.Host ? code : null;
                 Say(mode == Mode.Host ? "room " + code + " is open" : "training");
-                LoadArena();
+                if (mode == Mode.Host) OpenLobby(); else LoadArena();
             }
             catch (Exception e)
             {
@@ -290,7 +299,7 @@ namespace MageCast
                 // The host decides which scene everyone is in, and Netcode loads it for us.
                 Current = Mode.Client;
                 JoinCode = code;
-                Say("joined " + code + ", loading the arena...");
+                Say("joined " + code + ", loading...");
             }
             catch (Exception e)
             {
@@ -314,7 +323,7 @@ namespace MageCast
             if (!manager.StartHost()) { Fail("could not listen on port " + port); return; }
             Current = Mode.Host;
             JoinCode = "LAN:" + port;
-            LoadArena();
+            OpenLobby();
         }
 
         public void JoinDirect(string address, ushort port)
@@ -344,6 +353,25 @@ namespace MageCast
         {
             // Joiners do not choose: Netcode takes them to whichever map the host is on.
             manager.SceneManager.LoadScene(ArenaScenes[SelectedArena], LoadSceneMode.Single);
+        }
+
+        /// <summary>
+        /// A hosted game opens in the lobby, not the arena: the room waits there for players, the host
+        /// picks the map and the mode, and starts when everyone is ready. The lobby object outlives the
+        /// scene, so it goes along into every match and back.
+        /// </summary>
+        void OpenLobby()
+        {
+            if (lobbyPrefab == null)
+            {
+                Debug.LogWarning("[Net] no lobby prefab on the NetworkManager - run Tools > Arena > Build Lobby. Straight to the arena.");
+                LoadArena();
+                return;
+            }
+            GameObject lobby = Instantiate(lobbyPrefab);
+            lobby.name = "Lobby";
+            lobby.GetComponent<NetworkObject>().Spawn(false);
+            manager.SceneManager.LoadScene(LobbyScene, LoadSceneMode.Single);
         }
 
         async Task SignIn()
@@ -407,7 +435,8 @@ namespace MageCast
             if (clientId != manager.LocalClientId && clientId != NetworkManager.ServerClientId) return;
 
             string why = string.IsNullOrEmpty(manager.DisconnectReason) ? "" : ": " + manager.DisconnectReason;
-            Leave(Current == Mode.Client && IsArena(SceneManager.GetActiveScene().name)
+            string scene = SceneManager.GetActiveScene().name;
+            Leave(Current == Mode.Client && (IsArena(scene) || scene == LobbyScene)
                   ? "the host left the game" + why
                   : "could not connect" + why);
         }

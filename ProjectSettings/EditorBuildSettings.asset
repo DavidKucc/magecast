@@ -9,6 +9,9 @@ EditorBuildSettings:
     path: Assets/Scenes/MainMenu.unity
     guid: 425e8af5bb9a5db4a91dc342d65a6ab1
   - enabled: 1
+    path: Assets/Scenes/Lobby.unity
+    guid: e5589d1b81db7fa45aa01b2486e47c5f
+  - enabled: 1
     path: Assets/Scenes/Arena_Blockout.unity
     guid: 040dffe4b23eafa49b0077fe0b70d739
   - enabled: 1

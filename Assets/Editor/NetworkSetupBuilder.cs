@@ -17,7 +17,7 @@ namespace MageCast.EditorTools
     ///   Resources/NetworkManager     the network, loaded by whichever scene runs first
     ///   Scenes/MainMenu              the front door
     ///   Arena_Blockout               the scene player taken out, the match director put in
-    ///   Build Settings               menu first, arena second
+    ///   Build Settings               menu first, then the lobby and the arenas
     ///
     /// Same rule as the rest of the project: nothing assembled by hand, so it can all be rebuilt.
     /// </summary>
@@ -116,6 +116,8 @@ namespace MageCast.EditorTools
             NetSession session = go.AddComponent<NetSession>();
             SerializedObject so = new SerializedObject(session);
             so.FindProperty("playerPrefab").objectReferenceValue = playerPrefab;
+            // the lobby object, if Build Lobby has made it -- a rebuilt manager must not lose it
+            so.FindProperty("lobbyPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(LobbyBuilder.PrefabPath);
             so.ApplyModifiedPropertiesWithoutUndo();
 
             PrefabUtility.SaveAsPrefabAsset(go, ManagerPath);
@@ -170,11 +172,12 @@ namespace MageCast.EditorTools
             Debug.Log("[Net] arena prepared: " + dummies + " networked dummies, match director in place");
         }
 
-        static void SetBuildScenes()
+        public static void SetBuildScenes()
         {
             var scenes = new List<EditorBuildSettingsScene>
             {
                 new EditorBuildSettingsScene(MenuScenePath, true),
+                new EditorBuildSettingsScene(LobbyBuilder.ScenePath, true),
                 new EditorBuildSettingsScene(ArenaScenePath, true),
                 new EditorBuildSettingsScene(ArenaTempleBuilder.ScenePath, true),
                 new EditorBuildSettingsScene(ArenaCrossingBuilder.ScenePath, true),

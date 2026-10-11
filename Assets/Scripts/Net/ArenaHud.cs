@@ -23,18 +23,23 @@ namespace MageCast
 
         static readonly List<Kill> feed = new List<Kill>();
 
-        GUIStyle big, mid, small, nameTag, button;
+        GUIStyle big, bigLeft, bigRight, mid, small, nameTag, button;
         bool copied;
         float copiedAt;
 
         static string winner, winnerScore;
+        static int winnerTeam;
         static float winnerUntil = -1f;
 
-        /// <summary>The end of a match, for every screen: who won, the final score, the countdown to the next.</summary>
-        public static void ShowWinner(string name, string score, float seconds)
+        /// <summary>
+        /// The end of a match, for every screen: who won (a player, or a side in a team game), the final
+        /// score, the countdown to the next match or back to the lobby.
+        /// </summary>
+        public static void ShowWinner(string name, string score, int team, float seconds)
         {
             winner = name;
             winnerScore = score;
+            winnerTeam = team;
             winnerUntil = Time.time + seconds;
         }
 
@@ -44,12 +49,16 @@ namespace MageCast
             GUI.color = new Color(0f, 0f, 0f, 0.45f);
             GUI.DrawTexture(new Rect(0f, Screen.height * 0.3f, Screen.width, 150f), Texture2D.whiteTexture);
             GUI.color = Color.white;
-            bool me = PlayerNet.Local != null && PlayerNet.Local.DisplayName == winner;
-            Shadowed(new Rect(0f, Screen.height * 0.3f + 14f, Screen.width, 44f),
-                     me ? "YOU WIN" : winner + " WINS", big, me ? new Color(1f, 0.85f, 0.4f) : new Color(1f, 0.5f, 0.45f));
+            PlayerNet local = PlayerNet.Local;
+            bool me = local != null && (winnerTeam != Teams.None ? local.Team.Value == winnerTeam : local.DisplayName == winner);
+            string title = me ? (winnerTeam != Teams.None ? "YOUR TEAM WINS" : "YOU WIN") : winner + " WINS";
+            Color colour = winnerTeam != Teams.None ? Teams.Colour(winnerTeam)
+                         : me ? new Color(1f, 0.85f, 0.4f) : new Color(1f, 0.5f, 0.45f);
+            Shadowed(new Rect(0f, Screen.height * 0.3f + 14f, Screen.width, 44f), title, big, colour);
             Shadowed(new Rect(0f, Screen.height * 0.3f + 66f, Screen.width, 30f), winnerScore, mid, Color.white);
             Shadowed(new Rect(0f, Screen.height * 0.3f + 104f, Screen.width, 26f),
-                     "next match in " + Mathf.CeilToInt(winnerUntil - Time.time), small, new Color(1f, 1f, 1f, 0.75f));
+                     (Lobby.Active ? "back to the lobby in " : "next match in ") + Mathf.CeilToInt(winnerUntil - Time.time),
+                     small, new Color(1f, 1f, 1f, 0.75f));
         }
 
         public static void ReportKill(string killer, string victim)
@@ -113,6 +122,8 @@ namespace MageCast
         {
             if (big != null) return;
             big = new GUIStyle(GUI.skin.label) { fontSize = 26, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            bigLeft = new GUIStyle(big) { alignment = TextAnchor.MiddleLeft };
+            bigRight = new GUIStyle(big) { alignment = TextAnchor.MiddleRight };
             mid = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
             small = new GUIStyle(GUI.skin.label) { fontSize = 13, alignment = TextAnchor.MiddleCenter };
             nameTag = new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, clipping = TextClipping.Overflow };
@@ -146,13 +157,35 @@ namespace MageCast
                 return;
             }
 
-            // the code sits at the top for the host until somebody has used it
+            // the code sits at the top for the host until somebody has used it (a room that has a lobby
+            // shows it there)
             bool alone = PlayerNet.All.Count - MatchDirector.BotCount < 2;
-            if (session.Current == NetSession.Mode.Host && alone && !string.IsNullOrEmpty(session.JoinCode))
+            if (session.Current == NetSession.Mode.Host && alone && !Lobby.Active && !string.IsNullOrEmpty(session.JoinCode))
             {
                 Box(new Rect(cx - 210f, 6f, 420f, 70f));
                 Shadowed(new Rect(cx - 200f, 8f, 400f, 36f), "CODE:  " + session.JoinCode, big, new Color(1f, 0.9f, 0.5f));
                 Shadowed(new Rect(cx - 200f, 44f, 400f, 26f), "waiting for an opponent   (Esc - copy the code)", small, Color.white);
+                return;
+            }
+
+            string ping = "";
+            if (!nm.IsServer && nm.IsConnectedClient)
+                ping = "ping " + nm.NetworkConfig.NetworkTransport.GetCurrentRtt(NetworkManager.ServerClientId) + " ms";
+            // where the Relay server is: a far one is the first thing to suspect when the ping is high
+            if (!string.IsNullOrEmpty(session.RelayRegion)) ping += (ping.Length > 0 ? "   " : "") + "(" + session.RelayRegion + ")";
+
+            if (Lobby.TeamGame)
+            {
+                // the two sides' kills, each in its colour, and the target
+                Lobby lobby = Lobby.Instance;
+                Box(new Rect(cx - 210f, 6f, 420f, 34f));
+                Shadowed(new Rect(cx - 200f, 8f, 170f, 30f), Teams.Names[1].ToUpperInvariant() + "  " + lobby.Score(1),
+                         bigRight, Teams.Colour(1));
+                Shadowed(new Rect(cx - 30f, 8f, 60f, 30f), ":", big, Color.white);
+                Shadowed(new Rect(cx + 30f, 8f, 170f, 30f), lobby.Score(2) + "  " + Teams.Names[2].ToUpperInvariant(),
+                         bigLeft, Teams.Colour(2));
+                Shadowed(new Rect(cx - 300f, 42f, 600f, 20f), "first team to " + MatchDirector.Target + " kills"
+                         + (ping.Length > 0 ? "      " + ping : ""), small, new Color(1f, 1f, 1f, 0.75f));
                 return;
             }
 
@@ -163,14 +196,10 @@ namespace MageCast
                 if (line.Length > 0) line.Append("      ");
                 line.Append(p.DisplayName).Append("  ").Append(p.Kills.Value).Append(" / ").Append(p.Deaths.Value);
             }
-            string ping = "";
-            if (!nm.IsServer && nm.IsConnectedClient)
-                ping = "   ping " + nm.NetworkConfig.NetworkTransport.GetCurrentRtt(NetworkManager.ServerClientId) + " ms";
-            // where the Relay server is: a far one is the first thing to suspect when the ping is high
-            if (!string.IsNullOrEmpty(session.RelayRegion)) ping += "   (" + session.RelayRegion + ")";
 
             Box(new Rect(cx - 300f, 6f, 600f, 30f));
-            Shadowed(new Rect(cx - 300f, 8f, 600f, 26f), line + "      (to " + MatchDirector.KillsToWin + ")" + ping, mid, Color.white);
+            Shadowed(new Rect(cx - 300f, 8f, 600f, 26f), line + "      (to " + MatchDirector.Target + ")"
+                     + (ping.Length > 0 ? "   " + ping : ""), mid, Color.white);
         }
 
         void NameTags()
@@ -186,10 +215,12 @@ namespace MageCast
 
                 Vector3 s = cam.WorldToScreenPoint(p.transform.position + Vector3.up * 2.95f);
                 if (s.z <= 0.1f || s.z > 60f) continue;
-                // not through walls: a name over the cover gives away who is hiding behind it
-                if (!Sight.Sees(p.transform)) continue;
+                // Not through walls: a name over the cover gives away who is hiding behind it. A
+                // teammate's is shown anyway -- where your own side is, you know.
+                bool ally = Teams.Allies(PlayerNet.Local, p);
+                if (!ally && !Sight.Sees(p.transform)) continue;
                 Shadowed(new Rect(s.x - 100f, Screen.height - s.y - 12f, 200f, 24f), p.DisplayName, nameTag,
-                         new Color(1f, 0.55f, 0.5f));
+                         Teams.Colour(p.Team.Value));
             }
         }
 
@@ -317,8 +348,21 @@ namespace MageCast
                 }
             }
 
-            // Bots: only whoever runs the game can add them (they live on the server).
-            if (nm != null && nm.IsServer)
+            // The leader can end the match early and take everyone back to the lobby -- to change the map
+            // or the sides without closing the room.
+            if (nm != null && nm.IsServer && Lobby.Active && Lobby.Instance.Playing.Value)
+            {
+                if (GUI.Button(new Rect(x, y, w, h), "Back to the lobby (ends the match)", button))
+                {
+                    GameInput.MenuOpen = false;
+                    Lobby.Instance.BackToLobby();
+                }
+                y += h + 10f;
+            }
+
+            // Bots in training: only whoever runs the game can add them (they live on the server). A hosted
+            // room adds its bots in the lobby, on a side.
+            if (nm != null && nm.IsServer && session != null && session.Current == NetSession.Mode.Training)
             {
                 float bw = (w - 10f) / 2f;
                 if (GUI.Button(new Rect(x, y, bw, 34f), "Add bot", button)) MatchDirector.SpawnBot();
@@ -353,9 +397,20 @@ namespace MageCast
 
             if (nm != null)
             {
-                string who = "";
-                foreach (PlayerNet p in PlayerNet.All) who += (who.Length > 0 ? ", " : "") + p.DisplayName;
-                Shadowed(new Rect(0f, y, Screen.width, 22f), "in the game: " + who, small, Color.white);
+                // who is in, with kills and deaths -- by side in a team game
+                for (int side = Lobby.TeamGame ? 1 : 0; side <= (Lobby.TeamGame ? 2 : 0); side++)
+                {
+                    string who = "";
+                    foreach (PlayerNet p in PlayerNet.All)
+                    {
+                        if (side != Teams.None && p.Team.Value != side) continue;
+                        who += (who.Length > 0 ? ",   " : "") + p.DisplayName + " " + p.Kills.Value + "/" + p.Deaths.Value;
+                    }
+                    string label = side == Teams.None ? "in the game: " : Teams.Names[side] + ": ";
+                    Shadowed(new Rect(0f, y, Screen.width, 22f), label + who, small,
+                             side == Teams.None ? Color.white : Teams.Colour(side));
+                    y += 22f;
+                }
             }
         }
 

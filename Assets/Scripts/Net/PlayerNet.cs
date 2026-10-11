@@ -61,6 +61,9 @@ namespace MageCast
         public readonly NetworkVariable<int> BotNumber = new NetworkVariable<int>(0);
         public bool IsBot { get { return Bot.Value; } }
 
+        /// <summary>The side in a team game, 1 or 2; 0 in a free-for-all and in training. See Teams.</summary>
+        public readonly NetworkVariable<int> Team = new NetworkVariable<int>(0);
+
         public const ulong BotIdBase = 1000;
 
         /// <summary>
@@ -364,19 +367,20 @@ namespace MageCast
         /// Server: air blew one of the fire patches away as a wave. Everyone takes the patch away and runs
         /// their own copy of the wave -- to look at; only the server's burns and shoves.
         /// </summary>
-        public void BroadcastFireWave(Vector3 fireCentre, Vector3 from, Vector3 wind, float burnPerSecond)
+        public void BroadcastFireWave(Vector3 fireCentre, Vector3 from, Vector3 wind, float burnPerSecond, ulong burnsFor)
         {
             if (!IsServer) return;
-            FireWaveClientRpc(fireCentre, from, wind, burnPerSecond);
+            FireWaveClientRpc(fireCentre, from, wind, burnPerSecond, burnsFor);
         }
 
         [ClientRpc]
-        void FireWaveClientRpc(Vector3 fireCentre, Vector3 from, Vector3 wind, float burnPerSecond)
+        void FireWaveClientRpc(Vector3 fireCentre, Vector3 from, Vector3 wind, float burnPerSecond, ulong burnsFor)
         {
             if (IsServer) return;
             SpellZone fire = SpellZone.Find(fireCentre, GroundEffect.Burn);
             if (fire != null) fire.Remove();
-            FireWave.Spawn(from, wind, burnPerSecond, Health.NoAttacker, false);
+            // whose fire it is, so the copy here leaves that player's teammates out of the picture too
+            FireWave.Spawn(from, wind, burnPerSecond, burnsFor, false);
         }
 
         /// <summary>Server: this player's lightning ran through an ice patch. Everyone sees it happen.</summary>
@@ -528,11 +532,14 @@ namespace MageCast
             RespawnClientRpc(at, yaw, ToOwner());
         }
 
-        /// <summary>Somebody reached the kill limit: the result on every screen, hands off until the next match.</summary>
+        /// <summary>
+        /// Somebody reached the kill limit: the result on every screen, hands off until the next match (or
+        /// the way back to the lobby). <paramref name="team"/> is the winning side in a team game, else 0.
+        /// </summary>
         [ClientRpc]
-        public void MatchWonClientRpc(string winner, string score)
+        public void MatchWonClientRpc(string winner, string score, int team)
         {
-            ArenaHud.ShowWinner(winner, score, MatchDirector.IntermissionSeconds);
+            ArenaHud.ShowWinner(winner, score, team, MatchDirector.IntermissionSeconds);
             GameInput.MatchOverUntil = Time.time + MatchDirector.IntermissionSeconds;
         }
 

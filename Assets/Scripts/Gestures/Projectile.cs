@@ -82,6 +82,7 @@ namespace MageCast.Gestures
                 Health h = c.GetComponentInParent<Health>();
                 if (h == null || h.IsDead) continue;
                 if (owner != null && c.transform.IsChildOf(owner)) continue;
+                if (MageCast.Teams.Spares(owner, c)) continue;
                 Tally(ShotOutcome.Near);
                 return;
             }
@@ -239,6 +240,8 @@ namespace MageCast.Gestures
                     if (t == transform) continue;
                     if (owner != null && (t == owner || t.IsChildOf(owner))) continue;
                     if (ignoreOnce != null && hits[i].collider == ignoreOnce) continue;
+                    // through a teammate, as through yourself: they neither stop it nor feel it
+                    if (MageCast.Teams.Spares(owner, hits[i].collider)) continue;
 
                     // the caster's own dome lets the caster's spells out (and only theirs)
                     CastShield dome = hits[i].collider.GetComponentInParent<CastShield>();
@@ -486,6 +489,7 @@ namespace MageCast.Gestures
             foreach (Health h in FindObjectsOfType<Health>())
             {
                 if (h == from || h == mine || h.IsDead) continue;
+                if (MageCast.Teams.Spares(owner, h)) continue;      // the arc jumps to enemies only
                 float d = Vector3.Distance(Centre(h), at);
                 if (d < bestDistance) { bestDistance = d; best = h; }
             }
@@ -578,16 +582,18 @@ namespace MageCast.Gestures
             else FlashAt(centre, colour, radius * 2f, 1.6f);
 
             if (!authoritative) return;
-            Delayed.Run(SpellTiers.BombDelay, () => BombToss(centre, radius));
+            Transform by = owner;
+            Delayed.Run(SpellTiers.BombDelay, () => BombToss(centre, radius, by));
         }
 
-        /// <summary>The bang itself: everyone in reach thrown once into the middle.</summary>
-        static void BombToss(Vector3 centre, float radius)
+        /// <summary>The bang itself: everyone in reach thrown once into the middle -- but the bomber's teammates.</summary>
+        static void BombToss(Vector3 centre, float radius, Transform by)
         {
             float reach = radius + SpellTiers.BombReachBeyondPatch;
             float airTime = 2f * SpellTiers.BombLift / PlayerMotor.Gravity;
             foreach (PlayerMotor m in FindObjectsOfType<PlayerMotor>())
             {
+                if (MageCast.Teams.Spares(by, m)) continue;
                 Vector3 offset = centre - m.transform.position;
                 if (Mathf.Abs(offset.y) > 2f) continue;
                 Vector3 flat = new Vector3(offset.x, 0f, offset.z);
@@ -709,7 +715,7 @@ namespace MageCast.Gestures
                         ulong burnsFor = fire.Attacker;
                         fire.Remove();
                         FireWave.Spawn(from, wind, burn, burnsFor, true);
-                        if (caster != null && caster.IsSpawned) caster.BroadcastFireWave(centre, from, wind, burn);
+                        if (caster != null && caster.IsSpawned) caster.BroadcastFireWave(centre, from, wind, burn, burnsFor);
                         Flash(at, 1.4f, 1.6f);
                         return true;
                     }
@@ -719,7 +725,8 @@ namespace MageCast.Gestures
                     {
                         // No grip to stop you: a shove that would carry somebody a metre on dry floor
                         // takes them the length of the patch.
-                        foreach (PlayerMotor m in ice.MotorsTouching()) m.Slide(wind * IceBlast);
+                        foreach (PlayerMotor m in ice.MotorsTouching())
+                            if (!MageCast.Teams.Spares(owner, m)) m.Slide(wind * IceBlast);
                         Flash(at, 1.4f, 1.6f);
                         return true;
                     }
@@ -847,6 +854,7 @@ namespace MageCast.Gestures
                 if (m == null || !shoved.Add(m)) continue;
 
                 if (!authoritative) continue;      // a watcher's copy only shows the burst
+                if (MageCast.Teams.Spares(owner, m)) continue;
 
                 // full force at the wall, fading to nothing at the edge
                 float falloff = 1f - Mathf.Clamp01(Vector3.Distance(m.transform.position, at) / reach);

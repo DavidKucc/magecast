@@ -257,14 +257,28 @@ Původní $P (mračno bodů) zůstává v tréninku na `F7` pro porovnání.
 ---
 
 
-## Hra ve dvou
+## Hra ve více lidech
 
 **Menu:** jméno, *Training*, *Host a game*, *Join* s kódem. Trénink je ta samá hra, jen bez soupeře —
 všechno jde stejnou cestou jako online, takže co funguje v tréninku, funguje i ve dvou.
 
-**Připojení kódem.** Hostitel klikne *Host a game*, nahoře v aréně uvidí kód (Esc → zkopírovat) a
-pošle ho druhému. Ten ho zadá v menu a je ve hře. Jde to přes Unity Relay, takže nikdo nemusí otevírat
-porty ani znát cizí IP. Když hostitel odejde, hra končí i pro ostatní.
+**Připojení kódem.** Hostitel klikne *Host a game* a otevře se **lobby** s kódem místnosti (Copy code,
+na webu i Copy invite link). Kdo kód zadá v menu, objeví se v lobby. Jde to přes Unity Relay, takže nikdo
+nemusí otevírat porty ani znát cizí IP. Když hostitel odejde (*Close room*), hra končí i pro ostatní.
+V místnosti je nejvýš 6 hráčů včetně botů (mapy mají 6 spawnů, 3 na stranu); přijde-li člověk do plné
+místnosti, jeden bot mu uvolní místo.
+
+**Lobby** (scéna `Lobby`, kreslí ji `LobbyScreen`, stav drží síťový objekt `Lobby`):
+- **hostitel = leader.** Jen on vybírá **mapu** (karty s náhledem), **režim** (*Free for all* / *Teams*) a
+  **počet killů k výhře** (5 / 10 / 15 / 20; režim nastaví výchozí 5, resp. 10), přidává a odebírá boty
+  (v týmech přímo do týmu, bota přesune tlačítkem „to Red/Blue“) a nastavuje jejich dovednost.
+- **ostatní** si v týmovém režimu vyberou tým (*Join Blue / Join Red*, max 3 na tým) a dají **I'M READY**.
+  Změna týmu ready zruší. Když hostitel změní mapu, režim nebo počet killů, ready se zruší všem — nikdo
+  nespustí zápas na mapě, se kterou ostatní nesouhlasili (ukáže se jim upozornění).
+- **START MATCH** jde, až jsou ready všichni lidé (boti jsou ready vždy), jsou aspoň 2 hráči a v týmech má
+  každý tým aspoň jednoho. Na tlačítku je vidět, na co se čeká.
+- Lobby objekt není vázaný na scénu, takže jde se všemi do arény a zpátky. Kdo se připojí během zápasu,
+  dostane tým (ten menší) a naskočí rovnou do arény.
 
 **Co vidí soupeř:**
 - **runu, jak ji kreslíš** — bíle nad tvou hlavou, tak jak ji kreslíš ty (ne zrcadlově). Jakmile ji
@@ -292,11 +306,22 @@ až do respawnu. Za 3 s jsi zpátky na spawnu, který žádný živý soupeř ne
 ostatních. Nahoře se počítá skóre zabití / smrtí. Vlastní oheň nebo vlastní výboj v ledu tě zabít může,
 ale soupeři to nepřipíše. Jméno soupeře nad hlavou vidíš, jen když ho vidíš (ne přes zeď).
 
-**Zápas:** první na 5 zabití vyhrává. Všem se ukáže vítěz a skóre, 6 s se nikdo nehýbe, pak se skóre
-vynuluje a všichni začnou znovu z protilehlých spawnů. V tréninku zápasy nejsou.
+**Zápas:** první na nastavený počet zabití (výchozí 5) vyhrává. Všem se ukáže vítěz a skóre, 6 s se
+nikdo nehýbe, pak se všichni vrátí do lobby (bez lobby — jen když se aréna pustí přímo — se skóre vynuluje
+a začne nový zápas). Hostitel může zápas ukončit dřív v Esc menu: *Back to the lobby*. V tréninku zápasy nejsou.
 
-**Boti:** kdo hru vede (trénink nebo hostitel), přidá v Esc menu boty (*Add bot*, *Remove bots*,
-dovednost 0–100 %, volba „boti mě nechají být“ pro sledování jejich souboje). Bot hraje stejným tělem a
+**Týmy** (režim *Teams*, Modří proti Červeným, max 3 na tým): počítají se killy celého týmu (výchozí 10),
+nahoře je skóre obou týmů v jejich barvách. Modří začínají na spawnech A, Červení na B; respawn je na
+spawnu vlastní strany, který žádný soupeř nevidí (jen když hlídá všechny tři, kdekoli). Pravidlo mezi
+spoluhráči je jedno: **kouzlo spoluhráče ti nikdy neublíží ani tě neodstrčí**. Střely spoluhráčem proletí
+(nezastaví se o něj, nezpomalí ho, neshodí mu runu), jeho oheň, výbuch, splash ani výboj ho nezraní, jeho
+šokové pole mu nebere runu, vzduch ho neodhodí, bomba ho nevtáhne, blesk na něj nepřeskočí. Co je jen
+zem, zůstává zemí: led spoluhráče klouže i tobě a **updraft spoluhráče tě vyhodí vysoko jako jeho samotného**
+(výtah pro tým). Vlastní kouzla ubližují i tobě jako dřív. Jména spoluhráčů (v barvě týmu) jsou vidět i přes
+zdi, soupeřů jen na přímý pohled. Boti útočí jen na soupeře.
+
+**Boti:** v online hře je přidává hostitel v lobby (do týmu), v tréninku v Esc menu (*Add bot*,
+*Remove bots*, dovednost 0–100 %, volba „boti mě nechají být“ pro sledování jejich souboje). Bot hraje stejným tělem a
 podle stejných pravidel jako člověk: kreslí runu (trvá podle počtu čar, zpomalí ho, runa se mu kreslí nad
 hlavou, vzduch mu ji shodí), runa mu může nevyjít nebo vyjít na nižším tieru, drží cooldowny, míří s
 předstihem a chybou podle dovednosti, chodí po mapě po spočítané síti (po schodech a rampách, na hrany
@@ -304,8 +329,9 @@ nešplhá). Vybírá kouzlo podle situace: blesk na soupeře na ledu nebo ve vod
 toho, kdo kreslí, bariéru, když je zraněný, jinak oheň a led. Zabití se jim připisují (každý má vlastní
 číslo útočníka). Jejich zásahy se počítají v přesnosti zvlášť, jako „(bots)“.
 
-**Mapy:** hostitel (a trénink) vybírá v menu — *Blockout* (původní šedá aréna), *Temple*, *Crossing* a *Valley*. Kdo se
-připojí kódem, jde tam, kde je hostitel.
+**Mapy:** v online hře vybírá hostitel v lobby, pro trénink se vybírá v menu — *Blockout* (původní šedá
+aréna), *Temple*, *Crossing* a *Valley*. Náhledy map v lobby generuje `Tools/Arena/Build Map Previews`
+(po změně mapy pustit znovu).
 
 **Temple** (generuje `Tools/Arena/Build Temple Map`, měří `Tools/Arena/Audit Temple`): zřícený chrám
 44 × 44 m, čtvrtina orazítkovaná čtyřikrát otočením. Výšky jsou jen tyhle: 1,2 skok, 1,6 kryt po prsa

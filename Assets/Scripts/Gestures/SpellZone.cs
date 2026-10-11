@@ -307,6 +307,9 @@ namespace MageCast.Gestures
 
         public ulong Owner { get { return owner; } }
         public ulong Attacker { get { return attacker; } }
+
+        /// <summary>Whose patch it is, on every machine (the attacker is known only on the server).</summary>
+        ulong Laid { get { return owner != Health.NoAttacker ? owner : attacker; } }
         public float Remaining { get { return remaining; } }
         public float Strength { get { return strength; } }
         public Color Colour { get { return colour; } }
@@ -417,7 +420,8 @@ namespace MageCast.Gestures
                         // Stings, and takes the glyph out of the hand of anyone drawing in it: to cast,
                         // step out first. Standing in it, not jumping over it.
                         if (authoritative && t.Health != null && t.Touching) t.Health.TakeDamage(strength * TickInterval, attacker);
-                        if (t.Motor != null && t.Motor.IsLocallyControlled && t.Touching)
+                        if (t.Motor != null && t.Motor.IsLocallyControlled && t.Touching
+                            && !MageCast.Teams.Spares(Laid, t.Motor))
                         {
                             GestureCaster hands = t.Motor.GetComponent<GestureCaster>();
                             if (hands != null) hands.Interrupt();
@@ -431,10 +435,11 @@ namespace MageCast.Gestures
                             && !launched.Contains(t.Motor))
                         {
                             // Your own updraft throws you twice as high: 4 m, onto a roof or a bridge.
-                            // Air as a way up, not only a way to move other people.
+                            // Air as a way up, not only a way to move other people. A teammate's
+                            // does the same for you -- a lift up for the side.
                             PlayerNet who = t.Motor.GetComponent<PlayerNet>();
-                            ulong mine = owner != Health.NoAttacker ? owner : attacker;
-                            bool own = who != null ? who.IsSpawned && who.AttackerId == mine
+                            ulong mine = Laid;
+                            bool own = who != null ? who.IsSpawned && (who.AttackerId == mine || MageCast.Teams.Spares(mine, who))
                                                    : mine == Health.NoAttacker;
                             t.Motor.Launch(own ? SpellTiers.UpdraftSelfLaunch : strength);
                             launched.Add(t.Motor);
