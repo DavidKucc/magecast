@@ -214,11 +214,44 @@ namespace MageCast
         /// overwrites velocity.x and velocity.z from the movement input every single frame. An impulse
         /// added to velocity would be erased before it ever moved anybody.
         /// </summary>
-        public void AddImpulse(Vector3 impulse)
+        public void AddImpulse(Vector3 impulse, ulong slammedBy = Combat.Health.NoAttacker)
         {
+            // An air shove: whoever sent it gets the credit if it ends in a wall (the server keeps score).
+            if (slammedBy != Combat.Health.NoAttacker && net != null && net.IsServer) net.MarkShoved(slammedBy);
             // Somebody else's character is moved by its owner, so a shove is passed on to them.
-            if (!IsLocallyControlled) { if (net != null) net.SendImpulse(impulse); return; }
+            if (!IsLocallyControlled) { if (net != null) net.SendImpulse(impulse, slammedBy != Combat.Health.NoAttacker); return; }
             external += impulse;
+            if (slammedBy != Combat.Health.NoAttacker)
+            {
+                slamArmedUntil = Time.time + Gestures.SpellTiers.SlamWindow;
+                offlineSlammer = slammedBy;
+            }
+        }
+
+        float slamArmedUntil = -99f;
+        ulong offlineSlammer = Combat.Health.NoAttacker;
+
+        /// <summary>
+        /// After a move: still being carried by an air shove, and stopped by something at the side.
+        /// The wall hurts and the body stops dead for a moment -- air's damage comes from the map.
+        /// </summary>
+        void CheckSlam(CollisionFlags flags)
+        {
+            if ((flags & CollisionFlags.Sides) == 0 || Time.time > slamArmedUntil) return;
+            float speed = new Vector2(external.x, external.z).magnitude;
+            if (speed < Gestures.SpellTiers.SlamSpeed) return;
+
+            slamArmedUntil = -99f;
+            external = Vector3.zero;
+            velocity.x = 0f; velocity.z = 0f;
+            ApplySlow(0f, Gestures.SpellTiers.SlamStagger);
+            WorldPopups.Word(transform, "SLAM", new Color(0.85f, 0.95f, 0.9f));
+            if (net != null && net.IsSpawned) net.ReportSlam();
+            else
+            {
+                Combat.Health hp = GetComponent<Combat.Health>();
+                if (hp != null) hp.TakeDamage(Gestures.SpellTiers.SlamDamage, offlineSlammer);
+            }
         }
 
         /// <summary>
@@ -446,7 +479,7 @@ namespace MageCast
             }
 
             velocity.y += gravity * Time.deltaTime;
-            cc.Move((velocity + external) * Time.deltaTime);
+            CheckSlam(cc.Move((velocity + external) * Time.deltaTime));
 
             // exponential bleed-off, framerate independent
             external *= Mathf.Exp(-externalDamping * Time.deltaTime);

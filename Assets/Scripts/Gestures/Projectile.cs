@@ -369,7 +369,7 @@ namespace MageCast.Gestures
                 if (knockback > 0f)
                     // Along the flight path with a bit of lift, so it reads as being blown off your feet
                     // rather than shunted sideways.
-                    motor.AddImpulse((heading + Vector3.up * 0.45f).normalized * knockback);
+                    motor.AddImpulse((heading + Vector3.up * 0.45f).normalized * knockback, attacker);
 
                 // ice: slowed at every tier (tier I's one effect besides the hit), frozen in place at
                 // III -- which still lets you draw
@@ -818,7 +818,7 @@ namespace MageCast.Gestures
 
                 // full force at the wall, fading to nothing at the edge
                 float falloff = 1f - Mathf.Clamp01(Vector3.Distance(m.transform.position, at) / reach);
-                m.AddImpulse((away + Vector3.up * 0.35f).normalized * (knockback * falloff));
+                m.AddImpulse((away + Vector3.up * 0.35f).normalized * (knockback * falloff), attacker);
             }
 
             // as wide as the push, so the player can see how far from the wall was unsafe

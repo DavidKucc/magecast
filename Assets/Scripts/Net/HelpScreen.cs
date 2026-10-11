@@ -49,8 +49,8 @@ namespace MageCast
             new SpellInfo { Rune = GestureTemplates.Ehwaz, Name = "AIR", Czech = "Ehwaz (pohyb) - vzduch",
                 Colour = new Color(0.8f, 0.95f, 0.9f),
                 Basics = "Žádné poškození, nikdy. Odhodí a vždycky přeruší kreslení.",
-                I = "odhoz, rychlejší let",
-                II = "+ updraft plocha (vyhodí toho, kdo na ni vstoupí, a odkloní střely nahoru); do ohně: sfoukne ho jako ohnivou vlnu, " +
+                I = "odhoz, rychlejší let; kdo po odhozu narazí do zdi (do ~2 m od ní), dostane " + SpellTiers.SlamDamage + " a na " + SpellTiers.SlamStagger + " s se zastaví",
+                II = "+ updraft plocha (vyhodí toho, kdo na ni vstoupí, tebe až na 4 m - na střechu nebo most - a odkloní střely nahoru); do ohně: sfoukne ho jako ohnivou vlnu, " +
                      "která se 8 m převalí ve směru větru, zapálí a odhodí každého v cestě; na ledu rozklouže lidi",
                 III = "+ dopadne-li do jakékoli plochy: vzduchová bomba - všechny v ní a do " + SpellTiers.BombReachBeyondPatch + " m od ní hodí do jejího středu (i tebe), po " + SpellTiers.BombDelay + " s" },
             new SpellInfo { Rune = GestureTemplates.Uruz, Name = "BARRIER", Czech = "Uruz (síla) - bariéra",

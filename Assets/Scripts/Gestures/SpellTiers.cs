@@ -63,6 +63,15 @@ namespace MageCast.Gestures
         public const float ShockPerSecond = 3f;          // 4 s of it is 12: never more than the bolt itself
 
         // air
+        // Shoved into a wall: air does no damage itself, but the wall does. Only an air shove counts,
+        // only while it is still carrying you this fast, and the stagger is a short stop on the spot.
+        public const float SlamDamage = 8f;
+        public const float SlamStagger = 0.4f;
+        public const float SlamSpeed = 3f;            // m/s of the shove still left: a clean shove slams up to ~2.3 m from a wall
+        public const float SlamWindow = 1.5f;         // s after the shove that a slam still counts
+        // Your own updraft throws you this fast: 13.3 m/s against the motor's 22 m/s^2 is 4 m up --
+        // a tower roof or a bridge. Everyone else's throws you the usual 2 m.
+        public const float UpdraftSelfLaunch = 13.3f;
         public const float BombReachBeyondPatch = 1.5f;
         public const float BombLift = 6.5f;              // m/s up; with the motor's gravity, ~0.6 s in the air
         /// <summary>From the air landing in the patch to the bang: the time to get out of reach.</summary>

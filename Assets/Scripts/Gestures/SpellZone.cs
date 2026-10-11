@@ -430,7 +430,13 @@ namespace MageCast.Gestures
                         if (t.Motor != null && t.Motor.IsLocallyControlled && t.Motor.IsGrounded
                             && !launched.Contains(t.Motor))
                         {
-                            t.Motor.Launch(strength);
+                            // Your own updraft throws you twice as high: 4 m, onto a roof or a bridge.
+                            // Air as a way up, not only a way to move other people.
+                            PlayerNet who = t.Motor.GetComponent<PlayerNet>();
+                            ulong mine = owner != Health.NoAttacker ? owner : attacker;
+                            bool own = who != null ? who.IsSpawned && who.OwnerClientId == mine
+                                                   : mine == Health.NoAttacker;
+                            t.Motor.Launch(own ? SpellTiers.UpdraftSelfLaunch : strength);
                             launched.Add(t.Motor);
                         }
                         break;

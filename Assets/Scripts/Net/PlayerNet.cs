@@ -380,7 +380,35 @@ namespace MageCast
             return new ClientRpcParams { Send = new ClientRpcSendParams { TargetClientIds = new[] { OwnerClientId } } };
         }
 
-        public void SendImpulse(Vector3 impulse) { if (IsServer) ImpulseClientRpc(impulse, ToOwner()); }
+        public void SendImpulse(Vector3 impulse, bool canSlam = false) { if (IsServer) ImpulseClientRpc(impulse, canSlam, ToOwner()); }
+
+        // ---- wall slam: the owner's body hits the wall, the server deals the damage ----
+        ulong lastShovedBy = Health.NoAttacker;
+        float lastShovedAt = -99f;
+
+        /// <summary>Server: an air shove from <paramref name="by"/> just landed on this player.</summary>
+        public void MarkShoved(ulong by)
+        {
+            lastShovedBy = by;
+            lastShovedAt = Time.time;
+        }
+
+        /// <summary>Owner: the shove ended in a wall.</summary>
+        public void ReportSlam()
+        {
+            if (IsServer) ServerSlam(); else SlamServerRpc();
+        }
+
+        [ServerRpc]
+        void SlamServerRpc() { ServerSlam(); }
+
+        void ServerSlam()
+        {
+            // only a slam that follows a real air shove, so a client cannot hurt itself on cue for nothing
+            if (Time.time - lastShovedAt > Gestures.SpellTiers.SlamWindow + 0.5f) return;
+            health.TakeDamage(Gestures.SpellTiers.SlamDamage, lastShovedBy);
+            lastShovedAt = -99f;
+        }
         public void SendSlow(float multiplier, float duration) { if (IsServer) SlowClientRpc(multiplier, duration, ToOwner()); }
         public void SendLaunch(float upSpeed) { if (IsServer) LaunchClientRpc(upSpeed, ToOwner()); }
         public void SendInterrupt() { if (IsServer) InterruptClientRpc(ToOwner()); }
@@ -392,7 +420,11 @@ namespace MageCast
         void SlideClientRpc(Vector3 push, ClientRpcParams p = default) { if (IsOwner) motor.Slide(push); }
 
         [ClientRpc]
-        void ImpulseClientRpc(Vector3 impulse, ClientRpcParams p = default) { if (IsOwner) motor.AddImpulse(impulse); }
+        void ImpulseClientRpc(Vector3 impulse, bool canSlam, ClientRpcParams p = default)
+        {
+            // the server already holds who shoved; the owner only needs to know that a wall would count
+            if (IsOwner) motor.AddImpulse(impulse, canSlam ? OwnerClientId : Health.NoAttacker);
+        }
 
         [ClientRpc]
         void SlowClientRpc(float multiplier, float duration, ClientRpcParams p = default) { if (IsOwner) motor.ApplySlow(multiplier, duration); }

@@ -95,7 +95,7 @@ Tier mění, **co kouzlo dělá**, ne jen kolik ubere — poškození samo se s 
 | **oheň** | zásah, rychlejší let, splash | + hoření na zasaženém (3/s na 2 s), plocha, odraz od zdi | + výbuch: všichni do 2,5 m kromě zasaženého dostanou polovinu zásahu (i autor), bariéru opotřebí 1,5× |
 | **led** | zásah se zpomalením, rychlejší let, splash | + kluzká plocha | + zamrznutí na 0,6 s: nehýbe se ani neskočí, kreslit může |
 | **blesk** | zásah, rychlejší let | + přeskočí na nejbližší jiný cíl do 6 m za polovinu; do země nechá **elektrickou plochu** (2,2 m, 4 s, 3/s, kdo v ní stojí, nemůže kreslit) | + elektrická plocha se objeví přímo pod zasaženým |
-| **vzduch** | odhoz, rychlejší let | + updraft plocha; do ohně **ohnivá vlna** (oheň zmizí a 8 m po větru se převalí stěna plamenů, zapálí a odhodí každého v cestě, zastaví ji zeď); na ledu rozklouže lidi | + v jakékoli ploše **vzduchová bomba**: všechny v ploše a do 1,5 m od ní jednou hodí do jejího středu (i autora) — **po 0,4 s**, aby se dalo uhnout |
+| **vzduch** | odhoz, rychlejší let; **náraz do zdi** po odhozu (do ~2 m od ní) = 8 dmg a 0,4 s na místě | + updraft plocha (vlastní tě vyhodí až na 4 m: střecha, most); do ohně **ohnivá vlna** (oheň zmizí a 8 m po větru se převalí stěna plamenů, zapálí a odhodí každého v cestě, zastaví ji zeď); na ledu rozklouže lidi | + v jakékoli ploše **vzduchová bomba**: všechny v ploše a do 1,5 m od ní jednou hodí do jejího středu (i autora) — **po 0,4 s**, aby se dalo uhnout |
 | **bariéra** | stěna | větší stěna (1,35× šířka), víc výdrže | **kopule** kolem tebe na 4,5 s, chodí s tebou, tvoje kouzla propouští, cizí zastaví |
 
 - **Tier I je rychlá střela**: letí rychleji (oheň 34, led 24, blesk 52, vzduch 38 m/s), ale nezanechá
