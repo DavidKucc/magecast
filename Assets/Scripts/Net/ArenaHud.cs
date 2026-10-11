@@ -140,14 +140,14 @@ namespace MageCast
             if (session == null || nm == null) return;
             float cx = Screen.width * 0.5f;
 
-            if (session.Current == NetSession.Mode.Training)
+            if (session.Current == NetSession.Mode.Training && MatchDirector.BotCount == 0)
             {
                 Shadowed(new Rect(cx - 200f, 8f, 400f, 24f), "TRAINING", mid, new Color(1f, 1f, 1f, 0.6f));
                 return;
             }
 
             // the code sits at the top for the host until somebody has used it
-            bool alone = PlayerNet.All.Count < 2;
+            bool alone = PlayerNet.All.Count - MatchDirector.BotCount < 2;
             if (session.Current == NetSession.Mode.Host && alone && !string.IsNullOrEmpty(session.JoinCode))
             {
                 Box(new Rect(cx - 210f, 6f, 420f, 70f));
@@ -315,6 +315,25 @@ namespace MageCast
                     }
                     y += h + 10f;
                 }
+            }
+
+            // Bots: only whoever runs the game can add them (they live on the server).
+            if (nm != null && nm.IsServer)
+            {
+                float bw = (w - 10f) / 2f;
+                if (GUI.Button(new Rect(x, y, bw, 34f), "Add bot", button)) MatchDirector.SpawnBot();
+                int bots = MatchDirector.BotCount;
+                GUI.enabled = bots > 0;
+                if (GUI.Button(new Rect(x + bw + 10f, y, bw, 34f), "Remove bots" + (bots > 0 ? " (" + bots + ")" : ""), button))
+                    MatchDirector.RemoveBots();
+                GUI.enabled = true;
+                y += 44f;
+                BotBrain.IgnoreHumans = GUI.Toggle(new Rect(x, y, w, 24f), BotBrain.IgnoreHumans,
+                                                   "  bots leave me alone (watch them fight each other)");
+                y += 30f;
+                GUI.Label(new Rect(x, y, 120f, 22f), "bot skill " + Mathf.RoundToInt(BotBrain.Skill * 100f) + "%");
+                BotBrain.Skill = GUI.HorizontalSlider(new Rect(x + 120f, y + 6f, w - 120f, 16f), BotBrain.Skill, 0f, 1f);
+                y += 32f;
             }
 
             string leave = session != null && session.Current == NetSession.Mode.Host

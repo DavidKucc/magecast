@@ -56,7 +56,7 @@ namespace MageCast
             if (target == null) return;
 
             // Somebody else's player looks where THEY are aiming, not where this machine's camera is.
-            if (net != null && net.IsRemote)
+            if (net != null && (net.IsRemote || (net.IsSpawned && net.IsBot)))
             {
                 Vector3 theirs = net.AimPoint.Value;
                 if (theirs == Vector3.zero) theirs = transform.position + Vector3.up * 1.5f + transform.forward * 10f;

@@ -62,6 +62,48 @@ namespace MageCast
             manager.SceneManager.OnSynchronizeComplete += SpawnFor;
         }
 
+        // ---------------------------------------------------------------- bots
+
+        static int botsMade;
+
+        /// <summary>Bots in the game right now.</summary>
+        public static int BotCount
+        {
+            get { int n = 0; foreach (PlayerNet p in PlayerNet.All) if (p != null && p.IsBot) n++; return n; }
+        }
+
+        /// <summary>
+        /// Server: a computer player, in the same body as everybody's, at the spawn furthest from the
+        /// living. It belongs to the server; its BotBrain lives only there, and everyone else sees it the
+        /// way they see any other player.
+        /// </summary>
+        public static void SpawnBot()
+        {
+            NetworkManager nm = NetworkManager.Singleton;
+            if (nm == null || !nm.IsServer || NetSession.Instance == null) return;
+            GameObject prefab = NetSession.Instance.PlayerPrefab;
+            if (prefab == null) return;
+
+            Transform spawn = PickSpawn(null);
+            Vector3 at = spawn != null ? spawn.position : Vector3.zero;
+            Quaternion facing = spawn != null ? spawn.rotation : Quaternion.identity;
+            PlayerNet.SpawningBot = ++botsMade;
+            GameObject bot = Instantiate(prefab, at + Vector3.up * 0.1f, facing);
+            bot.GetComponent<NetworkObject>().Spawn(true);
+            bot.AddComponent<BotBrain>();
+            Debug.Log("[Match] bot " + botsMade + " in at " + (spawn != null ? spawn.name : "the origin"));
+        }
+
+        /// <summary>Server: every bot out of the game.</summary>
+        public static void RemoveBots()
+        {
+            NetworkManager nm = NetworkManager.Singleton;
+            if (nm == null || !nm.IsServer) return;
+            foreach (PlayerNet p in PlayerNet.All.ToArray())
+                if (p != null && p.IsBot && p.NetworkObject != null && p.NetworkObject.IsSpawned)
+                    p.NetworkObject.Despawn(true);
+        }
+
         static void PutAway(GameObject go)
         {
             foreach (Renderer r in go.GetComponentsInChildren<Renderer>(true)) r.enabled = false;

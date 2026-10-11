@@ -168,6 +168,19 @@ namespace MageCast
         /// starts, stops, turns and jumps and times them. Unset, the keyboard is read as always.
         /// </summary>
         public Vector2? ScriptedMove { get; set; }
+
+        /// <summary>The way a bot faces, standing in for the camera's yaw.</summary>
+        public float? ScriptedYaw { get; set; }
+
+        /// <summary>Driven by a BotBrain: the keyboard and the camera of this machine are not its own.</summary>
+        public bool IsBot { get; private set; }
+
+        public void MakeBot()
+        {
+            IsBot = true;
+            cam = null;
+            ScriptedMove = Vector2.zero;
+        }
         public bool ScriptedSprint { get; set; }
         public bool ScriptedJump { get; set; }
 
@@ -411,11 +424,11 @@ namespace MageCast
 
             IsGrounded = cc.isGrounded;
             if (IsGrounded) lastGroundedTime = Time.time;
-            bool hands = !GameInput.Blocked;
-            if (hands && Input.GetButtonDown("Jump")) lastJumpPressedTime = Time.time;
+            bool hands = IsBot || !GameInput.Blocked;
+            if (!IsBot && hands && Input.GetButtonDown("Jump")) lastJumpPressedTime = Time.time;
             if (ScriptedJump) { ScriptedJump = false; lastJumpPressedTime = Time.time; }
 
-            float yaw = cam != null ? cam.Yaw : transform.eulerAngles.y;
+            float yaw = ScriptedYaw.HasValue ? ScriptedYaw.Value : cam != null ? cam.Yaw : transform.eulerAngles.y;
             Quaternion basis = Quaternion.Euler(0f, yaw, 0f);
 
             // The body FOLLOWS the camera instead of being set to it.
@@ -442,7 +455,7 @@ namespace MageCast
             // Shift runs in every direction, not only forward: it is the old default speed, and this
             // character spends most of a fight strafing, so a forward-only run would rarely apply.
             bool sprinting = hands && !SprintLocked && !Winded && Stamina > 0f
-                             && (ScriptedSprint || Input.GetKey(KeyCode.LeftShift)) && input.sqrMagnitude > 0.01f;
+                             && (ScriptedSprint || (!IsBot && Input.GetKey(KeyCode.LeftShift))) && input.sqrMagnitude > 0.01f;
             Breathe(sprinting);
 
             // shaped before the basis rotation, so the limits apply to the character's own axes

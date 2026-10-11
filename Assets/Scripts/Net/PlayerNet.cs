@@ -56,6 +56,23 @@ namespace MageCast
         public readonly NetworkVariable<int> Kills = new NetworkVariable<int>(0);
         public readonly NetworkVariable<int> Deaths = new NetworkVariable<int>(0);
 
+        /// <summary>Played by the server rather than a person (MatchDirector.SpawnBot, BotBrain).</summary>
+        public readonly NetworkVariable<bool> Bot = new NetworkVariable<bool>(false);
+        public readonly NetworkVariable<int> BotNumber = new NetworkVariable<int>(0);
+        public bool IsBot { get { return Bot.Value; } }
+
+        public const ulong BotIdBase = 1000;
+
+        /// <summary>
+        /// Who this player is when it hurts somebody or lays a patch: the client for a person, a number
+        /// of its own for a bot. Every bot lives on the server's client id, and credited by that, every
+        /// kill a bot made would have gone to the host.
+        /// </summary>
+        public ulong AttackerId { get { return IsBot ? BotIdBase + (ulong)BotNumber.Value : OwnerClientId; } }
+
+        /// <summary>Server: the number of the bot about to be spawned, read once as it spawns.</summary>
+        public static int SpawningBot;
+
         [SerializeField] float respawnSeconds = 3f;
 
         /// <summary>How often the forming glyph is sent, in seconds. 20 a second reads as live.</summary>
@@ -100,7 +117,27 @@ namespace MageCast
         {
             All.Add(this);
 
-            if (IsOwner)
+            if (IsServer && SpawningBot > 0)
+            {
+                Bot.Value = true;
+                BotNumber.Value = SpawningBot;
+                PlayerName.Value = new FixedString32Bytes("Bot " + SpawningBot);
+                SpawningBot = 0;
+            }
+
+            if (IsOwner && IsBot)
+            {
+                // A bot, run on this machine (the server): its body moves here, but no keyboard, mouse,
+                // camera or HUD of this machine belongs to it. Shown like anybody else's player.
+                if (motor != null) { motor.MakeBot(); motor.TeleportTo(transform.position, transform.eulerAngles.y); }
+                if (caster != null) caster.MakeBot();
+                SetEnabled<GestureLegend>(false);
+                SetEnabled<AimSurfaceMarker>(false);
+                SetEnabled<PlayerHud>(false);
+                if (GetComponent<HealthBar>() == null) gameObject.AddComponent<HealthBar>();
+                glyph = gameObject.AddComponent<GlyphDisplay>();
+            }
+            else if (IsOwner)
             {
                 Local = this;
                 PlayerName.Value = new FixedString32Bytes(NetSession.SafeName(NetSession.PlayerName));
@@ -224,21 +261,21 @@ namespace MageCast
         [ClientRpc]
         void StrokeBeginClientRpc()
         {
-            if (IsOwner || glyph == null) return;
+            if ((IsOwner && !IsBot) || glyph == null) return;
             glyph.Begin();
         }
 
         [ClientRpc]
         void StrokePointsClientRpc(Vector2[] points)
         {
-            if (IsOwner || glyph == null) return;
+            if ((IsOwner && !IsBot) || glyph == null) return;
             glyph.Add(points);
         }
 
         [ClientRpc]
         void StrokeEndClientRpc(StrokeOutcome outcome, byte spell, byte tier)
         {
-            if (IsOwner) return;
+            if (IsOwner && !IsBot) return;
             if (glyph != null) glyph.End(outcome, caster.SpellColour(spell));
 
             // the outcomes that produce no spell still deserve a word -- a fizzle is the moment to push
@@ -296,7 +333,7 @@ namespace MageCast
         {
             if (IsServer) return;
             // owned by this player on every machine, so the two-patch limit takes away the same one everywhere
-            SpellZone.Spawn(at, effect, radius, lifetime, strength, colour, false, Health.NoAttacker, OwnerClientId);
+            SpellZone.Spawn(at, effect, radius, lifetime, strength, colour, false, Health.NoAttacker, AttackerId);
         }
 
         /// <summary>
@@ -369,7 +406,7 @@ namespace MageCast
         void BarrierWearClientRpc(float fraction)
         {
             if (IsServer) return;
-            CastShield shield = CastShield.Of(OwnerClientId);
+            CastShield shield = CastShield.Of(AttackerId);
             if (shield != null) shield.SetWear(fraction);
         }
 
@@ -506,6 +543,7 @@ namespace MageCast
             motor.TeleportTo(at, yaw);
             if (netTransform != null) netTransform.Teleport(at, Quaternion.Euler(0f, yaw, 0f), transform.localScale);
 
+            if (IsBot) return;
             ThirdPersonCamera cam = FindObjectOfType<ThirdPersonCamera>();
             if (cam != null) cam.SetTarget(transform, yaw);
         }
@@ -517,13 +555,13 @@ namespace MageCast
         void ApplyAlive(bool alive)
         {
             if (body != null) body.enabled = alive;
-            if (IsOwner) GameInput.LocalDead = !alive;
+            if (IsOwner && !IsBot) GameInput.LocalDead = !alive;
         }
 
         public static PlayerNet Find(ulong clientId)
         {
             if (clientId == Health.NoAttacker) return null;
-            foreach (PlayerNet p in All) if (p.OwnerClientId == clientId) return p;
+            foreach (PlayerNet p in All) if (p.AttackerId == clientId) return p;
             return null;
         }
     }

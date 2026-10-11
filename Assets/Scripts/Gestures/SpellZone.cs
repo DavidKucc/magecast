@@ -434,7 +434,7 @@ namespace MageCast.Gestures
                             // Air as a way up, not only a way to move other people.
                             PlayerNet who = t.Motor.GetComponent<PlayerNet>();
                             ulong mine = owner != Health.NoAttacker ? owner : attacker;
-                            bool own = who != null ? who.IsSpawned && who.OwnerClientId == mine
+                            bool own = who != null ? who.IsSpawned && who.AttackerId == mine
                                                    : mine == Health.NoAttacker;
                             t.Motor.Launch(own ? SpellTiers.UpdraftSelfLaunch : strength);
                             launched.Add(t.Motor);

@@ -295,6 +295,15 @@ ale soupeři to nepřipíše. Jméno soupeře nad hlavou vidíš, jen když ho v
 **Zápas:** první na 5 zabití vyhrává. Všem se ukáže vítěz a skóre, 6 s se nikdo nehýbe, pak se skóre
 vynuluje a všichni začnou znovu z protilehlých spawnů. V tréninku zápasy nejsou.
 
+**Boti:** kdo hru vede (trénink nebo hostitel), přidá v Esc menu boty (*Add bot*, *Remove bots*,
+dovednost 0–100 %, volba „boti mě nechají být“ pro sledování jejich souboje). Bot hraje stejným tělem a
+podle stejných pravidel jako člověk: kreslí runu (trvá podle počtu čar, zpomalí ho, runa se mu kreslí nad
+hlavou, vzduch mu ji shodí), runa mu může nevyjít nebo vyjít na nižším tieru, drží cooldowny, míří s
+předstihem a chybou podle dovednosti, chodí po mapě po spočítané síti (po schodech a rampách, na hrany
+nešplhá). Vybírá kouzlo podle situace: blesk na soupeře na ledu nebo ve vodě, vzduch na blízko nebo na
+toho, kdo kreslí, bariéru, když je zraněný, jinak oheň a led. Zabití se jim připisují (každý má vlastní
+číslo útočníka). Jejich zásahy se počítají v přesnosti zvlášť, jako „(bots)“.
+
 **Mapy:** hostitel (a trénink) vybírá v menu — *Blockout* (původní šedá aréna), *Temple*, *Crossing* a *Valley*. Kdo se
 připojí kódem, jde tam, kde je hostitel.
 

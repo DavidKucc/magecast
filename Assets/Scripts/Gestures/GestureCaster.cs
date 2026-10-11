@@ -328,7 +328,7 @@ namespace MageCast.Gestures
         // before Start ever runs, and must not put a full-screen drawing canvas on this machine.
         void Start()
         {
-            trail = GestureTrail.Create(null);
+            if (!IsBot) trail = GestureTrail.Create(null);
         }
 
         void OnDestroy()
@@ -340,6 +340,8 @@ namespace MageCast.Gestures
 
         void Update()
         {
+            if (IsBot) { BotTick(); return; }
+
             // A menu or death takes the hands off the glyph -- carrying on would draw with a mouse that
             // is busy clicking buttons.
             if (GameInput.Blocked)
@@ -494,7 +496,7 @@ namespace MageCast.Gestures
         void EndDraw()
         {
             drawing = false;
-            cam.LookEnabled = true;
+            if (cam != null) cam.LookEnabled = true;
             motor.SpeedMultiplier = 1f;
             motor.JumpLocked = false;
             trail.Clear();
@@ -637,7 +639,7 @@ namespace MageCast.Gestures
             heldQuality = CastQuality.Clean;
             heldPrecision = Mathf.Min(heldPrecision, SpellTiers.FallenPrecision);
             byte index = IndexOf(heldSpell);
-            AnnounceCreated(index, 2);
+            if (!IsBot) AnnounceCreated(index, 2);
             if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Held, index, 2);
             Announce(heldSpell.displayName + " fell to tier II");
         }
@@ -659,14 +661,14 @@ namespace MageCast.Gestures
             {
                 ClearHeld();
                 Headline("LOST", FailColour, 1.2f);
-                WorldPopups.Word(transform, "LOST", FailColour);
+                if (!IsBot) WorldPopups.Word(transform, "LOST", FailColour);
                 if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Interrupted, index);
                 return;
             }
 
             heldQuality = tier >= 3 ? CastQuality.Clean : CastQuality.Weak;
             heldPrecision = Mathf.Min(heldPrecision, tier >= 3 ? SpellTiers.FallenPrecision : SpellTiers.KnockedPrecision);
-            AnnounceCreated(index, tier - 1);
+            if (!IsBot) AnnounceCreated(index, tier - 1);
             if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Held, index, (byte)(tier - 1));
             Announce(heldSpell.displayName + " knocked down to tier " + SpellTiers.Roman(tier - 1));
         }
@@ -692,6 +694,105 @@ namespace MageCast.Gestures
         // against a 7.2 m/s sprint -- and could never close on anybody. Not higher than 0.7, because
         // a spell can be held for ever: near full speed, an empty hand would stop being worth having.
         public const float HoldSpeed = 0.7f;
+
+        // ---------------------------------------------------------------- a bot's hands
+
+        /// <summary>Driven by a BotBrain, not by this machine's mouse: no camera, no crosshair, no screen.</summary>
+        public bool IsBot { get; private set; }
+
+        public void MakeBot()
+        {
+            IsBot = true;
+            cam = null;
+            crosshair = null;
+        }
+
+        /// <summary>Drawing or holding: the hands are full.</summary>
+        public bool BotBusy { get { return drawing || holding; } }
+        public bool BotDrawing { get { return drawing; } }
+        public bool BotCanStart { get { return !drawing && !holding && Time.time >= fizzleUntil; } }
+
+        void BotTick()
+        {
+            if (holding && heldQuality == CastQuality.Perfect && Time.time >= heldTopTierUntil) FallToTierTwo();
+        }
+
+        /// <summary>
+        /// The bot starts a rune. Everything a person pays for drawing it pays as well: slowed, no sprint,
+        /// no jump, the rune forming over its head for everybody to read, and an air hit knocks it away.
+        /// </summary>
+        public void BotBeginDraw()
+        {
+            if (!BotCanStart) return;
+            drawing = true;
+            stroke.Clear();
+            strokeLength = 0f;
+            motor.SpeedMultiplier = castMoveSpeed;
+            motor.SprintLocked = true;
+            motor.JumpLocked = true;
+            if (anim != null) anim.SetDrawing(true);
+            if (Networked) net.OwnerStrokeBegin();
+        }
+
+        /// <summary>One more point of the rune over the bot's head (screen-height units, like a person's).</summary>
+        public void BotStrokePoint(Vector2 point)
+        {
+            if (drawing && Networked) net.OwnerStrokePoint(point);
+        }
+
+        /// <summary>The rune is finished: a fizzle, or the spell is in the hand at the given quality.</summary>
+        public void BotFinishDraw(Spell spell, CastQuality quality, float precision)
+        {
+            if (!drawing) return;              // knocked out of the hand meanwhile
+            drawing = false;
+            motor.JumpLocked = false;
+            if (anim != null) anim.SetDrawing(false);
+
+            if (quality == CastQuality.Fizzle || spell == null)
+            {
+                fizzleUntil = Time.time + FizzleRecovery;
+                motor.SpeedMultiplier = 1f;
+                motor.SprintLocked = false;
+                if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Fizzle, 0);
+                return;
+            }
+
+            heldSpell = spell;
+            heldQuality = quality;
+            heldPrecision = precision;
+            heldMetrics = new StrokeMetrics { SizePixels = sizeReferencePixels };
+            holding = true;
+            motor.SprintLocked = true;
+            motor.SpeedMultiplier = HoldSpeed;
+            heldTopTierUntil = Time.time + SpellTiers.TopTierHold;
+            if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Held, IndexOf(spell), (byte)SpellTiers.Of(quality));
+        }
+
+        /// <summary>The tier of the spell in hand, or 0.</summary>
+        public int BotHeldTier { get { return holding ? SpellTiers.Of(heldQuality) : 0; } }
+
+        /// <summary>Sends the spell in hand at a point. False if there is none, or its element is cooling down.</summary>
+        public bool BotSend(Vector3 aimPoint)
+        {
+            if (!holding || heldSpell == null || CooldownLeft(heldSpell) > 0f) return false;
+            Spell spell = heldSpell;
+            readyAt[IndexOf(spell)] = Time.time + SpellTiers.ElementCooldown;
+            ClearHeld();
+            if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Sent, IndexOf(spell));
+            Vector3 from = Muzzle();
+            Vector3 dir = aimPoint - from;
+            Cast(spell, dir.sqrMagnitude < 0.01f ? transform.forward : dir.normalized, heldPrecision, heldQuality, heldMetrics, from);
+            return true;
+        }
+
+        /// <summary>Lets go of the spell in hand without sending it.</summary>
+        public void BotDrop()
+        {
+            if (!holding) return;
+            byte index = IndexOf(heldSpell);
+            ClearHeld();
+            if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Lost, index);
+        }
 
         /// <summary>After a fizzle, how long before a new rune can be started.</summary>
         public const float FizzleRecovery = 0.5f;
@@ -751,7 +852,7 @@ namespace MageCast.Gestures
             stroke.Clear();
             strokeLength = 0f;
 
-            cam.LookEnabled = true;
+            if (cam != null) cam.LookEnabled = true;
             motor.SpeedMultiplier = 1f;
             motor.SprintLocked = false;
             motor.JumpLocked = false;
@@ -759,7 +860,7 @@ namespace MageCast.Gestures
             if (anim != null) anim.SetDrawing(false);
 
             Headline(reason, FailColour, 1f);
-            WorldPopups.Word(transform, reason, FailColour);
+            if (!IsBot) WorldPopups.Word(transform, reason, FailColour);   // a bot's is shown by the network
             if (Networked) net.OwnerStrokeEnd(outcome, 0);
         }
 
@@ -1004,7 +1105,7 @@ namespace MageCast.Gestures
             float dealt = spell.damage * power;
 
             Color colour = crit ? Color.Lerp(spell.colour, Color.white, 0.4f) : spell.colour;
-            ulong attacker = Networked ? net.OwnerClientId : Combat.Health.NoAttacker;
+            ulong attacker = Networked ? net.AttackerId : Combat.Health.NoAttacker;
 
             if (spell.kind == SpellKind.Barrier)
             {
@@ -1060,7 +1161,8 @@ namespace MageCast.Gestures
                              spell, sizeScale, authoritative, attacker);
             if (shot != null) shot.SetTier(SpellTiers.Of(quality));
             // your own shots, on your own machine, feed the accuracy numbers in the pause menu
-            if (shot != null && (!Networked || net.IsOwner)) shot.CountForStats(spell.displayName);
+            if (shot != null && (!Networked || net.IsOwner))
+                shot.CountForStats(IsBot ? spell.displayName + " (bots)" : spell.displayName);
 
             // A cast that arrived over the network is as old as its trip here: the copy is moved on by
             // that much, so it flies -- and lands, and hits -- where the caster's own shot is, instead of
@@ -1171,6 +1273,7 @@ namespace MageCast.Gestures
 
         void OnGUI()
         {
+            if (IsBot) return;      // a bot has no screen
             if (bigStyle == null)
             {
                 bigStyle = new GUIStyle(GUI.skin.label) { fontSize = 30, fontStyle = FontStyle.Bold };
