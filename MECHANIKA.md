@@ -295,7 +295,7 @@ ale soupeři to nepřipíše. Jméno soupeře nad hlavou vidíš, jen když ho v
 **Zápas:** první na 5 zabití vyhrává. Všem se ukáže vítěz a skóre, 6 s se nikdo nehýbe, pak se skóre
 vynuluje a všichni začnou znovu z protilehlých spawnů. V tréninku zápasy nejsou.
 
-**Mapy:** hostitel (a trénink) vybírá v menu — *Blockout* (původní šedá aréna), *Temple* a *Crossing*. Kdo se
+**Mapy:** hostitel (a trénink) vybírá v menu — *Blockout* (původní šedá aréna), *Temple*, *Crossing* a *Valley*. Kdo se
 připojí kódem, jde tam, kde je hostitel.
 
 **Temple** (generuje `Tools/Arena/Build Temple Map`, měří `Tools/Arena/Audit Temple`): zřícený chrám
@@ -316,6 +316,15 @@ korytem řeky (1,2 m) napříč středem. Polovina otočená o 180° — tým B 
 - **vzhled je záměrně tlumený** (šedomodrý kámen, šedozelený mech, jen pár slabých teplých lamp), aby
   nejbarevnější věc na obrazovce byla kouzla; nic nesvítí studeně, protože tyrkysová čára vypadá jako led.
   Slunce svítí z boku, aby oba týmy měly stejné světlo.
+
+**Valley** (`Tools/Arena/Build Valley Map`, `Audit Valley`): travnaté údolí 88 × 88 m (čtyřikrát
+víc plochy než Temple) obklopené horami. Terén je generovaný: mírné kopce (±2,4 m), za okrajem hory,
+na úpatí neviditelná hranice. Polovina otočená o 180°, tým B na +z, tým A na −z.
+- **pevnost uprostřed** a **čtyři zřícené kruhové věže**: zbytky zdí rostou po kruhu vždy o skok nebo
+  vyšplhání výš, takže se po nich dá vylézt až na podlahu nahoře (4,8 m),
+- **skupiny balvanů** asi 13 m od sebe (velký kámen na schování, menší na vylezení) a mezi nimi otevřená
+  tráva, **zbořené zdi** a jedna u každého spawnu,
+- tlumené barvy (tráva ztlumená, šedé kameny), slunce z boku, bez mlhy.
 
 **Pohyb:** chůze 5,0 m/s, sprint (Shift) 7,2 m/s. Sprint stojí staminu (žlutý pruh nad životy):
 plná vydrží 4 s sprintu, doplní se za 3,5 s od chvíle, kdy přestaneš (s pauzou 0,8 s). Když ji

@@ -446,6 +446,8 @@ namespace MageCast.EditorTools
             int nx = Mathf.RoundToInt(halfX * 2f / step), nz = Mathf.RoundToInt(halfZ * 2f / step);
             var spots = new List<Spot>();
             var byCell = new List<int>[nx * nz];
+            var cellFloor = new float[nx * nz];
+            for (int c = 0; c < cellFloor.Length; c++) cellFloor[c] = float.MaxValue;
             int mask = ~0;
             for (int i = 0; i < nx; i++)
             {
@@ -456,6 +458,8 @@ namespace MageCast.EditorTools
                     foreach (RaycastHit h in hits)
                     {
                         if (h.normal.y < 0.6f) continue;
+                        int under = i * nz + j;
+                        cellFloor[under] = Mathf.Min(cellFloor[under], h.point.y);   // walkable or not: the floor under a block counts
                         if (h.collider.GetComponentInParent<Combat.TrainingDummy>() != null) continue;
                         Vector3 p = h.point;
                         if (Physics.CheckCapsule(p + Vector3.up * 0.45f, p + Vector3.up * 1.6f, 0.35f, mask, QueryTriggerInteraction.Ignore))
@@ -496,6 +500,8 @@ namespace MageCast.EditorTools
             {
                 string name = c.gameObject.name;
                 if (name.StartsWith("Wall_") || name.StartsWith("Dummy")) continue;
+                // ground, not cover -- and a terrain cannot answer ClosestPoint anyway
+                if (c is TerrainCollider) continue;
                 covers.Add(c);
             }
             float worstCover = 0f, longest = 0f;
@@ -520,7 +526,10 @@ namespace MageCast.EditorTools
                 }
                 // Up high, cover is not the rule: a roof or a bridge is exposed on purpose, and the way to
                 // safety from it is down. Gated on the ground and in the pit, reported for the rest.
-                if (p.y > 1.3f) { if (best > MaxCoverDist) highExposed.Add(p); }
+                // "High" against the lowest thing standable in the same spot, not against y = 0: on a
+                // terrain the floor itself goes up and down, and the top of a boulder is high ground.
+                float floorHere = cellFloor[spots[k].cell];
+                if (p.y > floorHere + 1.3f) { if (best > MaxCoverDist) highExposed.Add(p); }
                 else
                 {
                     if (best > MaxCoverDist) { over++; exposed.Add(p); }
