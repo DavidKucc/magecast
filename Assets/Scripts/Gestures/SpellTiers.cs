@@ -1,5 +1,8 @@
 namespace MageCast.Gestures
 {
+    /// <summary>Which global cooldown a spell shares: attacks, defences, and the special ones (the portal, to come).</summary>
+    public enum SpellRole { Offensive, Defensive, Special }
+
     /// <summary>
     /// How well a spell was drawn, as the three tiers it shows: I (Weak), II (Clean), III (Perfect).
     ///
@@ -37,6 +40,31 @@ namespace MageCast.Gestures
         // long after the last one was. Drawing is free meanwhile -- you may draw it and hold it -- and
         // the other elements are free, so it stops Kenaz-Kenaz-Kenaz without slowing the game down.
         public const float ElementCooldown = 2f;
+
+        // The global cooldown, as in WoW, one per kind of spell: after sending an attack, no other
+        // attack can be SENT for this long, whatever its element. Drawing is free meanwhile -- the next
+        // rune is drawn during the pause and sent as it ends. With five elements on separate cooldowns
+        // there was always something ready, and six players found the best play was to fire whatever
+        // came up. A barrier is on its own clock: defence never waits for the rhythm of attack.
+        public const float GlobalCooldown = 1.3f;
+
+        /// <summary>
+        /// A send clicked this close to the end of a cooldown goes off by itself when it ends (WoW's spell
+        /// queue window), so the rhythm does not punish a click a moment early, or a ping.
+        /// </summary>
+        public const float QueueWindow = 0.4f;
+
+        /// <summary>
+        /// Interrupted mid-rune (air, a shock patch): the element that could already be read from what was
+        /// drawn is locked for this long -- WoW's school lockout. Read too early to tell, nothing is locked.
+        /// </summary>
+        public const float SchoolLock = 3f;
+
+        /// <summary>The role of a spell, by its id (GestureCaster.BarrierId...). Special: the portal, one day.</summary>
+        public static SpellRole RoleOf(byte spellId)
+        {
+            return spellId == GestureCaster.BarrierId ? SpellRole.Defensive : SpellRole.Offensive;
+        }
 
         // Tier I's splash: a fire or ice that lands on the map (floor, wall, barrier) rather than on a
         // person hurts whoever is near, the caster included. The middle gets this share of the hit,

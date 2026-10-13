@@ -107,7 +107,20 @@ Tier mění, **co kouzlo dělá**, ne jen kolik ubere — poškození samo se s 
   i mezitím (čára je při kreslení červená), ostatní prvky jsou volné. Tabulka run (F6) ukazuje zbývající
   čas. Kenaz–Kenaz–Kenaz nejde, Kenaz–Sowulo–Kenaz ano. Blesk do
   ledu se vybije na každém tieru — je to jeho hlavní použití.
+- **Globální cooldown (GCD), jako ve WoW, zvlášť pro každý druh kouzla:** po odeslání **útočného**
+  kouzla (oheň, led, blesk, vzduch) nejde 1,3 s poslat žádné jiné útočné. **Obranná** (bariéra) mají
+  vlastní GCD, takže obrana nikdy nečeká na rytmus útoku; **speciální** (portál, zatím není) taky.
+  Kreslit a držet jde i během GCD — další runa se kreslí v pauze a posílá na jejím konci. Klik v
+  posledních 0,4 s se zapamatuje a kouzlo odletí samo, jakmile to jde (jako spell queue ve WoW).
+  Proč: s pěti prvky na vlastních cooldownech bylo vždycky něco připravené a v šesti lidech vyhrávalo
+  střílet cokoli. Tabulka run ukazuje i GCD.
 - **Vzduch přeruší kreslení** při každém zásahu, na každém tieru.
+- **Zámek školy (jako ve WoW):** když tě přeruší cizí kouzlo (zásah vzduchem, šokové pole) a z toho, co už
+  máš rozkreslené, jde poznat, která runa to je, ten prvek se ti **zamkne na 3 s** — nad hlavou se ukáže
+  „INTERRUPTED – FIRE LOCKED“ a v tabulce run „LOCKED“. Runa se čte stejně, jako ji čte soupeř: hotová
+  runa podle sebe, rozkreslená podle prvních čar, a jen když jedna runa sedí jasně líp než ostatní
+  („<“ je oheň, i když blesk začíná stejně). Přerušení moc brzy nezamkne nic — přerušit pozdě, když je
+  runa vidět, se vyplatí víc. Menu, smrt ani šplhání nic nezamykají.
 - **Tier III v ruce vydrží 4 s**, pak spadne na tier II (proužek pod názvem ukazuje, kolik zbývá). Jinak
   by se vyplatilo kreslit v klidu za krytem, dokud nepadne III, a s ním chodit. Tier II vydrží napořád.
 - Tier je **vidět nad hlavou** — „FIRE III“; když spadne, objeví se „FIRE II“.

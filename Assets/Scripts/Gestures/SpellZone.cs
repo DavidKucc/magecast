@@ -424,7 +424,7 @@ namespace MageCast.Gestures
                             && !MageCast.Teams.Spares(Laid, t.Motor))
                         {
                             GestureCaster hands = t.Motor.GetComponent<GestureCaster>();
-                            if (hands != null) hands.Interrupt();
+                            if (hands != null) hands.Interrupt(true);
                         }
                         break;
 

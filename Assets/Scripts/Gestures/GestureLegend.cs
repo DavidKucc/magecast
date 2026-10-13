@@ -64,9 +64,11 @@ namespace MageCast.Gestures
                     GUI.color = Color.white;
                 }
 
-                nameStyle.normal.textColor = colour;
+                // locked by an interrupt: said so, in red, so it is not mistaken for the usual cooldown
+                nameStyle.normal.textColor = entry.Locked ? new Color(1f, 0.4f, 0.35f) : colour;
                 GUI.Label(new Rect(panel.x + 10f + glyphSize + 10f, y + 8f, panelWidth, 20f),
-                          cooling ? entry.SpellName + "   " + entry.Cooldown.ToString("0.0") + " s" : entry.SpellName, nameStyle);
+                          cooling ? entry.SpellName + (entry.Locked ? "   LOCKED " : "   ") + entry.Cooldown.ToString("0.0") + " s"
+                                  : entry.SpellName, nameStyle);
                 GUI.Label(new Rect(panel.x + 10f + glyphSize + 10f, y + 26f, panelWidth, 20f),
                           entry.Id, runeStyle);
                 y += rowHeight;

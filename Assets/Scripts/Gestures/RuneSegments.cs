@@ -262,6 +262,67 @@ namespace MageCast.Gestures
             return m;
         }
 
+        /// <summary>
+        /// Which rune a stroke still being drawn is becoming -- the way somebody watching it form over your
+        /// head reads it. The lines drawn so far are compared with the first lines of every rune (and with
+        /// the last ones, turned round, for a rune begun from its other end). Null while it could still be
+        /// more than one: one rune has to fit clearly better than any other.
+        ///
+        /// A stroke that already is a whole rune reads as that rune when it is also the best start of any
+        /// rune -- a "&lt;" is fire, although lightning starts the same way. But an M half drawn is also a
+        /// passable laguz drawn from the bottom; the M fits better, so it is not read as ice.
+        /// </summary>
+        public static string Reading(IList<Vector2> raw)
+        {
+            if (raw == null || raw.Count < 2) return null;
+            string whole = Recognise(raw).Name;
+
+            List<Vector2> c = Corners(raw);
+            int n = c.Count - 1;
+            if (n < 1) return null;
+            var angles = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                Vector2 d = c[i + 1] - c[i];
+                angles[i] = Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg;
+            }
+
+            string best = null;
+            float bestMean = 999f, otherMean = 999f, wholeMean = 999f;
+            foreach (Rune r in Runes)
+            {
+                int lines = r.Angles.Length;
+                if (lines < n) continue;
+                float runeBest = 999f;
+                for (int way = 0; way < 2; way++)
+                {
+                    float sum = 0f, worst = 0f;
+                    for (int j = 0; j < n; j++)
+                    {
+                        float want = way == 0 ? r.Angles[j] : r.Angles[lines - 1 - j] + 180f;
+                        float e = Mathf.Abs(Mathf.DeltaAngle(angles[j], want));
+                        sum += e;
+                        worst = Mathf.Max(worst, e);
+                    }
+                    if (worst <= MaxSegmentError) runeBest = Mathf.Min(runeBest, sum / n);
+                }
+                if (runeBest >= 999f) continue;
+                if (r.Name == whole) wholeMean = runeBest;
+                if (runeBest < bestMean) { otherMean = bestMean; bestMean = runeBest; best = r.Name; }
+                else otherMean = Mathf.Min(otherMean, runeBest);
+            }
+            if (best == null) return null;
+            // within a hair of the best start: lightning's first two lines are fire's, a degree or two apart
+            if (whole != null && wholeMean <= bestMean + WholeSlack) return whole;
+            return otherMean - bestMean >= ReadingMargin ? best : null;
+        }
+
+        /// <summary>How much worse (mean degrees) a whole rune may fit than the best start and still be read as itself.</summary>
+        const float WholeSlack = 3f;
+
+        /// <summary>How much better (mean degrees) one rune must fit a half-drawn stroke than any other to be read.</summary>
+        const float ReadingMargin = 15f;
+
         /// <summary>How close the stroke kept to its own lines: 1 = ruler-straight.</summary>
         static float Straightness(IList<Vector2> raw, List<Vector2> corners)
         {

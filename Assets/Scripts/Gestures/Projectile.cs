@@ -419,7 +419,7 @@ namespace MageCast.Gestures
                     // Being shoved takes the hand off the glyph -- there is nothing left to salvage. A
                     // spell already drawn and HELD is untouched: the risk lives in drawing, not holding.
                     GestureCaster caster = motor.GetComponent<GestureCaster>();
-                    if (caster != null) caster.Interrupt();
+                    if (caster != null) caster.Interrupt(true);
                 }
 
             }

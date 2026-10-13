@@ -100,8 +100,12 @@ namespace MageCast
             "(viz Kouzla); poškození samo se hýbe jen 0,8-1,2x.\n" +
             "Tier I je holé kouzlo: žádná plocha, žádný odraz, žádná kombinace - ale letí rychleji a oheň s ledem " +
             "při dopadu mimo člověka zraní okolí (splash).\n" +
-            "Cooldown: stejný prvek jde poslat znovu až " + SpellTiers.ElementCooldown + " s po minulém. Kreslit a držet ho můžeš i mezitím, " +
-            "ostatní prvky jsou volné. Tabulka run ukazuje, co ještě čeká.\n" +
+            "Cooldown: stejný prvek jde poslat znovu až " + SpellTiers.ElementCooldown + " s po minulém. " +
+            "Navíc globální cooldown (GCD): po odeslání útočného kouzla nejde " + SpellTiers.GlobalCooldown + " s poslat žádné jiné útočné. " +
+            "Bariéra má svůj vlastní - obrana nečeká na rytmus útoku. Kreslit a držet můžeš i mezitím: další runu nakresli během " +
+            "pauzy. Klik do " + SpellTiers.QueueWindow + " s před koncem se zapamatuje a kouzlo odletí samo. Tabulka run ukazuje, co ještě čeká.\n" +
+            "Zámek školy: když tě vzduch nebo šokové pole přeruší při kreslení a z rozkreslené runy už jde poznat, co to je, " +
+            "ten prvek se ti zamkne na " + SpellTiers.SchoolLock + " s (LOCKED). Přerušení moc brzy nezamkne nic.\n" +
             "Tier III v ruce vydrží " + "4" + " s, pak spadne na II. Tier II vydrží napořád.\n" +
             "Když tě cokoli trefí přímým zásahem, tier kouzla v ruce klesne o jeden - a kouzlo s tierem I zmizí.\n\n" +
             "<b>Soupeř tě čte</b>\n" +

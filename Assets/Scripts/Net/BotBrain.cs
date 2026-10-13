@@ -84,6 +84,10 @@ namespace MageCast
             {
                 motor.ScriptedMove = Vector2.zero;
                 motor.ScriptedSprint = false;
+                // Down mid-rune: the hands let go, the way a person's do (GameInput.Blocked). Left
+                // drawing, the bot came back with its hands still full and never cast again -- two of
+                // six were found standing like that, slowed, for minutes.
+                if (hands.BotDrawing) hands.Interrupt();
                 phase = Phase.Idle;
                 target = null;
                 return;
@@ -316,6 +320,11 @@ namespace MageCast
             Add(options, air, distance < 6f ? 6f : drawing ? 4f : 0.8f);
             Add(options, ward, health.Fraction < 0.4f && CastShield.Of(self.AttackerId) == null ? 3f : 0.15f);
 
+            // A barrier now and then for no reason is fine; one every time the attacks are on the global
+            // cooldown is not -- that is filling the pause with whatever is free, the thing the pause is
+            // there to stop. Unhurt, wait for an attack instead.
+            if (options.Count == 1 && options[0].Key == ward && options[0].Value < 1f) return null;
+
             float total = 0f;
             foreach (var o in options) total += o.Value;
             if (total <= 0f) return null;
@@ -324,10 +333,17 @@ namespace MageCast
             return options[options.Count - 1].Key;
         }
 
+        /// <summary>
+        /// A spell is an option if it will be sendable by the time its rune is drawn -- the global
+        /// cooldown after the last send is for drawing the next one, the way a person uses it. A locked
+        /// element or one still well on its own cooldown is not.
+        /// </summary>
         void Add(List<KeyValuePair<Spell, float>> options, Spell s, float weight)
         {
-            if (s != null && hands.CooldownLeft(s) <= 0f && weight > 0f) options.Add(new KeyValuePair<Spell, float>(s, weight));
+            if (s != null && hands.CooldownLeft(s) <= ReadyWithin && weight > 0f) options.Add(new KeyValuePair<Spell, float>(s, weight));
         }
+
+        const float ReadyWithin = 0.8f;
 
         /// <summary>How the rune came out: fizzle, tier I, II or III, by skill.</summary>
         void RollQuality()

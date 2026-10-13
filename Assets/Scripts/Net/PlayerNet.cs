@@ -285,7 +285,11 @@ namespace MageCast
             switch (outcome)
             {
                 case StrokeOutcome.Fizzle: WorldPopups.Word(transform, "FIZZLE", GestureCaster.FailColour); break;
-                case StrokeOutcome.Interrupted: WorldPopups.Word(transform, "INTERRUPTED", GestureCaster.FailColour); break;
+                // tier 1 here means the interrupt locked that element (see GestureCaster.Interrupt)
+                case StrokeOutcome.Interrupted:
+                    WorldPopups.Word(transform, tier > 0 ? "INTERRUPTED - " + caster.SpellByIndex(spell).displayName + " LOCKED"
+                                                          : "INTERRUPTED", GestureCaster.FailColour);
+                    break;
                 case StrokeOutcome.Lost: WorldPopups.Word(transform, "DROPPED", GestureCaster.FailColour); break;
                 // the spell exists from here on -- its name and tier go up now, not when it is sent (and
                 // again if a tier III falls to II in the hand)
@@ -452,7 +456,7 @@ namespace MageCast
         }
         public void SendSlow(float multiplier, float duration) { if (IsServer) SlowClientRpc(multiplier, duration, ToOwner()); }
         public void SendLaunch(float upSpeed) { if (IsServer) LaunchClientRpc(upSpeed, ToOwner()); }
-        public void SendInterrupt() { if (IsServer) InterruptClientRpc(ToOwner()); }
+        public void SendInterrupt(bool locksSchool) { if (IsServer) InterruptClientRpc(locksSchool, ToOwner()); }
         public void SendStagger() { if (IsServer) StaggerClientRpc(ToOwner()); }
         public void SendToss(Vector3 along, float upSpeed) { if (IsServer) TossClientRpc(along, upSpeed, ToOwner()); }
         public void SendSlide(Vector3 push) { if (IsServer) SlideClientRpc(push, ToOwner()); }
@@ -474,7 +478,7 @@ namespace MageCast
         void LaunchClientRpc(float upSpeed, ClientRpcParams p = default) { if (IsOwner) motor.Launch(upSpeed); }
 
         [ClientRpc]
-        void InterruptClientRpc(ClientRpcParams p = default) { if (IsOwner) caster.Interrupt(); }
+        void InterruptClientRpc(bool locksSchool, ClientRpcParams p = default) { if (IsOwner) caster.Interrupt(locksSchool); }
 
         [ClientRpc]
         void StaggerClientRpc(ClientRpcParams p = default) { if (IsOwner) caster.Staggered(); }

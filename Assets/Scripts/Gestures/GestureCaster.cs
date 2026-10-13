@@ -366,6 +366,8 @@ namespace MageCast.Gestures
             if (holding)
             {
                 if (heldQuality == CastQuality.Perfect && Time.time >= heldTopTierUntil) FallToTierTwo();
+                // clicked a moment early: it goes as the cooldown ends
+                if (sendQueued && !pressing && CooldownLeft(heldSpell) <= 0f) { Send(); return; }
                 if (Input.GetMouseButtonDown(castButton)) { pressing = true; pressedAt = Time.time; }
                 if (pressing && !Input.GetMouseButton(castButton))
                 {
@@ -616,12 +618,15 @@ namespace MageCast.Gestures
             float wait = CooldownLeft(spell);
             if (wait > 0f)
             {
-                // Not yet: nothing is spent, the spell stays in the hand.
-                Headline(spell.displayName + "  " + wait.ToString("0.0") + " s", FailColour, 0.8f);
-                Announce(spell.displayName + " is cooling down");
+                // Not yet: nothing is spent, the spell stays in the hand. A click just before the end
+                // is kept, and the spell goes by itself the moment it can.
+                sendQueued = wait <= SpellTiers.QueueWindow;
+                Headline(spell.displayName + (LockLeft(spell) > 0f ? "  LOCKED " : "  ") + wait.ToString("0.0") + " s",
+                         FailColour, 0.8f);
+                Announce(spell.displayName + (LockLeft(spell) > 0f ? " is locked" : " is cooling down"));
                 return;
             }
-            readyAt[IndexOf(spell)] = Time.time + SpellTiers.ElementCooldown;
+            Spend(spell);
             ClearHeld();
             if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Sent, IndexOf(spell));
             Vector3 from;
@@ -737,7 +742,9 @@ namespace MageCast.Gestures
         /// <summary>One more point of the rune over the bot's head (screen-height units, like a person's).</summary>
         public void BotStrokePoint(Vector2 point)
         {
-            if (drawing && Networked) net.OwnerStrokePoint(point);
+            if (!drawing) return;
+            stroke.Add(point);                 // kept, so an interrupt can read it like a person's
+            if (Networked) net.OwnerStrokePoint(point);
         }
 
         /// <summary>The rune is finished: a fizzle, or the spell is in the hand at the given quality.</summary>
@@ -776,7 +783,7 @@ namespace MageCast.Gestures
         {
             if (!holding || heldSpell == null || CooldownLeft(heldSpell) > 0f) return false;
             Spell spell = heldSpell;
-            readyAt[IndexOf(spell)] = Time.time + SpellTiers.ElementCooldown;
+            Spend(spell);
             ClearHeld();
             if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Sent, IndexOf(spell));
             Vector3 from = Muzzle();
@@ -802,6 +809,7 @@ namespace MageCast.Gestures
         {
             holding = false;
             heldSpell = null;
+            sendQueued = false;
             motor.SprintLocked = false;
             motor.SpeedMultiplier = 1f;
             if (crosshair != null) crosshair.SetTint(null);
@@ -832,18 +840,37 @@ namespace MageCast.Gestures
         /// in this game is in the drawing, and punishing the hold as well would charge twice for the
         /// same thing while rewarding an opponent for simply waiting.
         /// </summary>
-        public void Interrupt()
+        /// <summary>
+        /// <paramref name="locksSchool"/>: knocked out by somebody's spell (air, a shock patch), not by a
+        /// menu or a ledge. Then the element that could already be read from the rune so far is locked
+        /// for <see cref="SpellTiers.SchoolLock"/> -- interrupt late, when the rune is plain to see, and it
+        /// costs more than the time spent drawing.
+        /// </summary>
+        public void Interrupt(bool locksSchool = false)
         {
             // somebody else's player: their own machine has to let go of the glyph
-            if (Networked && !net.IsOwner) { net.SendInterrupt(); return; }
-            AbortDraw("INTERRUPTED", StrokeOutcome.Interrupted);
+            if (Networked && !net.IsOwner) { net.SendInterrupt(locksSchool); return; }
+            if (!drawing) return;
+
+            Spell read = null;
+            if (locksSchool)
+            {
+                string id = RuneSegments.Reading(stroke);
+                if (id != null) read = SpellFor(id);
+            }
+            if (read == null) { AbortDraw("INTERRUPTED", StrokeOutcome.Interrupted); return; }
+
+            byte index = IndexOf(read);
+            lockedUntil[index] = Time.time + SpellTiers.SchoolLock;
+            AbortDraw("INTERRUPTED - " + read.displayName + " LOCKED", StrokeOutcome.Interrupted, index, 1);
         }
 
         /// <summary>
         /// Drops a glyph in progress with nothing cast. The right button has to be let go and pressed
         /// again to draw -- until then the mouse is back to aiming, even with the button still held.
+        /// <paramref name="locked"/> = 1 tells everyone the element <paramref name="spell"/> was locked.
         /// </summary>
-        void AbortDraw(string reason, StrokeOutcome outcome)
+        void AbortDraw(string reason, StrokeOutcome outcome, byte spell = 0, byte locked = 0)
         {
             if (!drawing) return;
 
@@ -859,9 +886,9 @@ namespace MageCast.Gestures
             if (trail != null) trail.Clear();
             if (anim != null) anim.SetDrawing(false);
 
-            Headline(reason, FailColour, 1f);
+            Headline(reason, FailColour, locked > 0 ? 1.6f : 1f);
             if (!IsBot) WorldPopups.Word(transform, reason, FailColour);   // a bot's is shown by the network
-            if (Networked) net.OwnerStrokeEnd(outcome, 0);
+            if (Networked) net.OwnerStrokeEnd(outcome, spell, locked);
         }
 
         // ---------------------------------------------------------------- recognition
@@ -964,6 +991,7 @@ namespace MageCast.Gestures
             public string SpellName;
             public Color Colour;
             public float Cooldown;      // seconds until it can be sent again
+            public bool Locked;         // ...because an interrupt locked it
         }
 
         public List<VocabularyEntry> Vocabulary()
@@ -975,7 +1003,7 @@ namespace MageCast.Gestures
             {
                 Spell s = SpellFor(id);
                 list.Add(new VocabularyEntry { Id = id, SpellName = s.displayName, Colour = s.colour,
-                                               Cooldown = CooldownLeft(s) });
+                                               Cooldown = CooldownLeft(s), Locked = LockLeft(s) > 0f });
             }
             return list;
         }
@@ -1010,11 +1038,44 @@ namespace MageCast.Gestures
         /// <summary>When each element may next be sent, by spell index.</summary>
         readonly Dictionary<byte, float> readyAt = new Dictionary<byte, float>();
 
-        /// <summary>Seconds until a spell of this element can be sent again; 0 when it can.</summary>
+        /// <summary>When each kind of spell (attack, defence, special) comes off the global cooldown.</summary>
+        readonly Dictionary<SpellRole, float> globalReadyAt = new Dictionary<SpellRole, float>();
+
+        /// <summary>Elements locked by an interrupt, until when, by spell index.</summary>
+        readonly Dictionary<byte, float> lockedUntil = new Dictionary<byte, float>();
+
+        /// <summary>A send clicked inside the queue window, waiting for the cooldown to end.</summary>
+        bool sendQueued;
+
+        static float Left(float until) { return Mathf.Max(0f, until - Time.time); }
+
+        /// <summary>
+        /// Seconds until a spell of this element can be sent; 0 when it can. Whichever is longest of its
+        /// element's own cooldown, its kind's global cooldown and a lock from an interrupt.
+        /// </summary>
         public float CooldownLeft(Spell spell)
         {
+            if (spell == null) return 0f;
+            byte index = IndexOf(spell);
+            float t, left = 0f;
+            if (readyAt.TryGetValue(index, out t)) left = Left(t);
+            if (globalReadyAt.TryGetValue(SpellTiers.RoleOf(index), out t)) left = Mathf.Max(left, Left(t));
+            return Mathf.Max(left, LockLeft(spell));
+        }
+
+        /// <summary>Seconds this element stays locked by an interrupt; 0 when it is not.</summary>
+        public float LockLeft(Spell spell)
+        {
             float t;
-            return spell != null && readyAt.TryGetValue(IndexOf(spell), out t) ? Mathf.Max(0f, t - Time.time) : 0f;
+            return spell != null && lockedUntil.TryGetValue(IndexOf(spell), out t) ? Left(t) : 0f;
+        }
+
+        /// <summary>A spell has just been sent: its element's cooldown and its kind's global cooldown start.</summary>
+        void Spend(Spell spell)
+        {
+            byte index = IndexOf(spell);
+            readyAt[index] = Time.time + SpellTiers.ElementCooldown;
+            globalReadyAt[SpellTiers.RoleOf(index)] = Time.time + SpellTiers.GlobalCooldown;
         }
 
         public float CooldownLeft(string gestureId)
@@ -1295,7 +1356,10 @@ namespace MageCast.Gestures
                                           : heldSpell.colour;
                 GUI.Label(new Rect(14f, 10f, 700f, 40f),
                           heldSpell.displayName + " " + SpellTiers.Roman(tier)
-                          + (willDrop ? "  - RELEASE TO DROP" : wait > 0f ? "  " + wait.ToString("0.0") + " s" : "  READY"),
+                          + (willDrop ? "  - RELEASE TO DROP"
+                             : wait > 0f ? (LockLeft(heldSpell) > 0f ? "  LOCKED " : "  ") + wait.ToString("0.0") + " s"
+                                           + (sendQueued ? "  (queued)" : "")
+                             : "  READY"),
                           bigStyle);
 
                 // a tier III runs down to II: shown as a draining bar under the name
