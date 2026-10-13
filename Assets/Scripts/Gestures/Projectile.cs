@@ -316,6 +316,14 @@ namespace MageCast.Gestures
             // itself and has no direction -- read as a wall there, a fire bounced straight back up.
             if (hit.collider.bounds.max.y <= transform.position.y + 0.05f) return true;
 
+            // A surface lying right under the centre is the floor, whatever its shape. Asked of the
+            // collider itself, by a ray straight down: a terrain's bounds reach up to the mountain tops,
+            // and ClosestPoint does not work on a terrain at all -- the Valley's grass was taken for a
+            // wall, so a fire skimming it bounced back at its caster and never left a patch.
+            RaycastHit below;
+            if (hit.collider.Raycast(new Ray(transform.position + Vector3.up * 0.3f, Vector3.down), out below, 0.3f + WallCore + 0.2f)
+                && below.normal.y > FloorNormal) return true;
+
             Vector3 closest = hit.collider.ClosestPoint(transform.position);
             Vector3 up = transform.position - closest;
             return up.sqrMagnitude > 1e-6f && up.normalized.y > FloorNormal;

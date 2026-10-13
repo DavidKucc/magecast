@@ -217,6 +217,11 @@ schopnost uhýbat, takže kdo na něm kreslí, je terč; a je to plocha, na kter
 - **Velikost ploch roste s velikostí glyfu** (0,7–1,4×), stejně jako velikost střely.
 - **Plocha končí na hraně toho, na čem leží.** Dopadne-li kousek od kraje platformy, je u kraje
   rovně uříznutá a nevisí do vzduchu — a kdo stojí dole pod hranou, toho nezasáhne.
+- **Plocha leží na kopci jako na kopci.** Na nerovné zemi (tráva ve Valley, rampa) kopíruje terén a
+  zabírá ho celý; utne ji jen schod nebo hrana (víc než ~40° mezi dvěma body čtvrt metru od sebe).
+  Kdo v ní stojí, se počítá podle výšky plochy tam, kde stojí. (Do 13. 10. byla plocha placatý disk,
+  na svahu ji kopec napůl zakryl a ořízla se na pruh; navíc střela, která trávu jen škrtla, ji brala
+  jako zeď — oheň se od trávy odrazil a žádná plocha nevznikla.)
 - **Výbuch u stěny slábne se vzdáleností.** Kdo se o zeď opírá, dostane plnou sílu; kdo stojí dva metry
   opodál, jen štulec.
 

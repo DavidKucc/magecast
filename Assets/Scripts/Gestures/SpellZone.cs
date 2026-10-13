@@ -68,60 +68,113 @@ namespace MageCast.Gestures
         /// <summary>Directions the edge is measured in. 64 keeps a straight platform edge straight.</summary>
         public const int Spokes = 64;
 
-        /// <summary>How far the ground may step and still count as the same surface.</summary>
-        const float SameSurface = 0.15f;
+        /// <summary>
+        /// How much the ground may rise or fall between two probes a step apart and still be the same
+        /// surface -- a slope of about 40 degrees. The lip of a platform or a step is more, and ends it.
+        /// </summary>
+        const float StepRise = 0.2f;
+        const float ProbeStep = 0.25f;
+
+        /// <summary>Rings of the patch along each spoke, so it lies on a hill instead of cutting through it.</summary>
+        const int Rings = 5;
 
         /// <summary>How far the patch reaches in each spoke direction, after the ground has run out.</summary>
         float[] reach;
 
+        /// <summary>The ground's height under the patch, relative to its centre: spoke * Rings + ring - 1.</summary>
+        float[] heights;
+
+        /// <summary>The ground a patch lies on: its reach along each spoke and its height at each ring.</summary>
+        public struct Shape
+        {
+            public float[] Reach;
+            public float[] Heights;
+        }
+
         /// <summary>
         /// How far a patch centred on <paramref name="ground"/> can spread in each direction before the
-        /// surface under it ends -- the edge of a platform, the lip of a step.
+        /// surface under it ends -- the edge of a platform, the lip of a step -- and the shape of that
+        /// surface on the way, for lying on it.
         ///
-        /// A patch is a thing lying on the ground, so where there is no ground at its height there is no
-        /// patch. It used to be a flat disc of the full radius, and one landing near the edge of a
-        /// platform hung out over the drop like a tray. Probed straight down along each spoke; a box top
-        /// seen from a point on it is always reachable in a straight line, so walking outwards and
-        /// stopping at the first miss finds the edge exactly.
+        /// A patch is a thing lying on the ground, so where there is no ground there is no patch. It used
+        /// to be a flat disc of the full radius, and one landing near the edge of a platform hung out over
+        /// the drop like a tray. Probed straight down, walking outwards along each spoke: each probe may be
+        /// a little higher or lower than the one before (a hill), not a step higher or lower (a ledge).
+        /// Until 13 Oct every probe had to be within 0.15 m of the centre's height, and on the Valley's
+        /// grass a patch was cut to a strip along the slope and lay flat, half buried in the hill.
         /// </summary>
-        public static float[] SupportedReach(Vector3 ground, float radius)
+        public static Shape SupportedShape(Vector3 ground, float radius)
         {
-            var result = new float[Spokes];
-            const float Step = 0.25f;
+            var shape = new Shape { Reach = new float[Spokes], Heights = new float[Spokes * Rings] };
+            var rs = new List<float>();
+            var ys = new List<float>();
 
             for (int i = 0; i < Spokes; i++)
             {
                 float a = i / (float)Spokes * Mathf.PI * 2f;
                 Vector3 dir = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+                rs.Clear();
+                ys.Clear();
+                rs.Add(0f);
+                ys.Add(0f);
 
                 // coarse steps to find the gap, then halving to put the edge within a centimetre
-                float good = 0f, reached = radius;
-                for (float r = Step; ; r += Step)
+                float good = 0f, goodY = 0f, reached = radius, y;
+                for (float r = ProbeStep; ; r += ProbeStep)
                 {
                     float at = Mathf.Min(r, radius);
-                    if (!Supported(ground, dir, at))
+                    if (!Probe(ground, dir, at, goodY, Rise(at - good), out y))
                     {
                         float bad = at;
                         for (int k = 0; k < 5; k++)
                         {
                             float mid = (good + bad) * 0.5f;
-                            if (Supported(ground, dir, mid)) good = mid; else bad = mid;
+                            if (Probe(ground, dir, mid, goodY, Rise(mid - good), out y))
+                            {
+                                good = mid;
+                                goodY = y;
+                                rs.Add(mid);
+                                ys.Add(y);
+                            }
+                            else bad = mid;
                         }
                         reached = good;
                         break;
                     }
                     good = at;
+                    goodY = y;
+                    rs.Add(at);
+                    ys.Add(y);
                     if (at >= radius) break;
                 }
-                result[i] = reached;
+
+                shape.Reach[i] = reached;
+                for (int k = 1; k <= Rings; k++)
+                    shape.Heights[i * Rings + k - 1] = Along(rs, ys, reached * k / Rings);
             }
-            return result;
+            return shape;
         }
 
-        static bool Supported(Vector3 ground, Vector3 dir, float r)
+        /// <summary>How far the patch reaches along each spoke -- for the aim marker, which shows the patch ahead.</summary>
+        public static float[] SupportedReach(Vector3 ground, float radius)
         {
-            Vector3 from = ground + dir * r + Vector3.up * 0.6f;
-            RaycastHit[] hits = Physics.RaycastAll(from, Vector3.down, 0.6f + SameSurface + 0.05f, ~0,
+            return SupportedShape(ground, radius).Reach;
+        }
+
+        static float Rise(float distance)
+        {
+            return Mathf.Max(0.05f, distance / ProbeStep * StepRise);
+        }
+
+        /// <summary>
+        /// The ground <paramref name="r"/> out along a spoke, if it is within <paramref name="tolerance"/>
+        /// of the height expected there. <paramref name="y"/> is relative to the centre.
+        /// </summary>
+        static bool Probe(Vector3 ground, Vector3 dir, float r, float expected, float tolerance, out float y)
+        {
+            y = expected;
+            Vector3 from = ground + dir * r + Vector3.up * (expected + 0.8f);
+            RaycastHit[] hits = Physics.RaycastAll(from, Vector3.down, 0.8f + tolerance + 0.05f, ~0,
                                                    QueryTriggerInteraction.Ignore);
 
             // The nearest SURFACE below, looking through anybody standing there. Somebody standing in
@@ -134,10 +187,22 @@ namespace MageCast.Gestures
                 if (h.collider.GetComponentInParent<PlayerMotor>() != null) continue;
                 if (h.distance < nearest) { nearest = h.distance; best = h; }
             }
+            if (nearest == float.MaxValue || best.normal.y <= Projectile.FloorNormal) return false;
 
-            return nearest < float.MaxValue
-                   && Mathf.Abs(best.point.y - ground.y) <= SameSurface
-                   && best.normal.y > Projectile.FloorNormal;
+            y = best.point.y - ground.y;
+            return Mathf.Abs(y - expected) <= tolerance;
+        }
+
+        /// <summary>The height at <paramref name="r"/> along a spoke, between the probes taken.</summary>
+        static float Along(List<float> rs, List<float> ys, float r)
+        {
+            for (int i = 1; i < rs.Count; i++)
+                if (rs[i] >= r)
+                {
+                    float span = rs[i] - rs[i - 1];
+                    return span > 1e-4f ? Mathf.Lerp(ys[i - 1], ys[i], (r - rs[i - 1]) / span) : ys[i];
+                }
+            return ys[ys.Count - 1];
         }
 
         /// <summary>The patch's reach towards a point, read off the nearest spokes.</summary>
@@ -151,26 +216,67 @@ namespace MageCast.Gestures
             return Mathf.Lerp(reach[i0], reach[i1], f - Mathf.Floor(f));
         }
 
-        /// <summary>A flat fan following the reach, lifted a hair so it does not z-fight the floor.</summary>
-        static Mesh BuildMesh(float[] reach)
+        /// <summary>The height of the ground the patch lies on under a point, relative to its centre.</summary>
+        float HeightAt(Vector3 offset)
         {
-            var vertices = new Vector3[Spokes + 1];
-            var triangles = new int[Spokes * 3];
+            if (heights == null) return 0f;
+            float a = Mathf.Atan2(offset.z, offset.x);
+            if (a < 0f) a += Mathf.PI * 2f;
+            float f = a / (Mathf.PI * 2f) * Spokes;
+            int i0 = Mathf.FloorToInt(f) % Spokes;
+            int i1 = (i0 + 1) % Spokes;
+            float flat = new Vector2(offset.x, offset.z).magnitude;
+            return Mathf.Lerp(SpokeHeight(i0, flat), SpokeHeight(i1, flat), f - Mathf.Floor(f));
+        }
+
+        float SpokeHeight(int spoke, float flat)
+        {
+            float r = reach[spoke];
+            if (r < 1e-3f) return 0f;
+            float ring = Mathf.Clamp(flat / r * Rings, 0f, Rings);
+            int k = Mathf.Min(Mathf.FloorToInt(ring), Rings - 1);
+            float inner = k == 0 ? 0f : heights[spoke * Rings + k - 1];
+            float outer = heights[spoke * Rings + k];
+            return Mathf.Lerp(inner, outer, ring - k);
+        }
+
+        /// <summary>
+        /// The patch as a mesh: a fan of spokes cut to the reach, each with rings that follow the ground,
+        /// lifted a hair so it does not z-fight the floor.
+        /// </summary>
+        static Mesh BuildMesh(Shape shape)
+        {
+            var vertices = new Vector3[1 + Spokes * Rings];
+            var triangles = new List<int>(Spokes * (1 + 2 * (Rings - 1)) * 3);
             vertices[0] = Vector3.zero;
             for (int i = 0; i < Spokes; i++)
             {
                 float a = i / (float)Spokes * Mathf.PI * 2f;
-                vertices[i + 1] = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * reach[i];
+                Vector3 dir = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+                for (int k = 1; k <= Rings; k++)
+                    vertices[1 + i * Rings + k - 1] = dir * (shape.Reach[i] * k / Rings)
+                                                      + Vector3.up * shape.Heights[i * Rings + k - 1];
+            }
 
-                // wound so the face points up
-                triangles[i * 3] = 0;
-                triangles[i * 3 + 1] = (i + 1) % Spokes + 1;
-                triangles[i * 3 + 2] = i + 1;
+            // wound so the faces point up
+            for (int i = 0; i < Spokes; i++)
+            {
+                int next = (i + 1) % Spokes;
+                triangles.Add(0);
+                triangles.Add(1 + next * Rings);
+                triangles.Add(1 + i * Rings);
+                for (int k = 1; k < Rings; k++)
+                {
+                    int innerCur = 1 + i * Rings + k - 1, innerNext = 1 + next * Rings + k - 1;
+                    int outerCur = innerCur + 1, outerNext = innerNext + 1;
+                    triangles.Add(innerCur); triangles.Add(innerNext); triangles.Add(outerNext);
+                    triangles.Add(innerCur); triangles.Add(outerNext); triangles.Add(outerCur);
+                }
             }
 
             var mesh = new Mesh { name = "SpellZone" };
             mesh.vertices = vertices;
-            mesh.triangles = triangles;
+            mesh.triangles = triangles.ToArray();
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
             return mesh;
@@ -200,9 +306,11 @@ namespace MageCast.Gestures
             // a hair off the floor, or the two surfaces z-fight and the patch flickers
             go.transform.position = ground + Vector3.up * 0.03f;
 
-            // Cut to the ground it actually lies on, so it ends where the platform ends.
-            float[] reach = SupportedReach(ground, radius);
-            go.AddComponent<MeshFilter>().sharedMesh = BuildMesh(reach);
+            // Cut to the ground it actually lies on, so it ends where the platform ends, and shaped to it,
+            // so it lies on a hill rather than cutting through one.
+            Shape shape = SupportedShape(ground, radius);
+            float[] reach = shape.Reach;
+            go.AddComponent<MeshFilter>().sharedMesh = BuildMesh(shape);
             MeshRenderer renderer = go.AddComponent<MeshRenderer>();
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
@@ -223,6 +331,7 @@ namespace MageCast.Gestures
             z.attacker = attacker;
             z.owner = owner;
             z.reach = reach;
+            z.heights = shape.Heights;
             z.fx = ZoneFx.Play(SpellFx.ForZone(effect), go.transform.position, radius, lifetime, reach);
             // Under a real effect the plain outline would only wash it out; it stays for the flash.
             z.outline = renderer;
@@ -296,7 +405,8 @@ namespace MageCast.Gestures
             {
                 if (z == null || z.effect != GroundEffect.Updraft) continue;
                 Vector3 offset = point - z.transform.position;
-                if (offset.y < 0f || offset.y > DraftHeight) continue;
+                float above = offset.y - z.HeightAt(offset);
+                if (above < 0f || above > DraftHeight) continue;
                 if (new Vector2(offset.x, offset.z).magnitude <= ReachTowards(z.reach, offset)) return z;
             }
             return null;
@@ -340,7 +450,7 @@ namespace MageCast.Gestures
         bool Contains(Vector3 point, float verticalSlack, float reachOut = 0f)
         {
             Vector3 offset = point - transform.position;
-            if (Mathf.Abs(offset.y) > verticalSlack) return false;
+            if (Mathf.Abs(offset.y - HeightAt(offset)) > verticalSlack) return false;
             return new Vector2(offset.x, offset.z).magnitude <= ReachTowards(reach, offset) + reachOut;
         }
 
@@ -485,25 +595,28 @@ namespace MageCast.Gestures
                 // inside the patch as cut, not the full circle -- standing below a platform's edge is
                 // not standing in the fire on top of it
                 if (flat > ReachTowards(reach, offset)) continue;
-                if (offset.y < -0.4f || offset.y > Height) continue;
+                float above = offset.y - HeightAt(offset);              // over the ground the patch lies on
+                if (above < -0.4f || above > Height) continue;
 
-                found.Add(new Target { Root = root, Health = hp, Motor = motor, Touching = IsTouching(c, motor, centre) });
+                found.Add(new Target { Root = root, Health = hp, Motor = motor,
+                                       Touching = IsTouching(c, motor, centre.y + HeightAt(offset)) });
             }
             return found;
         }
 
         /// <summary>
         /// Standing on the patch. For a player that is their grounded flag -- read off the network for
-        /// somebody else's body, whose motor is not running here -- and feet at the patch's height. A
-        /// dummy has no motor and never leaves the floor.
+        /// somebody else's body, whose motor is not running here -- and feet at the patch's height where
+        /// they stand (<paramref name="surface"/>: on a hill, not the height of its centre). A dummy has
+        /// no motor and never leaves the floor.
         /// </summary>
-        static bool IsTouching(Collider c, PlayerMotor motor, Vector3 centre)
+        static bool IsTouching(Collider c, PlayerMotor motor, float surface)
         {
-            if (motor == null) return Mathf.Abs(c.bounds.min.y - centre.y) < 0.35f;
+            if (motor == null) return Mathf.Abs(c.bounds.min.y - surface) < 0.35f;
 
             PlayerNet net = motor.GetComponent<PlayerNet>();
             bool grounded = net != null && net.IsRemote ? net.Grounded.Value : motor.IsGrounded;
-            return grounded && Mathf.Abs(motor.transform.position.y - centre.y) < 0.35f;
+            return grounded && Mathf.Abs(motor.transform.position.y - surface) < 0.35f;
         }
     }
 }
