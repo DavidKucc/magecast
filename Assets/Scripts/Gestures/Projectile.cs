@@ -147,6 +147,7 @@ namespace MageCast.Gestures
             p.bouncesLeft = spell != null ? spell.wallBounces : 0;
             p.authoritative = authoritative;
             p.attacker = attacker;
+            Live.Add(p);
 
             // The real effect, where the spell has one: the sphere stays as the thing that collides and
             // stops being the thing you see. Sized with the sphere, so a big draw still looks big.
@@ -886,9 +887,17 @@ namespace MageCast.Gestures
 
         void OnDestroy()
         {
+            Live.Remove(this);
             // the flying effect fades where it is rather than blinking out with the projectile
             SpellFx.Release(fx);
         }
+
+        /// <summary>Every spell in flight on this machine -- what a bot looks at to see a shot coming.</summary>
+        public static readonly System.Collections.Generic.List<Projectile> Live = new System.Collections.Generic.List<Projectile>();
+
+        public Vector3 Velocity { get { return velocity; } }
+        public Transform Owner { get { return owner; } }
+        public bool Finished { get { return ended; } }
 
         /// <summary>A brief glowing burst anywhere -- also how a barrier shows it has broken.</summary>
         public static void FlashAt(Vector3 at, Color colour, float size, float glow)

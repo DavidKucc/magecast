@@ -347,11 +347,27 @@ zdi, soupeřů jen na přímý pohled. Boti útočí jen na soupeře.
 **Boti:** v online hře je přidává hostitel v lobby (do týmu), v tréninku v Esc menu (*Add bot*,
 *Remove bots*, dovednost 0–100 %, volba „boti mě nechají být“ pro sledování jejich souboje). Bot hraje stejným tělem a
 podle stejných pravidel jako člověk: kreslí runu (trvá podle počtu čar, zpomalí ho, runa se mu kreslí nad
-hlavou, vzduch mu ji shodí), runa mu může nevyjít nebo vyjít na nižším tieru, drží cooldowny, míří s
-předstihem a chybou podle dovednosti, chodí po mapě po spočítané síti (po schodech a rampách, na hrany
-nešplhá). Vybírá kouzlo podle situace: blesk na soupeře na ledu nebo ve vodě, vzduch na blízko nebo na
-toho, kdo kreslí, bariéru, když je zraněný, jinak oheň a led. Zabití se jim připisují (každý má vlastní
-číslo útočníka). Jejich zásahy se počítají v přesnosti zvlášť, jako „(bots)“.
+hlavou, vzduch mu ji shodí), runa mu může nevyjít nebo vyjít na nižším tieru, platí pro něj cooldowny, GCD,
+zámek školy i NOT READY, chodí po mapě po spočítané síti (po schodech a rampách, na hrany nešplhá).
+
+**Ví jen to, co by věděl člověk** (od 13. 10.; předtím viděl přes zdi, za sebe a reagoval v tom samém
+snímku):
+- **oči:** vidí asi 110° před sebe (jako kamera za zády) a kohokoli do 3,5 m; přes zeď nevidí. Když se
+  prochází, rozhlíží se do stran,
+- **paměť:** kde někoho naposledy viděl, si pamatuje 7 s — dojde tam, rozhlédne se, a když nikdo není,
+  zapomene,
+- **zásah:** ví, kdo ho trefil a odkud (jako ty podle směru střely), a otočí se tam,
+- **reakce:** všechno vidí se zpožděním 0,38–0,17 s (podle dovednosti), takže předsazení míří tam, kam
+  jsi *šel* — změna směru ho nechá minout. Chyba mušky roste se vzdáleností a s tím, jak rychle mu
+  přebíháš před očima,
+- **otáčení:** jen rychlostí ruky na myši (380–760 °/s) a kouzlo pošle, až má cíl před sebou.
+
+**Chová se jako člověk:** nejdřív odpovídá tomu, kdo na něj střílí; po spatření soupeře chvíli počká, než
+začne kreslit; střele, kterou vidí letět na sebe, uhne úkrokem, když to stihne (ne vždy, podle dovednosti);
+těžce zraněný bez bariéry se na pár sekund schová z dohledu a pak se vrátí. Vybírá kouzlo podle situace:
+blesk na soupeře na ledu nebo ve vodě, vzduch na blízko nebo na toho, kdo kreslí, bariéru, když je zraněný
+nebo pod palbou, jinak oheň a led. Zabití se jim připisují (každý má vlastní číslo útočníka). Jejich zásahy
+se počítají v přesnosti zvlášť, jako „(bots)“.
 
 **Mapy:** v online hře vybírá hostitel v lobby, pro trénink se vybírá v menu — *Blockout* (původní šedá
 aréna), *Temple*, *Crossing* a *Valley*. Náhledy map v lobby generuje `Tools/Arena/Build Map Previews`

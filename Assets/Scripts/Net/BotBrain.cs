@@ -7,30 +7,47 @@ using UnityEngine.AI;
 namespace MageCast
 {
     /// <summary>
-    /// A computer player, on the server only. It plays by exactly the rules a person does, through the
-    /// same body: it walks with the motor (accelerating, braking, jumping, out of stamina like anybody),
-    /// and it casts with the same hands -- drawing a rune takes it time, slows it, shows the rune over
-    /// its head for everyone to read, and an air hit knocks it away; a rune can fizzle or come out at a
-    /// lower tier; every spell obeys its element's cooldown; and it aims with a lead and a human-sized
-    /// error. What it does NOT have is a mouse: the drawing itself is skipped, the quality rolled.
+    /// A computer player, on the server only. It plays by the rules a person does, through the same
+    /// body and the same hands: it walks with the motor (accelerating, braking, out of stamina like
+    /// anybody), drawing a rune takes it time and slows it, the rune forms over its head for everyone to
+    /// read, an air hit knocks it away, a rune can fizzle or come out at a lower tier, and every
+    /// cooldown, the global cooldown, a lock and NOT READY apply to it exactly as to you. What it does
+    /// NOT have is a mouse: the drawing itself is skipped, the quality rolled by <see cref="Skill"/>.
     ///
-    /// Behaviour, kept simple on purpose: pick the nearest living opponent, get to a fighting range by the
-    /// walkable surface (BotNav), side-step back and forth while there, choose a spell for the moment
-    /// (lightning at somebody on ice, air at somebody close or drawing, a barrier when hurt, otherwise
-    /// fire and ice), draw it, hold it a moment, lead the shot, send it.
+    /// And it knows only what a person in its place would know (since 13 Oct; before, it saw through
+    /// walls and behind its back, and reacted in the same frame):
     ///
-    /// <see cref="Skill"/> 0..1 moves the fizzle and tier odds and the aim error together.
+    ///   eyes       a view of about 110 degrees ahead, plus anybody within a few metres; no walls
+    ///   memory     where it last saw somebody, for a few seconds -- it goes there, looks, and gives up
+    ///   being hit  tells it who hit it, and roughly from where, as the shot's direction would tell you
+    ///   reaction   everything it sees, it sees a quarter of a second late (shorter with skill): its
+    ///              lead is on where you were going, so a change of direction makes it miss
+    ///   turning    no faster than a mouse flick, and it sends only once it faces its target
+    ///
+    /// Like a person it answers whoever is shooting at it before picking a new fight, waits a moment
+    /// after spotting somebody before it starts a rune, sidesteps a shot it sees coming (when it reacts
+    /// in time), and, badly hurt, breaks line of sight for a few seconds before coming back.
     /// </summary>
     public class BotBrain : MonoBehaviour
     {
         /// <summary>All bots leave people alone -- for watching them fight each other.</summary>
         public static bool IgnoreHumans;
 
-        /// <summary>0 = clumsy, 1 = sharp. Moves rune quality and aim error together.</summary>
+        /// <summary>0 = clumsy, 1 = sharp: rune quality, aim, reaction time, turning, dodging.</summary>
         public static float Skill = 0.6f;
+
+        /// <summary>For measuring: shots sidestepped and retreats out of sight, by all bots since the start.</summary>
+        public static int Dodges, Retreats;
 
         const float FightRange = 12f;
         const float ThinkInterval = 0.15f;
+
+        /// <summary>Half the width of what it sees, degrees -- a third-person camera's view, give or take.</summary>
+        const float ViewHalfAngle = 55f;
+        /// <summary>Anybody this close is noticed whichever way it faces: footsteps, a shadow, a shout.</summary>
+        const float NearbyNotice = 3.5f;
+        /// <summary>How long it remembers where it last saw somebody.</summary>
+        const float MemorySeconds = 7f;
 
         PlayerNet self;
         PlayerMotor motor;
@@ -38,10 +55,23 @@ namespace MageCast
         Health health;
         System.Random rnd;
 
+        /// <summary>What it knows about somebody: where it last saw them, and whether it sees them now.</summary>
+        class Known
+        {
+            public Vector3 Position;
+            public float SeenAt;
+            public bool Visible;
+            public float HurtMeAt = -99f;
+        }
+
+        readonly Dictionary<PlayerNet, Known> known = new Dictionary<PlayerNet, Known>();
         PlayerNet target;
-        Vector3 targetVelocity, lastTargetPos;
         bool targetSeen;
         float nextThink;
+        float lastHealth = -1f;
+
+        /// <summary>The target as it has been seen, oldest first -- read a reaction time late.</summary>
+        readonly List<KeyValuePair<float, Vector3>> seen = new List<KeyValuePair<float, Vector3>>();
 
         NavMeshPath path;
         int corner;
@@ -53,6 +83,16 @@ namespace MageCast
         float stuckCheckAt;
         Vector3 wanderGoal;
         float wanderUntil;
+        float facing;
+
+        // dodging a shot it sees coming
+        readonly HashSet<Projectile> judged = new HashSet<Projectile>();
+        float dodgeAt = -1f, dodgeUntil = -1f;
+        Vector3 dodgeDir;
+
+        // breaking line of sight when badly hurt
+        float hideUntil = -1f, hideAgainAt;
+        Vector3 hidePoint;
 
         enum Phase { Idle, Drawing, Holding }
         Phase phase;
@@ -62,6 +102,9 @@ namespace MageCast
         Vector2[] rune;
         float drawStarted, drawLength, holdUntil, nextCastAt;
         int pointsSent;
+
+        float Reaction { get { return Mathf.Lerp(0.38f, 0.17f, Skill); } }
+        float TurnRate { get { return Mathf.Lerp(380f, 760f, Skill); } }
 
         void Start()
         {
@@ -73,6 +116,7 @@ namespace MageCast
             path = new NavMeshPath();
             BotNav.EnsureBaked();
             nextCastAt = Time.time + 1f;
+            facing = transform.eulerAngles.y;
         }
 
         float Rand(float a, float b) { return a + (float)rnd.NextDouble() * (b - a); }
@@ -90,43 +134,117 @@ namespace MageCast
                 if (hands.BotDrawing) hands.Interrupt();
                 phase = Phase.Idle;
                 target = null;
+                known.Clear();
+                seen.Clear();
+                hideUntil = dodgeUntil = dodgeAt = -1f;
+                lastHealth = -1f;
+                facing = transform.eulerAngles.y;
                 return;
             }
 
             if (Time.time >= nextThink) Think();
-            TrackTarget();
+            WatchForShots();
+            Remember();
             Move();
             Cast();
         }
 
-        // ------------------------------------------------------------------ choosing whom to fight
+        // ------------------------------------------------------------------ what it knows
 
         void Think()
         {
             nextThink = Time.time + ThinkInterval;
+            Perceive();
+
             PlayerNet best = null;
             float bestScore = float.MaxValue;
-            foreach (PlayerNet p in PlayerNet.All)
+            foreach (KeyValuePair<PlayerNet, Known> k in known)
             {
-                if (p == null || p == self || !p.IsSpawned) continue;
-                if (IgnoreHumans && !p.IsBot) continue;
-                if (Teams.Allies(self, p)) continue;
-                Health h = p.GetComponent<Health>();
-                if (h == null || h.IsDead) continue;
-                float d = Vector3.Distance(p.transform.position, transform.position);
-                if (!Sees(p)) d += 25f;              // somebody in sight first
-                if (p == target) d -= 4f;            // and do not flip between two at the same distance
-                if (d < bestScore) { bestScore = d; best = p; }
+                PlayerNet p = k.Key;
+                float score = Vector3.Distance(k.Value.Position, transform.position);
+                if (!k.Value.Visible) score += 15f;                              // somebody in sight first
+                if (Time.time - k.Value.HurtMeAt < 3f) score -= 14f;             // answer whoever shoots you
+                if (p == target) score -= 5f;                                   // and do not flip between two
+                if (score < bestScore) { bestScore = score; best = p; }
             }
+
+            bool sawBefore = targetSeen;
             if (best != target)
             {
                 target = best;
-                if (target != null) { lastTargetPos = target.transform.position; targetVelocity = Vector3.zero; }
+                seen.Clear();
             }
-            targetSeen = target != null && Sees(target);
+            targetSeen = target != null && known[target].Visible;
+
+            // just spotted: a moment to take it in before the hands start a rune
+            if (targetSeen && !sawBefore)
+                nextCastAt = Mathf.Max(nextCastAt, Time.time + Reaction + Rand(0.1f, 0.4f));
+
+            ConsiderHiding();
         }
 
-        bool Sees(PlayerNet p)
+        /// <summary>Who it can see, who just hurt it, and what it has forgotten.</summary>
+        void Perceive()
+        {
+            foreach (PlayerNet p in PlayerNet.All)
+            {
+                if (!Enemy(p)) { known.Remove(p); continue; }
+                Known k;
+                bool visible = CanSee(p);
+                if (!known.TryGetValue(p, out k))
+                {
+                    if (!visible) continue;
+                    k = new Known();
+                    known[p] = k;
+                }
+                k.Visible = visible;
+                if (visible) { k.Position = p.transform.position; k.SeenAt = Time.time; }
+            }
+
+            // hit: whoever did it is known, and where they were -- the shot came from there
+            if (lastHealth >= 0f && health.Current < lastHealth - 0.01f)
+            {
+                PlayerNet by = PlayerNet.Find(health.LastAttacker);
+                if (Enemy(by))
+                {
+                    Known k;
+                    if (!known.TryGetValue(by, out k)) { k = new Known(); known[by] = k; }
+                    k.HurtMeAt = Time.time;
+                    k.Position = by.transform.position;
+                    k.SeenAt = Mathf.Max(k.SeenAt, Time.time - 0.5f);
+                }
+            }
+            lastHealth = health.Current;
+
+            var forget = new List<PlayerNet>();
+            foreach (KeyValuePair<PlayerNet, Known> k in known)
+                if (k.Key == null || !k.Key.IsSpawned || Time.time - k.Value.SeenAt > MemorySeconds) forget.Add(k.Key);
+            foreach (PlayerNet p in forget) known.Remove(p);
+        }
+
+        bool Enemy(PlayerNet p)
+        {
+            if (p == null || p == self || !p.IsSpawned) return false;
+            if (IgnoreHumans && !p.IsBot) return false;
+            if (Teams.Allies(self, p)) return false;
+            Health h = p.GetComponent<Health>();
+            return h != null && !h.IsDead;
+        }
+
+        /// <summary>In front of it (or right next to it) and not behind a wall.</summary>
+        bool CanSee(PlayerNet p)
+        {
+            Vector3 to = p.transform.position - transform.position;
+            float flat = new Vector2(to.x, to.z).magnitude;
+            if (flat > NearbyNotice)
+            {
+                Vector3 ahead = Quaternion.Euler(0f, facing, 0f) * Vector3.forward;
+                if (Vector3.Angle(ahead, new Vector3(to.x, 0f, to.z)) > ViewHalfAngle) return false;
+            }
+            return LineOfSight(p);
+        }
+
+        bool LineOfSight(PlayerNet p)
         {
             Vector3 eye = transform.position + Vector3.up * 1.6f;
             Vector3 chest = p.transform.position + Vector3.up * 1.2f;
@@ -134,20 +252,139 @@ namespace MageCast
             foreach (RaycastHit h in Physics.RaycastAll(eye, d.normalized, d.magnitude, ~0, QueryTriggerInteraction.Ignore))
             {
                 if (h.transform.IsChildOf(transform) || h.transform.IsChildOf(p.transform)) continue;
+                if (h.collider.GetComponentInParent<PlayerNet>() != null) continue;     // people do not hide people
                 return false;
             }
             return true;
         }
 
-        void TrackTarget()
+        /// <summary>The target's track while in sight, for reading it a reaction time late.</summary>
+        void Remember()
         {
-            if (target == null) return;
-            Vector3 p = target.transform.position;
-            Vector3 v = (p - lastTargetPos) / Mathf.Max(Time.deltaTime, 0.001f);
-            v.y = 0f;
-            if (v.magnitude < 20f) targetVelocity = Vector3.Lerp(targetVelocity, v, 1f - Mathf.Exp(-6f * Time.deltaTime));
-            lastTargetPos = p;
+            if (target == null || !targetSeen) return;
+            seen.Add(new KeyValuePair<float, Vector3>(Time.time, target.transform.position));
+            while (seen.Count > 2 && seen[0].Key < Time.time - 1.5f) seen.RemoveAt(0);
         }
+
+        /// <summary>Where the target was, as seen <see cref="Reaction"/> ago (the last sighting if longer).</summary>
+        Vector3 SeenAt(float ago)
+        {
+            if (seen.Count == 0) return target != null && known.ContainsKey(target) ? known[target].Position : transform.position;
+            float t = Time.time - ago;
+            for (int i = seen.Count - 1; i > 0; i--)
+                if (seen[i - 1].Key <= t)
+                {
+                    float span = seen[i].Key - seen[i - 1].Key;
+                    float f = span > 1e-4f ? Mathf.Clamp01((t - seen[i - 1].Key) / span) : 1f;
+                    return Vector3.Lerp(seen[i - 1].Value, seen[i].Value, f);
+                }
+            return seen[0].Value;
+        }
+
+        Vector3 Perceived { get { return SeenAt(Reaction); } }
+
+        /// <summary>The target's velocity as it looked a reaction time ago -- a change of course is seen late.</summary>
+        Vector3 PerceivedVelocity
+        {
+            get
+            {
+                Vector3 v = (SeenAt(Reaction) - SeenAt(Reaction + 0.2f)) / 0.2f;
+                v.y = 0f;
+                return v.magnitude < 15f ? v : Vector3.zero;
+            }
+        }
+
+        // ------------------------------------------------------------------ dodging and hiding
+
+        /// <summary>
+        /// A shot it can see, on course to pass within a metre of it, is sidestepped -- a reaction time
+        /// after it saw it, if that is still in time, and not every time (better with skill).
+        /// </summary>
+        void WatchForShots()
+        {
+            if (dodgeAt > 0f && Time.time >= dodgeAt)
+            {
+                dodgeAt = -1f;
+                dodgeUntil = Time.time + Rand(0.35f, 0.55f);
+                Dodges++;
+            }
+            if (dodgeAt > 0f || Time.time < dodgeUntil) return;
+
+            Vector3 me = transform.position + Vector3.up * 1.1f;
+            Vector3 ahead = Quaternion.Euler(0f, facing, 0f) * Vector3.forward;
+            for (int i = Projectile.Live.Count - 1; i >= 0; i--)
+            {
+                Projectile p = Projectile.Live[i];
+                if (p == null || p.Finished || judged.Contains(p)) continue;
+                Transform owner = p.Owner;
+                if (owner == transform || (owner != null && Teams.Spares(owner, self))) { judged.Add(p); continue; }
+
+                Vector3 rel = me - p.transform.position;
+                Vector3 v = p.Velocity;
+                float speed2 = v.sqrMagnitude;
+                if (speed2 < 1f) continue;
+                float tHit = Vector3.Dot(rel, v) / speed2;
+                if (tHit <= 0f || tHit > 1.2f) continue;
+                if ((rel - v * tHit).magnitude > 1.1f) continue;
+
+                // seen at all: ahead of it, or close enough to hear
+                Vector3 toShot = p.transform.position - transform.position;
+                if (toShot.magnitude > 6f && Vector3.Angle(ahead, new Vector3(toShot.x, 0f, toShot.z)) > ViewHalfAngle) continue;
+
+                judged.Add(p);
+                if (tHit < Reaction + 0.1f) continue;                           // too late to do anything
+                if (rnd.NextDouble() > 0.2f + 0.5f * Skill) continue;           // did not react
+
+                Vector3 side = Vector3.Cross(Vector3.up, new Vector3(v.x, 0f, v.z).normalized);
+                if (rnd.NextDouble() < 0.5) side = -side;
+                if (!BotNav.Open(transform.position, side, 1.5f)) side = -side;
+                dodgeDir = side;
+                dodgeAt = Time.time + Reaction;
+                break;
+            }
+            if (judged.Count > 64) judged.RemoveWhere(p => p == null);
+        }
+
+        /// <summary>Badly hurt, with no barrier up: out of its sight for a few seconds, then back.</summary>
+        void ConsiderHiding()
+        {
+            if (target == null || Time.time < hideAgainAt || Time.time < hideUntil) return;
+            if (health.Fraction > 0.35f || CastShield.Of(self.AttackerId) != null || !targetSeen) return;
+            if (rnd.NextDouble() > 0.35 + 0.4 * Skill) { hideAgainAt = Time.time + 2f; return; }
+
+            Vector3 threat = known[target].Position + Vector3.up * 1.6f;
+            Vector3 best = Vector3.zero;
+            float bestDistance = float.MaxValue;
+            for (int i = 0; i < 14; i++)
+            {
+                Vector3 p = BotNav.RandomPoint(transform.position, 9f, rnd);
+                float d = Vector3.Distance(p, transform.position);
+                if (d < 2f || d > bestDistance) continue;
+                if (!Blocked(threat, p + Vector3.up * 1.3f)) continue;
+                best = p;
+                bestDistance = d;
+            }
+            hideAgainAt = Time.time + 9f;
+            if (bestDistance == float.MaxValue) return;
+            hidePoint = best;
+            hideUntil = Time.time + Rand(2.5f, 4.5f);
+            Retreats++;
+        }
+
+        /// <summary>Something of the map between two points.</summary>
+        static bool Blocked(Vector3 from, Vector3 to)
+        {
+            Vector3 d = to - from;
+            foreach (RaycastHit h in Physics.RaycastAll(from, d.normalized, d.magnitude, ~0, QueryTriggerInteraction.Ignore))
+            {
+                if (h.collider.GetComponentInParent<PlayerNet>() != null) continue;
+                if (h.collider.GetComponentInParent<CastShield>() != null) continue;
+                return true;
+            }
+            return false;
+        }
+
+        bool Hiding { get { return Time.time < hideUntil; } }
 
         // ------------------------------------------------------------------ moving
 
@@ -156,32 +393,49 @@ namespace MageCast
             Vector3 pos = transform.position;
             Vector3 want = Vector3.zero;
             bool sprint = false;
-            float face;
+            float face = facing;
 
             if (target == null)
             {
-                // nobody to fight: wander the map
+                // nobody to fight: wander the map, looking where it goes
                 if (Time.time > wanderUntil || (wanderGoal - pos).sqrMagnitude < 4f)
                 {
                     wanderGoal = BotNav.RandomPoint(Vector3.zero, 30f, rnd);
                     wanderUntil = Time.time + 8f;
                 }
                 want = Follow(wanderGoal);
-                face = Yaw(want, transform.eulerAngles.y);
+                // looking about as it goes, the way a person swings the camera -- it only sees ahead
+                face = Yaw(want, facing) + Mathf.Sin(Time.time * 0.9f + GetInstanceID()) * 55f;
             }
             else
             {
-                Vector3 to = target.transform.position - pos;
+                Known k = known[target];
+                Vector3 last = targetSeen ? Perceived : k.Position;
+                Vector3 to = last - pos;
                 to.y = 0f;
                 float d = to.magnitude;
                 Vector3 toDir = d > 0.01f ? to / d : transform.forward;
 
-                if (!targetSeen || d > FightRange + 10f)
+                if (Hiding)
                 {
-                    // go and find them, by the paths
-                    want = Follow(target.transform.position);
+                    // out of sight, facing back towards the danger
+                    want = Follow(hidePoint);
+                    if ((hidePoint - pos).sqrMagnitude < 1f) want = Vector3.zero;
+                    face = Yaw(toDir, facing);
+                }
+                else if (!targetSeen)
+                {
+                    // to where it was last seen; nobody there -- forget it
+                    want = Follow(k.Position);
+                    sprint = d > 14f && !hands.BotBusy;
+                    face = Yaw(want.sqrMagnitude > 0.01f ? want : toDir, facing);
+                    if (d < 2f) { known.Remove(target); target = null; }
+                }
+                else if (d > FightRange + 10f)
+                {
+                    want = Follow(last);
                     sprint = d > 20f && !hands.BotBusy;
-                    face = targetSeen ? Yaw(toDir, 0f) : Yaw(want, transform.eulerAngles.y);
+                    face = Yaw(toDir, facing);
                 }
                 else
                 {
@@ -190,17 +444,21 @@ namespace MageCast
                     {
                         if (rnd.NextDouble() < 0.6) strafeSign = -strafeSign;
                         strafeSwitchAt = Time.time + Rand(0.6f, 1.8f);
-                        if (!hands.BotBusy && rnd.NextDouble() < 0.12) motor.ScriptedJump = true;
+                        if (!hands.BotBusy && rnd.NextDouble() < 0.1) motor.ScriptedJump = true;
                     }
                     Vector3 side = Vector3.Cross(Vector3.up, toDir) * strafeSign;
                     if (!BotNav.Open(pos, side, 1.5f)) { strafeSign = -strafeSign; side = -side; }
                     float range = d > FightRange + 3f ? 0.7f : d < FightRange - 5f ? -0.7f : 0f;
                     want = (side + toDir * range).normalized;
-                    if (!BotNav.Open(pos, want, 1.5f)) want = Follow(target.transform.position);
-                    face = Yaw(toDir, 0f);
-                    self.AimPoint.Value = target.transform.position + Vector3.up * 1.3f;
+                    if (!BotNav.Open(pos, want, 1.5f)) want = Follow(last);
+                    face = Yaw(toDir, facing);
                 }
+
+                if (target != null) self.AimPoint.Value = last + Vector3.up * 1.3f;
             }
+
+            // a shot it saw coming: a step aside, whatever else it was doing
+            if (Time.time < dodgeUntil) { want = dodgeDir; sprint = false; }
 
             // stuck against something: hop and change sides
             if (Time.time >= stuckCheckAt)
@@ -215,8 +473,10 @@ namespace MageCast
                 stuckCheckAt = Time.time + 1f;
             }
 
-            motor.ScriptedYaw = face;
-            Quaternion toLocal = Quaternion.Euler(0f, -face, 0f);
+            // turning at the speed of a hand on a mouse, not in one frame
+            facing = Mathf.MoveTowardsAngle(facing, face, TurnRate * Time.deltaTime);
+            motor.ScriptedYaw = facing;
+            Quaternion toLocal = Quaternion.Euler(0f, -facing, 0f);
             Vector3 local = toLocal * want;
             motor.ScriptedMove = new Vector2(local.x, local.z);
             motor.ScriptedSprint = sprint;
@@ -246,6 +506,17 @@ namespace MageCast
 
         static Vector3 Flat(Vector3 v) { v.y = 0f; return v; }
 
+        /// <summary>How far off its target it is turned, degrees.</summary>
+        float FacingError
+        {
+            get
+            {
+                if (target == null) return 180f;
+                Vector3 to = Perceived - transform.position;
+                return Mathf.Abs(Mathf.DeltaAngle(facing, Yaw(to, facing)));
+            }
+        }
+
         // ------------------------------------------------------------------ casting
 
         void Cast()
@@ -253,8 +524,8 @@ namespace MageCast
             switch (phase)
             {
                 case Phase.Idle:
-                    if (target == null || !targetSeen || Time.time < nextCastAt || !hands.BotCanStart) return;
-                    float d = Vector3.Distance(target.transform.position, transform.position);
+                    if (target == null || !targetSeen || Hiding || Time.time < nextCastAt || !hands.BotCanStart) return;
+                    float d = Vector3.Distance(Perceived, transform.position);
                     if (d > 32f) return;
                     chosen = ChooseSpell(d);
                     if (chosen == null) { nextCastAt = Time.time + 0.3f; return; }
@@ -273,7 +544,7 @@ namespace MageCast
                     {
                         // knocked out of the hand (air, a shock patch)
                         phase = Phase.Idle;
-                        nextCastAt = Time.time + Rand(0.3f, 0.7f);
+                        nextCastAt = Time.time + Rand(0.4f, 0.9f);
                         return;
                     }
                     float t = Mathf.Clamp01((Time.time - drawStarted) / drawLength);
@@ -283,28 +554,29 @@ namespace MageCast
                     if (hands.BotHeldTier > 0)
                     {
                         phase = Phase.Holding;
-                        holdUntil = Time.time + Rand(0.15f, 0.5f);
+                        holdUntil = Time.time + Rand(0.2f, 0.6f);
                     }
                     else
                     {
                         phase = Phase.Idle;
-                        nextCastAt = Time.time + Rand(0.6f, 1f);
+                        nextCastAt = Time.time + Rand(0.6f, 1.1f);
                     }
                     break;
 
                 case Phase.Holding:
                     if (hands.BotHeldTier == 0) { phase = Phase.Idle; nextCastAt = Time.time + 0.4f; return; }
-                    if (target == null || !targetSeen || Time.time < holdUntil) return;
+                    // like a person: sends when it has the target in front of it, not over its shoulder
+                    if (target == null || !targetSeen || Hiding || Time.time < holdUntil || FacingError > 18f) return;
                     if (hands.BotSend(AimFor(chosen)))
                     {
                         phase = Phase.Idle;
-                        nextCastAt = Time.time + Rand(0.2f, 0.9f);
+                        nextCastAt = Time.time + Rand(0.35f, 1.1f);
                     }
                     break;
             }
         }
 
-        /// <summary>A spell for the moment, from those whose element is ready.</summary>
+        /// <summary>A spell for the moment, from those whose rune will make a spell once drawn.</summary>
         Spell ChooseSpell(float distance)
         {
             var options = new List<KeyValuePair<Spell, float>>();
@@ -318,11 +590,12 @@ namespace MageCast
             Add(options, ice, distance < 18f ? 3f : 1.5f);
             Add(options, bolt, onConductor ? 12f : distance > 18f ? 3f : 2f);
             Add(options, air, distance < 6f ? 6f : drawing ? 4f : 0.8f);
-            Add(options, ward, health.Fraction < 0.4f && CastShield.Of(self.AttackerId) == null ? 3f : 0.15f);
+            bool beingShot = known.ContainsKey(target) && Time.time - known[target].HurtMeAt < 2f;
+            Add(options, ward, CastShield.Of(self.AttackerId) != null ? 0f
+                             : health.Fraction < 0.4f ? 3f : beingShot ? 0.8f : 0.15f);
 
-            // A barrier now and then for no reason is fine; one every time the attacks are on the global
-            // cooldown is not -- that is filling the pause with whatever is free, the thing the pause is
-            // there to stop. Unhurt, wait for an attack instead.
+            // A barrier now and then for no reason is fine; one every time the attacks are not ready is
+            // not -- that is filling the pause with whatever is free. Unhurt, wait for an attack instead.
             if (options.Count == 1 && options[0].Key == ward && options[0].Value < 1f) return null;
 
             float total = 0f;
@@ -376,28 +649,35 @@ namespace MageCast
         }
 
         /// <summary>
-        /// Where to send it: where the target will be when the spell gets there (two passes of the lead),
-        /// at the chest -- or at the feet, for a patch, now and then -- plus an aim error that grows with
-        /// distance and shrinks with skill.
+        /// Where to send it: where the target looked to be going, a reaction time ago, when the spell
+        /// gets there (two passes of the lead) -- at the chest, or at the feet for a patch now and then --
+        /// plus an aim error that grows with distance and with how fast the target crosses its view, and
+        /// shrinks with skill.
         /// </summary>
         Vector3 AimFor(Spell spell)
         {
-            Vector3 feet = target.transform.position;
+            Vector3 feet = Perceived;
             if (spell == hands.SpellByIndex(GestureCaster.BarrierId)) return feet + Vector3.up * 1.2f;
 
             int tier = hands.BotHeldTier;
             float speed = tier <= 1 && spell.speedTierI > 0f ? spell.speedTierI : spell.speed;
             Vector3 from = hands.MuzzlePoint;
+            Vector3 velocity = PerceivedVelocity;
+            // the lead is judged from what it saw, over the time the shot will take -- reaction included
             Vector3 aim = feet + Vector3.up * 1.1f;
             for (int i = 0; i < 2; i++)
             {
-                float flight = Vector3.Distance(from, aim) / Mathf.Max(1f, speed);
-                aim = feet + Vector3.up * 1.1f + targetVelocity * flight;
+                float flight = Vector3.Distance(from, aim) / Mathf.Max(1f, speed) + Reaction;
+                aim = feet + Vector3.up * 1.1f + velocity * flight;
             }
             bool patch = tier >= 2 && spell.groundEffect != GroundEffect.None && spell.groundEffect != GroundEffect.Updraft;
             if (patch && rnd.NextDouble() < 0.3) aim.y = feet.y + 0.05f;
 
-            float error = (0.015f + (1f - Skill) * 0.05f) * Vector3.Distance(from, aim);
+            Vector3 line = (aim - from).normalized;
+            float crossing = Vector3.Cross(line, velocity).magnitude;           // m/s across the line of fire
+            float distance = Vector3.Distance(from, aim);
+            // tuned (13 Oct) so a 60 % bot lands about 40 % on players, as a person does
+            float error = (0.028f + (1f - Skill) * 0.07f) * distance + crossing * (0.16f - 0.08f * Skill);
             aim += new Vector3(Rand(-1f, 1f), Rand(-0.6f, 0.6f), Rand(-1f, 1f)) * error;
             return aim;
         }
