@@ -77,7 +77,7 @@ namespace MageCast
             "S kouzlem v ruce jen jdeš (70 % rychlosti) a nedá se sprintovat.\n\n" +
             "<b>Ostatní</b>\n" +
             "Esc - menu (nastavení, nápověda, odchod)\n" +
-            "F6 - schová / ukáže tabulku run vpravo nahoře\n" +
+            "F6 - schová / ukáže panel kouzel dole\n" +
             "V tréninku: F1-F5 cvičný cíl pro záznam, F7 přepne rozpoznávání run (čáry a úhly / starý $P)";
 
         static readonly string Rules =
@@ -103,7 +103,7 @@ namespace MageCast
             "Cooldown: stejný prvek jde poslat znovu až " + SpellTiers.ElementCooldown + " s po minulém. " +
             "Navíc globální cooldown (GCD): po odeslání útočného kouzla nejde " + SpellTiers.GlobalCooldown + " s poslat žádné jiné útočné. " +
             "Bariéra má svůj vlastní - obrana nečeká na rytmus útoku. Kreslit a držet můžeš i mezitím: další runu nakresli během " +
-            "pauzy. Klik do " + SpellTiers.QueueWindow + " s před koncem se zapamatuje a kouzlo odletí samo. Tabulka run ukazuje, co ještě čeká.\n" +
+            "pauzy. Klik do " + SpellTiers.QueueWindow + " s před koncem se zapamatuje a kouzlo odletí samo. Panel kouzel dole ukazuje, co ještě čeká: tmavá ručička s odpočtem, samotné GCD bez čísla.\n" +
             "Zámek školy: když tě vzduch nebo šokové pole přeruší při kreslení a z rozkreslené runy už jde poznat, co to je, " +
             "ten prvek se ti zamkne na " + SpellTiers.SchoolLock + " s (LOCKED). Přerušení moc brzy nezamkne nic.\n" +
             "Tier III v ruce vydrží " + "4" + " s, pak spadne na II. Tier II vydrží napořád.\n" +

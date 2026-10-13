@@ -134,7 +134,7 @@ namespace MageCast
                 // camera or HUD of this machine belongs to it. Shown like anybody else's player.
                 if (motor != null) { motor.MakeBot(); motor.TeleportTo(transform.position, transform.eulerAngles.y); }
                 if (caster != null) caster.MakeBot();
-                SetEnabled<GestureLegend>(false);
+                SetEnabled<SpellBar>(false);
                 SetEnabled<AimSurfaceMarker>(false);
                 SetEnabled<PlayerHud>(false);
                 if (GetComponent<HealthBar>() == null) gameObject.AddComponent<HealthBar>();
@@ -161,7 +161,7 @@ namespace MageCast
                 // for the position.
                 SetEnabled<PlayerMotor>(false);
                 SetEnabled<GestureCaster>(false);
-                SetEnabled<GestureLegend>(false);
+                SetEnabled<SpellBar>(false);
                 SetEnabled<AimSurfaceMarker>(false);
                 SetEnabled<PlayerHud>(false);
 

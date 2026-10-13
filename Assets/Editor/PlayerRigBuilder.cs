@@ -51,7 +51,7 @@ namespace MageCast.EditorTools
 
             // The rune crib sheet, top right. Temporary by design -- F6 hides it, and deleting the
             // component is the whole removal.
-            player.AddComponent<MageCast.Gestures.GestureLegend>();
+            player.AddComponent<MageCast.Gestures.SpellBar>();
 
             // Shows, while a spell is held, what it will do where you are pointing -- floor, wall or
             // person now give different effects from one gesture, and that must be visible beforehand.

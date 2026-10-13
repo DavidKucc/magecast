@@ -416,6 +416,7 @@ namespace MageCast.Gestures
             drawing = true;
             stroke.Clear();
             strokeLength = 0f;
+            previewId = null;
 
             cam.LookEnabled = false;
             motor.SpeedMultiplier = castMoveSpeed;
@@ -475,11 +476,13 @@ namespace MageCast.Gestures
 
         void UpdatePreview()
         {
+            previewId = null;
             if (stroke.Count < 8 || strokeLength < minStrokeLength) { trail.SetPreview(null); return; }
 
             if (segmentRecognition)
             {
                 RuneSegments.Match m = RuneSegments.Recognise(stroke);
+                previewId = m.Name;
                 trail.SetPreview(m.Name == null ? (Color?)null
                                  : CooldownLeft(m.Name) > 0f ? CoolingColour
                                  : PreviewColour(m.Name, PrecisionTier(m.Precision)));
@@ -489,6 +492,7 @@ namespace MageCast.Gestures
             RecognitionResult r = Recognise();
             CastQuality q = Grade(r);
             string id = ResolveGestureId(r);
+            previewId = q == CastQuality.Fizzle ? null : id;
 
             trail.SetPreview(q == CastQuality.Fizzle || id == null
                              ? (Color?)null
@@ -982,16 +986,23 @@ namespace MageCast.Gestures
         }
 
         /// <summary>
-        /// The castable vocabulary, for anything that needs to show it -- the on-screen legend, for now.
-        /// Read from the same mapping the caster uses, so a legend cannot drift from what actually fires.
+        /// The castable vocabulary and the state of each spell, for the spell bar. Read from the same
+        /// mapping the caster uses, so the bar cannot drift from what actually fires.
         /// </summary>
         public struct VocabularyEntry
         {
             public string Id;
             public string SpellName;
             public Color Colour;
+            public SpellRole Role;
             public float Cooldown;      // seconds until it can be sent again
-            public bool Locked;         // ...because an interrupt locked it
+            public float Duration;      // how long the timer holding it back runs in all, for the sweep
+            public bool Locked;         // ...held back by an interrupt's lock
+            public bool GlobalOnly;     // ...held back only by the global cooldown
+            public bool Held;           // this is the spell in the hand
+            public int HeldTier;
+            public bool Queued;         // ...and a send is waiting for the cooldown
+            public bool Drawing;        // the rune being drawn reads as this one right now
         }
 
         public List<VocabularyEntry> Vocabulary()
@@ -1002,11 +1013,30 @@ namespace MageCast.Gestures
             foreach (string id in ids)
             {
                 Spell s = SpellFor(id);
-                list.Add(new VocabularyEntry { Id = id, SpellName = s.displayName, Colour = s.colour,
-                                               Cooldown = CooldownLeft(s), Locked = LockLeft(s) > 0f });
+                byte index = IndexOf(s);
+                float t, element = 0f, global = 0f, lockLeft = LockLeft(s);
+                if (readyAt.TryGetValue(index, out t)) element = Left(t);
+                if (globalReadyAt.TryGetValue(SpellTiers.RoleOf(index), out t)) global = Left(t);
+
+                // the sweep follows whichever timer ends last, over that timer's own length
+                float left = Mathf.Max(lockLeft, Mathf.Max(element, global));
+                float duration = left <= 0f ? 1f
+                               : lockLeft >= left ? SpellTiers.SchoolLock
+                               : element >= left ? SpellTiers.ElementCooldown
+                               : SpellTiers.GlobalCooldown;
+                bool held = holding && heldSpell == s;
+                list.Add(new VocabularyEntry {
+                    Id = id, SpellName = s.displayName, Colour = s.colour, Role = SpellTiers.RoleOf(index),
+                    Cooldown = left, Duration = duration, Locked = lockLeft > 0f && lockLeft >= left,
+                    GlobalOnly = left > 0f && global >= left && element < left && lockLeft < left,
+                    Held = held, HeldTier = held ? SpellTiers.Of(heldQuality) : 0, Queued = held && sendQueued,
+                    Drawing = drawing && previewId == id });
             }
             return list;
         }
+
+        /// <summary>The rune the stroke being drawn reads as at the moment (the trail's colour), or null.</summary>
+        string previewId;
 
         GestureTemplate TemplateFor(string shapeName)
         {

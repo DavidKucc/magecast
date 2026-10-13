@@ -104,7 +104,7 @@ Tier mění, **co kouzlo dělá**, ne jen kolik ubere — poškození samo se s 
   nejvíc, na kraji nic), **i autor**. Zeď nebo bariéra mezi tím ho zastaví. Splash nesnižuje tier
   drženého kouzla a nic nezapaluje ani nezpomaluje.
 - **Cooldown 2 s na prvek**: stejný prvek jde poslat znovu až 2 s po minulém. Kreslit a držet ho můžeš
-  i mezitím (čára je při kreslení červená), ostatní prvky jsou volné. Tabulka run (F6) ukazuje zbývající
+  i mezitím (čára je při kreslení červená), ostatní prvky jsou volné. Panel kouzel dole ukazuje zbývající
   čas. Kenaz–Kenaz–Kenaz nejde, Kenaz–Sowulo–Kenaz ano. Blesk do
   ledu se vybije na každém tieru — je to jeho hlavní použití.
 - **Globální cooldown (GCD), jako ve WoW, zvlášť pro každý druh kouzla:** po odeslání **útočného**
@@ -113,11 +113,11 @@ Tier mění, **co kouzlo dělá**, ne jen kolik ubere — poškození samo se s 
   Kreslit a držet jde i během GCD — další runa se kreslí v pauze a posílá na jejím konci. Klik v
   posledních 0,4 s se zapamatuje a kouzlo odletí samo, jakmile to jde (jako spell queue ve WoW).
   Proč: s pěti prvky na vlastních cooldownech bylo vždycky něco připravené a v šesti lidech vyhrávalo
-  střílet cokoli. Tabulka run ukazuje i GCD.
+  střílet cokoli. Panel kouzel ukazuje i GCD (sweep bez čísla).
 - **Vzduch přeruší kreslení** při každém zásahu, na každém tieru.
 - **Zámek školy (jako ve WoW):** když tě přeruší cizí kouzlo (zásah vzduchem, šokové pole) a z toho, co už
   máš rozkreslené, jde poznat, která runa to je, ten prvek se ti **zamkne na 3 s** — nad hlavou se ukáže
-  „INTERRUPTED – FIRE LOCKED“ a v tabulce run „LOCKED“. Runa se čte stejně, jako ji čte soupeř: hotová
+  „INTERRUPTED – FIRE LOCKED“ a v panelu kouzel červené „LOCKED“. Runa se čte stejně, jako ji čte soupeř: hotová
   runa podle sebe, rozkreslená podle prvních čar, a jen když jedna runa sedí jasně líp než ostatní
   („<“ je oheň, i když blesk začíná stejně). Přerušení moc brzy nezamkne nic — přerušit pozdě, když je
   runa vidět, se vyplatí víc. Menu, smrt ani šplhání nic nezamykají.
@@ -130,8 +130,15 @@ Tier mění, **co kouzlo dělá**, ne jen kolik ubere — poškození samo se s 
 V menu je **„How to play“** — ovládání, pravidla a všechna kouzla s runami a tiery. V nastavení je
 hlasitost celé hry a zvlášť hlasitost kouzel (výchozí 70 %).
 
-V pravém horním rohu je **legenda** se všemi gesty (`F6` ji schová). Kreslí skutečné šablony
-rozpoznávače, ne ručně dělané ikonky, aby nikdy nemohla ukazovat něco jiného, než co hra čeká.
+Dole uprostřed je **panel kouzel** jako ve WoW (`F6` ho schová): dlaždice pro každé kouzlo, útočná
+pohromadě, obranná zvlášť (speciální, až budou, jako třetí skupina). Runy na dlaždicích kreslí skutečné
+rohy šablon rozpoznávače, takže panel je zároveň tahák. Co ukazuje:
+- **tmavá ručička** (čtvercový sweep po směru hodin od dvanácté), dokud kouzlo nejde poslat; **číslo**
+  uprostřed = vlastní cooldown prvku nebo zámek. Jen **GCD** je sweep **bez čísla** (jako ve WoW),
+- **červeně a LOCKED** — prvek zamčený přerušením,
+- **zlatý rámeček a tier** (I/II/III) — kouzlo v ruce, nad ním **QUEUED**, když čeká odeslání,
+- **bílý rámeček** — runa, kterou právě kreslíš, se teď čte jako tohle kouzlo,
+- **záblesk** — cooldown právě skončil.
 
 ---
 
