@@ -12,7 +12,8 @@ namespace MageCast.Gestures
     ///   sweep, no number       only the global cooldown after the last attack, as in WoW
     ///   red, LOCKED            an interrupt locked the element (SpellTiers.SchoolLock)
     ///   gold frame, tier       the spell in your hand; QUEUED when a send waits for the cooldown
-    ///   white frame            the rune you are drawing reads as this one right now
+    ///   white frame            the rune you are drawing reads as this one right now; red if,
+    ///                          finished now, it would make nothing (cooldown or lock)
     ///   a flash                a cooldown has just ended
     ///
     /// The tiles show the runes from the recogniser's own corners, so the bar is also the crib sheet:
@@ -130,9 +131,10 @@ namespace MageCast.Gestures
             if (readyFlash.TryGetValue(s.Id, out flash) && Time.time - flash < 0.35f)
                 Fill(r, new Color(1f, 1f, 1f, 0.55f * (1f - (Time.time - flash) / 0.35f)));
 
-            // the frame: gold in the hand, white while being drawn, the element's colour otherwise
+            // the frame: gold in the hand, white while being drawn -- red if, finished now, the rune
+            // would make nothing -- the element's colour otherwise
             Color frame = s.Held ? Gold
-                        : s.Drawing ? Color.white
+                        : s.Drawing ? (s.WouldFail ? LockRed : Color.white)
                         : cooling ? new Color(0.45f, 0.45f, 0.5f, 0.6f)
                         : new Color(s.Colour.r, s.Colour.g, s.Colour.b, 0.75f);
             Frame(r, s.Held || s.Drawing ? 3f : 2f, frame);

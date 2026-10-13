@@ -36,17 +36,19 @@ namespace MageCast.Gestures
         /// <summary>Precision a tier II is left with when a hit knocks it to I -- just under the II line.</summary>
         public const float KnockedPrecision = 0.64f;
 
-        // Every element's own button-down: a spell of the same element cannot be SENT again until this
-        // long after the last one was. Drawing is free meanwhile -- you may draw it and hold it -- and
-        // the other elements are free, so it stops Kenaz-Kenaz-Kenaz without slowing the game down.
-        public const float ElementCooldown = 2f;
+        // Every element's own cooldown: a spell of the same element cannot be made again until this long
+        // after the last one was sent. A rune of it finished sooner makes nothing (NOT READY) and the
+        // drawing was wasted -- watch the bar. Within QueueWindow of the end it does make its spell.
+        // The other elements are free. (2 s until 13 Oct, raised with the global cooldown.)
+        public const float ElementCooldown = 2.5f;
 
         // The global cooldown, as in WoW, one per kind of spell: after sending an attack, no other
         // attack can be SENT for this long, whatever its element. Drawing is free meanwhile -- the next
         // rune is drawn during the pause and sent as it ends. With five elements on separate cooldowns
         // there was always something ready, and six players found the best play was to fire whatever
         // came up. A barrier is on its own clock: defence never waits for the rhythm of attack.
-        public const float GlobalCooldown = 1.3f;
+        // (1.3 s until 13 Oct; 1.5 is WoW's.)
+        public const float GlobalCooldown = 1.5f;
 
         /// <summary>
         /// A send clicked this close to the end of a cooldown goes off by itself when it ends (WoW's spell
@@ -58,7 +60,7 @@ namespace MageCast.Gestures
         /// Interrupted mid-rune (air, a shock patch): the element that could already be read from what was
         /// drawn is locked for this long -- WoW's school lockout. Read too early to tell, nothing is locked.
         /// </summary>
-        public const float SchoolLock = 3f;
+        public const float SchoolLock = 3.5f;
 
         /// <summary>The role of a spell, by its id (GestureCaster.BarrierId...). Special: the portal, one day.</summary>
         public static SpellRole RoleOf(byte spellId)

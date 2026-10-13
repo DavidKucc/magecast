@@ -483,8 +483,9 @@ namespace MageCast.Gestures
             {
                 RuneSegments.Match m = RuneSegments.Recognise(stroke);
                 previewId = m.Name;
+                // red: finished now, this rune would make nothing (its element's cooldown or a lock)
                 trail.SetPreview(m.Name == null ? (Color?)null
-                                 : CooldownLeft(m.Name) > 0f ? CoolingColour
+                                 : WouldFail(SpellFor(m.Name)) ? CoolingColour
                                  : PreviewColour(m.Name, PrecisionTier(m.Precision)));
                 return;
             }
@@ -583,6 +584,7 @@ namespace MageCast.Gestures
             }
 
             Spell cast = SpellFor(id);
+            if (NotReady(cast)) return;
 
             heldSpell = cast;
             heldQuality = quality;
@@ -613,6 +615,44 @@ namespace MageCast.Gestures
                                    metrics.Steadiness, metrics.Definition,
                                    metrics.Weakest == "-" ? "" : "   weakest: " + metrics.Weakest));
         }
+
+        /// <summary>
+        /// A rune finished for an element that is still on its own cooldown, or locked: nothing is made.
+        /// The time spent drawing it is the price of not watching the bar. The global cooldown does not
+        /// count -- the next rune is meant to be drawn during it -- and a rune finished within the queue
+        /// window of the end still makes its spell, which then goes as soon as it can.
+        /// </summary>
+        bool NotReady(Spell spell)
+        {
+            float wait = BlockLeft(spell);
+            if (wait <= SpellTiers.QueueWindow) return false;
+
+            bool locked = LockLeft(spell) >= wait;
+            string why = locked ? "LOCKED" : "NOT READY";
+            motor.SprintLocked = false;
+            motor.SpeedMultiplier = 1f;
+            Headline(spell.displayName + "  " + why + "  " + wait.ToString("0.0") + " s", FailColour, 1.3f);
+            if (!IsBot) WorldPopups.Word(transform, why, FailColour);    // a bot's is shown by the network
+            // tier 1 on a fizzle: it was drawn well enough, its element was not ready (or locked: 2)
+            if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Fizzle, IndexOf(spell), (byte)(locked ? 2 : 1));
+            Announce(spell.displayName + " drawn " + wait.ToString("0.0") + " s too soon - nothing made");
+            return true;
+        }
+
+        /// <summary>
+        /// Seconds the element is held back by its own cooldown or a lock -- what stops a rune of it from
+        /// being made at all. The global cooldown only holds back the send.
+        /// </summary>
+        public float BlockLeft(Spell spell)
+        {
+            if (spell == null) return 0f;
+            float t, left = 0f;
+            if (readyAt.TryGetValue(IndexOf(spell), out t)) left = Left(t);
+            return Mathf.Max(left, LockLeft(spell));
+        }
+
+        /// <summary>Whether a rune of this element, finished now, would make nothing.</summary>
+        public bool WouldFail(Spell spell) { return BlockLeft(spell) > SpellTiers.QueueWindow; }
 
         // ---------------------------------------------------------------- sending
 
@@ -767,6 +807,9 @@ namespace MageCast.Gestures
                 if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Fizzle, 0);
                 return;
             }
+
+            // a bot pays for drawing an element too soon exactly as a person does
+            if (NotReady(spell)) return;
 
             heldSpell = spell;
             heldQuality = quality;
@@ -960,7 +1003,7 @@ namespace MageCast.Gestures
             return CastQuality.Weak;
         }
 
-        /// <summary>The line while drawing a rune whose element cannot be sent yet.</summary>
+        /// <summary>The line while drawing a rune that, finished now, would make nothing.</summary>
         static readonly Color CoolingColour = new Color(0.85f, 0.25f, 0.2f, 0.9f);
 
         Color PreviewColour(string gestureId, CastQuality q)
@@ -1003,6 +1046,7 @@ namespace MageCast.Gestures
             public int HeldTier;
             public bool Queued;         // ...and a send is waiting for the cooldown
             public bool Drawing;        // the rune being drawn reads as this one right now
+            public bool WouldFail;      // finished now, a rune of it would make nothing
         }
 
         public List<VocabularyEntry> Vocabulary()
@@ -1030,7 +1074,7 @@ namespace MageCast.Gestures
                     Cooldown = left, Duration = duration, Locked = lockLeft > 0f && lockLeft >= left,
                     GlobalOnly = left > 0f && global >= left && element < left && lockLeft < left,
                     Held = held, HeldTier = held ? SpellTiers.Of(heldQuality) : 0, Queued = held && sendQueued,
-                    Drawing = drawing && previewId == id });
+                    Drawing = drawing && previewId == id, WouldFail = WouldFail(s) });
             }
             return list;
         }

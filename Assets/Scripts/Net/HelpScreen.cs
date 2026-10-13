@@ -100,9 +100,11 @@ namespace MageCast
             "(viz Kouzla); poškození samo se hýbe jen 0,8-1,2x.\n" +
             "Tier I je holé kouzlo: žádná plocha, žádný odraz, žádná kombinace - ale letí rychleji a oheň s ledem " +
             "při dopadu mimo člověka zraní okolí (splash).\n" +
-            "Cooldown: stejný prvek jde poslat znovu až " + SpellTiers.ElementCooldown + " s po minulém. " +
+            "Cooldown: stejný prvek jde vytvořit znovu až " + SpellTiers.ElementCooldown + " s po minulém odeslání. " +
+            "Runa prvku, který má ještě cooldown (nebo je zamčený), nevznikne - NOT READY - a čas kreslení je pryč. " +
+            "Čára i rámeček v panelu jsou pak při kreslení červené. Runa dokreslená těsně před koncem (" + SpellTiers.QueueWindow + " s) ještě vznikne.\n" +
             "Navíc globální cooldown (GCD): po odeslání útočného kouzla nejde " + SpellTiers.GlobalCooldown + " s poslat žádné jiné útočné. " +
-            "Bariéra má svůj vlastní - obrana nečeká na rytmus útoku. Kreslit a držet můžeš i mezitím: další runu nakresli během " +
+            "Bariéra má svůj vlastní - obrana nečeká na rytmus útoku. GCD tvoření nebrání: další runu nakresli a drž během " +
             "pauzy. Klik do " + SpellTiers.QueueWindow + " s před koncem se zapamatuje a kouzlo odletí samo. Panel kouzel dole ukazuje, co ještě čeká: tmavá ručička s odpočtem, samotné GCD bez čísla.\n" +
             "Zámek školy: když tě vzduch nebo šokové pole přeruší při kreslení a z rozkreslené runy už jde poznat, co to je, " +
             "ten prvek se ti zamkne na " + SpellTiers.SchoolLock + " s (LOCKED). Přerušení moc brzy nezamkne nic.\n" +

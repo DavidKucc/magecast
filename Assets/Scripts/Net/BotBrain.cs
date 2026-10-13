@@ -334,15 +334,19 @@ namespace MageCast
         }
 
         /// <summary>
-        /// A spell is an option if it will be sendable by the time its rune is drawn -- the global
-        /// cooldown after the last send is for drawing the next one, the way a person uses it. A locked
-        /// element or one still well on its own cooldown is not.
+        /// A spell is an option if its rune will make the spell by the time it is drawn: not locked, not
+        /// still well on its element's own cooldown (a rune finished too soon makes nothing). The global
+        /// cooldown does not count -- it is for drawing the next one, the way a person uses it.
         /// </summary>
         void Add(List<KeyValuePair<Spell, float>> options, Spell s, float weight)
         {
-            if (s != null && hands.CooldownLeft(s) <= ReadyWithin && weight > 0f) options.Add(new KeyValuePair<Spell, float>(s, weight));
+            if (s != null && hands.BlockLeft(s) <= ReadyWithin && weight > 0f) options.Add(new KeyValuePair<Spell, float>(s, weight));
         }
 
+        /// <summary>
+        /// How far off its element's own cooldown a rune may be begun: the quickest rune takes about half
+        /// a second to draw, and one finished within the queue window of the end still makes its spell.
+        /// </summary>
         const float ReadyWithin = 0.8f;
 
         /// <summary>How the rune came out: fizzle, tier I, II or III, by skill.</summary>

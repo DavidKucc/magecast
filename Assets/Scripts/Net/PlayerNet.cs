@@ -284,7 +284,10 @@ namespace MageCast
             // the outcomes that produce no spell still deserve a word -- a fizzle is the moment to push
             switch (outcome)
             {
-                case StrokeOutcome.Fizzle: WorldPopups.Word(transform, "FIZZLE", GestureCaster.FailColour); break;
+                // tier 1/2 on a fizzle: drawn fine, but the element was not ready / locked (GestureCaster.NotReady)
+                case StrokeOutcome.Fizzle:
+                    WorldPopups.Word(transform, tier == 2 ? "LOCKED" : tier == 1 ? "NOT READY" : "FIZZLE", GestureCaster.FailColour);
+                    break;
                 // tier 1 here means the interrupt locked that element (see GestureCaster.Interrupt)
                 case StrokeOutcome.Interrupted:
                     WorldPopups.Word(transform, tier > 0 ? "INTERRUPTED - " + caster.SpellByIndex(spell).displayName + " LOCKED"
