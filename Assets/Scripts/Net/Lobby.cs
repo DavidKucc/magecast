@@ -226,9 +226,19 @@ namespace MageCast
 
         // ---------------------------------------------------------------- what anybody may ask
 
+        /// <summary>Your name, as typed in the lobby, for everyone in the room.</summary>
+        public void Rename(string name)
+        {
+            IntroduceServerRpc(new FixedString32Bytes(NetSession.SafeName(name)));
+        }
+
         [ServerRpc(RequireOwnership = false)]
         void IntroduceServerRpc(FixedString32Bytes name, ServerRpcParams p = default)
         {
+            // A newcomer introduces themselves while still loading in -- before Netcode reports their
+            // connection, which is when they would otherwise be added. Dropped then, their name never
+            // arrived and they stayed "Player 2". Taken in here instead.
+            Admit(p.Receive.SenderClientId);
             int i = IndexOfClient(p.Receive.SenderClientId);
             if (i < 0) return;
             LobbyMember m = Members[i];

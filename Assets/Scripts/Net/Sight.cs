@@ -83,6 +83,50 @@ namespace MageCast
             return aimed;
         }
 
+        /// <summary>
+        /// How far away the rune somebody is drawing, the spell in their hand and the words over their
+        /// head (FIRE III, FIZZLE, LOCKED) can be read. The spells themselves are seen across the map; what
+        /// is coming is only yours to read from fighting distance.
+        /// </summary>
+        public const float ReadRange = 18f;
+
+        /// <summary>How far away the damage other players deal each other is shown. Your own hits, and
+        /// whatever hits you, always are.</summary>
+        public const float DamageRange = 15f;
+
+        /// <summary>The last metres of a range, over which things fade out rather than blink off.</summary>
+        const float FadeOver = 3f;
+
+        /// <summary>
+        /// 1 near, fading to 0 at <paramref name="range"/> metres from you (your body; the camera without
+        /// one): how readable something over <paramref name="who"/> is.
+        /// </summary>
+        public static float Readable(Transform who, float range)
+        {
+            if (who == null) return 0f;
+            Vector3 from;
+            if (PlayerNet.Local != null) from = PlayerNet.Local.transform.position;
+            else if (Camera.main != null) from = Camera.main.transform.position;
+            else return 1f;
+            float d = Vector3.Distance(from, who.position);
+            return Mathf.Clamp01((range - d) / FadeOver);
+        }
+
+        static readonly Dictionary<Transform, float> myHits = new Dictionary<Transform, float>();
+
+        /// <summary>One of your own spells just hit <paramref name="who"/>: its damage is yours to see, from anywhere.</summary>
+        public static void MarkMyHit(Transform who)
+        {
+            if (who != null) myHits[who] = Time.time;
+        }
+
+        /// <summary>Whether a spell of yours hit <paramref name="who"/> in the last few seconds (a burn keeps ticking).</summary>
+        public static bool HitByMe(Transform who)
+        {
+            float at;
+            return who != null && myHits.TryGetValue(who, out at) && Time.time - at < 5f;
+        }
+
         /// <summary>Whether <paramref name="who"/> is somebody else's player (not you, not a dummy).</summary>
         public static bool IsOtherPlayer(Transform who)
         {

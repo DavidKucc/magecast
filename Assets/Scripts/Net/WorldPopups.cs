@@ -146,8 +146,19 @@ namespace MageCast
                 if (age >= p.Life) { popups.RemoveAt(i); continue; }
 
                 if (p.Anchor != null) p.Point = p.Anchor.position;
-                // "FIRE III", "FIZZLE" over another player tell you what they hold: only in sight
-                if (!p.IsDamage && Sight.IsOtherPlayer(p.Anchor) && !Sight.Sees(p.Anchor)) continue;
+                // "FIRE III", "FIZZLE" over another player tell you what they hold: only in sight, and
+                // only from fighting distance
+                float near = 1f;
+                if (!p.IsDamage && Sight.IsOtherPlayer(p.Anchor))
+                {
+                    if (!Sight.Sees(p.Anchor)) continue;
+                    near = Sight.Readable(p.Anchor, Sight.ReadRange);
+                }
+                // what others deal each other, only near you; your own hits and the ones on you, always
+                if (p.IsDamage && p.Anchor != null && (PlayerNet.Local == null || p.Anchor != PlayerNet.Local.transform)
+                    && !Sight.HitByMe(p.Anchor))
+                    near = Sight.Readable(p.Anchor, Sight.DamageRange);
+                if (near <= 0.01f) continue;
                 float t = age / p.Life;
 
                 // eased up and out: fast at first, then hanging while it fades
@@ -162,7 +173,7 @@ namespace MageCast
 
                 // a pop on arrival, then a fade over the last 40%
                 float pop = age < 0.12f ? Mathf.Lerp(1.35f, 1f, age / 0.12f) : 1f;
-                float alpha = t < 0.6f ? 1f : 1f - (t - 0.6f) / 0.4f;
+                float alpha = (t < 0.6f ? 1f : 1f - (t - 0.6f) / 0.4f) * near;
 
                 style.fontSize = Mathf.RoundToInt(size * pop);
                 Rect r = new Rect(screen.x - 200f, Screen.height - screen.y - 30f, 400f, 60f);

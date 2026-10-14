@@ -129,16 +129,21 @@ namespace MageCast
         void LateUpdate()
         {
             // What they are drawing, and once drawn what they hold, is only yours to read while you
-            // can see them: behind cover the rune over their head disappears with them.
-            bool seen = Sight.Sees(transform);
-            if (holder.gameObject.activeSelf != seen) holder.gameObject.SetActive(seen);
+            // can see them -- behind cover the rune over their head disappears with them -- and from
+            // fighting distance: further than Sight.ReadRange it fades out. The spell itself, once
+            // sent, is seen from anywhere.
+            float near = Sight.Readable(transform, Sight.ReadRange);
+            bool show = near > 0.01f && Sight.Sees(transform);
+            if (holder.gameObject.activeSelf != show) holder.gameObject.SetActive(show);
 
+            float fade = 1f;
             if (fadeFrom >= 0f)
             {
                 float t = (Time.time - fadeFrom) / FadeSeconds;
                 if (t >= 1f) { points.Clear(); raw.Clear(); fadeFrom = -1f; Apply(0f); return; }
-                Apply(1f - t);
+                fade = 1f - t;
             }
+            if (points.Count >= 2) Apply(fade * near);
 
             if (!line.enabled) return;
 

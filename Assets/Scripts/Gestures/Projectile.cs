@@ -365,6 +365,9 @@ namespace MageCast.Gestures
             {
                 Tally(motor == null && hp != null && hp.GetComponent<Combat.TrainingDummy>() != null
                       ? ShotOutcome.Dummy : ShotOutcome.Player);
+                // your own shot: its damage numbers are yours to see from any distance
+                if (owner != null && MageCast.PlayerNet.Local != null && owner == MageCast.PlayerNet.Local.transform)
+                    MageCast.Sight.MarkMyHit(hp != null ? hp.transform : motor.transform);
                 if (authoritative) HitPerson(hp, motor, heading);
                 Flash(at, 1.4f, 2.5f);
                 TierHit(hp, at);

@@ -28,7 +28,8 @@ namespace MageCast
         static readonly Color Gold = new Color(1f, 0.82f, 0.45f);
         static readonly Color ReadyGreen = new Color(0.55f, 1f, 0.55f);
 
-        GUIStyle title, header, label, small, rowName, rowTag, button, chosen, bigButton, smallButton, status, codeStyle;
+        GUIStyle title, header, label, small, rowName, rowTag, button, chosen, bigButton, smallButton, status, codeStyle, nameField;
+        float renameAt = -1f;
         Texture2D[] previews;
         bool showSettings, copied;
         float copiedAt;
@@ -66,6 +67,7 @@ namespace MageCast
             smallButton = new GUIStyle(GUI.skin.button) { fontSize = 13 };
             status = new GUIStyle(GUI.skin.label) { fontSize = 15, alignment = TextAnchor.MiddleCenter, wordWrap = true };
             codeStyle = new GUIStyle(GUI.skin.label) { fontSize = 30, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleRight };
+            nameField = new GUIStyle(GUI.skin.textField) { fontSize = 15, alignment = TextAnchor.MiddleLeft };
         }
 
         void OnGUI()
@@ -243,6 +245,14 @@ namespace MageCast
             ulong me = nm != null ? nm.LocalClientId : 0;
             Shadowed(new Rect(x, y, w, 22f), "PLAYERS   " + lobby.Members.Count + " / " + Lobby.MaxPlayers, header, Gold);
             y += 28f;
+
+            // Your own name, editable here as well: an invite link can bring you in before the menu's
+            // name box was ever filled. Sent a moment after the typing stops.
+            Shadowed(new Rect(x, y, 90f, 26f), "your name", small, new Color(1f, 1f, 1f, 0.7f));
+            string typed = GUI.TextField(new Rect(x + 90f, y, Mathf.Min(220f, w - 90f), 26f), NetSession.PlayerName, 12, nameField);
+            if (typed != NetSession.PlayerName) { NetSession.PlayerName = typed; renameAt = Time.time + 0.5f; }
+            if (renameAt > 0f && Time.time >= renameAt) { renameAt = -1f; lobby.Rename(NetSession.PlayerName); }
+            y += 34f;
 
             if (lobby.Mode == Lobby.GameMode.Teams)
             {

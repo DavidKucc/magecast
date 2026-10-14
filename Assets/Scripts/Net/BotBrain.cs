@@ -585,7 +585,8 @@ namespace MageCast
             Spell ward = hands.SpellByIndex(GestureCaster.BarrierId);
 
             bool onConductor = SpellZone.ConductorAt(target.transform.position) != null;
-            bool drawing = target.Drawing.Value;
+            // the rune over their head reads only from fighting distance, for a bot as for you
+            bool drawing = target.Drawing.Value && distance <= Sight.ReadRange;
             Add(options, fire, 4f);
             Add(options, ice, distance < 18f ? 3f : 1.5f);
             Add(options, bolt, onConductor ? 12f : distance > 18f ? 3f : 2f);

@@ -28,17 +28,23 @@ namespace MageCast
             session.HandleCommandLine();
 
             // Opened from an invite link: straight into the room, once. Only on the first visit to the
-            // menu -- coming back here after leaving must not throw you back into the same game.
+            // menu -- coming back here after leaving must not throw you back into the same game. With no
+            // name yet, the code is filled in and the name asked for first: joining nameless made you
+            // "Player 2" for everyone.
             string invited = NetSession.CodeFromPageAddress();
             if (invited != null && !inviteUsed)
             {
                 inviteUsed = true;
                 code = invited;
-                session.JoinOnline(invited);
+                if (NetSession.SafeName(NetSession.PlayerName).Length > 0) session.JoinOnline(invited);
+                else askName = true;
             }
         }
 
         static bool inviteUsed;
+
+        /// <summary>Came from an invite link with no name: the name box is pointed at until it is filled.</summary>
+        bool askName;
 
         /// <summary>For the web page (unityInstance.SendMessage("Menu", "JoinFromPage", code)).</summary>
         public void JoinFromPage(string roomCode)
@@ -82,8 +88,15 @@ namespace MageCast
 
             GUI.enabled = !busy;
 
-            GUI.Label(new Rect(x, y, w, 24f), "Your name", label);
+            bool nameless = NetSession.SafeName(NetSession.PlayerName).Length == 0;
+            GUI.Label(new Rect(x, y, w, 24f), askName && nameless ? "Your name  - type it, then Join below" : "Your name", label);
             y += 26f;
+            if (askName && nameless)
+            {
+                GUI.color = new Color(1f, 0.82f, 0.45f);
+                GUI.DrawTexture(new Rect(x - 3f, y - 3f, w + 6f, 50f), Texture2D.whiteTexture);
+                GUI.color = Color.white;
+            }
             string name = GUI.TextField(new Rect(x, y, w, 44f), NetSession.PlayerName, 12, field);
             if (name != NetSession.PlayerName) NetSession.PlayerName = name;
             y += 64f;
