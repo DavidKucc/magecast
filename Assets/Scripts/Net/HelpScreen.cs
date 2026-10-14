@@ -35,7 +35,9 @@ namespace MageCast
                 III = "+ výbuch: všichni do " + SpellTiers.ExplosionRadius + " m kromě zasaženého dostanou polovinu zásahu - i ty, když stojíš blízko" },
             new SpellInfo { Rune = GestureTemplates.Laguz, Name = "ICE", Czech = "Laguz (voda) - led",
                 Colour = new Color(0.55f, 0.85f, 1f),
-                Basics = "22 poškození, 17 m/s (tier I 24 m/s). Pomalý a tlustý, dá se uhnout. Zasažený se vždy zpomalí.",
+                Basics = "22 poškození, 17 m/s (tier I 24 m/s). Pomalý a tlustý, dá se uhnout. Zasažený se vždy zpomalí. " +
+                         "Zamířený na zem do " + SpellTiers.IceWallReach + " m před sebe (svítí WALL a ukáže se obrys) nevyletí, " +
+                         "ale vyrazí jako ledová stěna: první zásah ji roztříští, po " + SpellTiers.IceWallSeconds + " s roztaje, oheň z ní nechá vodu.",
                 I = "zásah se zpomalením, rychlejší let; dopad na zem, zeď nebo bariéru zraní každého do " + SpellTiers.SplashRadius + " m (i tebe)",
                 II = "+ kluzká ledová plocha na zemi",
                 III = "+ zmrazí na " + SpellTiers.FreezeSeconds + " s: nehne se ani neskočí, kreslit ale může" },
@@ -55,8 +57,9 @@ namespace MageCast
                 III = "+ dopadne-li do jakékoli plochy: vzduchová bomba - všechny v ní a do " + SpellTiers.BombReachBeyondPatch + " m od ní hodí do jejího středu (i tebe), po " + SpellTiers.BombDelay + " s" },
             new SpellInfo { Rune = GestureTemplates.Uruz, Name = "BARRIER", Czech = "Uruz (síla) - bariéra",
                 Colour = new Color(1f, 0.85f, 0.4f),
-                Basics = "Zastaví kouzla z obou stran, dokud ji zásahy neprorazí. Jedna na hráče.",
-                I = "stěna",
+                Basics = "Zastaví kouzla z obou stran, dokud ji zásahy neprorazí. Jedna na hráče. Silný, vytrvalý kryt - " +
+                         "rychlý a křehký je ledová stěna.",
+                I = "stěna na " + SpellTiers.WallSeconds + " s",
                 II = "větší stěna, vydrží víc",
                 III = "kopule kolem tebe na " + SpellTiers.DomeSeconds + " s, chodí s tebou, tvoje kouzla pouští ven, cizí zastaví" },
         };

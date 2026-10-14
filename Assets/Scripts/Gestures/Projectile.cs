@@ -333,7 +333,7 @@ namespace MageCast.Gestures
         static bool IsTarget(Collider c)
         {
             return c.GetComponentInParent<Health>() != null || c.GetComponentInParent<PlayerMotor>() != null
-                   || c.GetComponentInParent<CastShield>() != null;
+                   || c.GetComponentInParent<CastShield>() != null || c.GetComponentInParent<IceWall>() != null;
         }
 
         /// <summary>Resolves a hit. Returns true if the projectile is finished, false if it bounced on.</summary>
@@ -357,6 +357,19 @@ namespace MageCast.Gestures
                 Flash(at, 1.1f, 2.2f);
                 if (IsFire && tier >= 3) Explode(at, null);
                 Splash(at, -heading);
+                End();
+                return true;
+            }
+
+            // An ice wall: the first spell to hit it shatters it, and stops there. The server's copy breaks
+            // it for everyone; a fire leaves its meltwater behind. Everybody else's copy only stops.
+            IceWall iceWall = struck != null ? struck.GetComponentInParent<IceWall>() : null;
+            if (iceWall != null)
+            {
+                Tally(ShotOutcome.Barrier);
+                Flash(at, 1.1f, 2.2f);
+                if (authoritative)
+                    iceWall.Hit(IsFire, owner != null ? owner.GetComponent<PlayerNet>() : null, attacker);
                 End();
                 return true;
             }

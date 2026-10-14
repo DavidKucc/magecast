@@ -75,7 +75,7 @@ malou abecedu, ne pět náhodných čmáranic.
 | **Laguz** (voda) | stonek s větví | led | 22 | 17 m/s (tier I 24) | pomalé a tlusté, snadno se uhne; vždy zpomalí |
 | **Sowulo** (slunce) | klikatice | blesk | 12 | 44 m/s | skoro se nedá uhnout, málo ubere |
 | **Ehwaz** (pohyb) | `M` | vzduch | **0** | 30 m/s | odhodí — vytáhne z krytu, shodí rozkreslené kouzlo |
-| **Uruz** (síla, vytrvalost) | brána `∩` se šikmou střechou | bariéra | — | — | zavře směr na 6 s, dokud ji zásahy neprorazí |
+| **Uruz** (síla, vytrvalost) | brána `∩` se šikmou střechou | bariéra | — | — | zavře směr na 8 s, dokud ji zásahy neprorazí |
 
 **Vzduch nedává poškození, nikdy.** Kdyby dával, stal by se kouzlem na všechno. Takhle sám nikdy
 nevyhraje, ale je u všech dobrých momentů — je to kouzlo, kterým soupeře **doručíš do svého ohně**.
@@ -96,7 +96,7 @@ Tier mění, **co kouzlo dělá**, ne jen kolik ubere — poškození samo se s 
 | **led** | zásah se zpomalením, rychlejší let, splash | + kluzká plocha | + zamrznutí na 0,6 s: nehýbe se ani neskočí, kreslit může |
 | **blesk** | zásah, rychlejší let | + přeskočí na nejbližší jiný cíl do 6 m za polovinu; do země nechá **elektrickou plochu** (2,2 m, 4 s, 3/s, kdo v ní stojí, nemůže kreslit) | + elektrická plocha se objeví přímo pod zasaženým |
 | **vzduch** | odhoz, rychlejší let; **náraz do zdi** po odhozu (do ~2 m od ní) = 8 dmg a 0,4 s na místě | + updraft plocha (vlastní tě vyhodí až na 4 m: střecha, most); do ohně **ohnivá vlna** (oheň zmizí a 8 m po větru se převalí stěna plamenů, zapálí a odhodí každého v cestě, zastaví ji zeď); na ledu rozklouže lidi | + v jakékoli ploše **vzduchová bomba**: všechny v ploše a do 1,5 m od ní jednou hodí do jejího středu (i autora) — **po 0,4 s**, aby se dalo uhnout |
-| **bariéra** | stěna | větší stěna (1,35× šířka), víc výdrže | **kopule** kolem tebe na 4,5 s, chodí s tebou, tvoje kouzla propouští, cizí zastaví |
+| **bariéra** | stěna (8 s) | větší stěna (1,35× šířka), víc výdrže | **kopule** kolem tebe na 6 s, chodí s tebou, tvoje kouzla propouští, cizí zastaví |
 
 - **Tier I je rychlá střela**: letí rychleji (oheň 34, led 24, blesk 52, vzduch 38 m/s), ale nezanechá
   žádnou plochu, odraz ani kombinaci (voda, ohnivá vlna...). Oheň a led tieru I mají **splash**: když
@@ -245,11 +245,30 @@ někdo střílí.
 | blesk | 0,5 | 8 |
 | vzduch | vždy 3 | 3 |
 
-Výdrž je **60** krát 0,6–1,4 podle přesnosti kreslení (36–84). Běžná bariéra tedy vydrží jeden oheň a
-druhý ji prorazí, blesků snese kolem sedmi, vzduch ji skoro nepoškodí. Jak ubývá, bledne — soupeř vidí,
-že ještě jeden oheň a je pryč. **Jedna na hráče**: nová zruší starou.
+Výdrž je **90** (do 14. 10. 60) krát tier: stěna tieru I 0,8× (72), tieru II 1,4× (126), kopule 1,6×
+(144). Stěna stojí **8 s** (dřív 6), kopule **6 s** (dřív 4,5). Bariéra je od teď ten silný, vytrvalý
+kryt — rychlý a křehký je ledová stěna (níž). Jak ubývá, bledne — soupeř vidí, že ještě jeden oheň a je
+pryč. **Jedna na hráče**: nová zruší starou.
 
-*Ověřeno: čistá bariéra po jednom ohni 27 %, druhý ji rozbil.*
+## Ledová stěna
+
+**Led zamířený na zem blízko před sebe nevyletí, ale vyrazí ze země jako stěna ledových hrotů.**
+Spouštěč: zaměřovač na zemi (ne na člověku, zdi ani římse) do **4,5 m** od tvých nohou a zhruba v jejich
+výšce; blíž než 1,6 m se stěna posune na 1,6 m, aby nevyrostla skrz tebe. Když to platí, u drženého ledu
+svítí **„WALL“** a na zemi stojí **obrys stěny**, kde vyroste — ve všech hrách, ne jen v tréninku, aby
+stěna nikdy nebyla nechtěná.
+
+- **rychlá a křehká:** stojí hned, **první zásah jakýmkoli kouzlem ji roztříští** (i tvým — je pevná z obou
+  stran), po **6 s** sama roztaje do země,
+- **pevná:** zastaví kouzla, lidi i pohled (runa ani jméno přes ni nejsou vidět),
+- **stojí tvůj led:** spotřebuje cooldown ledu i útočné GCD — volíš mezi útokem a krytem,
+- **velikost podle tieru:** I 2,0 × 1,7 m (kryt v podřepu), II 2,8 × 2,3 m, III 3,4 × 2,6 m,
+- **oheň do ní:** roztaví ji a zůstane po ní **voda** (vede blesk) — oheň do ledu jako všude jinde,
+- **boti** ji stavějí, když je někdo ostřeluje a jsou zranění (2,6 m před sebou, směrem k útočníkovi).
+
+Vzhled: hroty a ledový materiál z balíku Stylized AoE (pointy rock), vyrážejí ze země od středu ke
+krajům za ledovým výbuchem z téhož balíku, mezi nimi průsvitná ledová deska; při rozbití se rozletí na
+střepy s ledovou explozí. Bez balíku (klon z repozitáře) vlastní jednoduché krystaly.
 
 Ověřeno měřením (dřívější čísla): odraz vyšel zrcadlově na desetinu s poškozením 17,6, vzdušný proud
 vyhodil rychlostí 9,4 m/s a výbuch u stěny

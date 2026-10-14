@@ -133,9 +133,46 @@ namespace MageCast.EditorTools
                 air.specialSound = Trim(AreaSound("Air", "Burst_01"), 0.42f, "Air_Bomb_Impact");
             }
 
+            AssignIceWall(fx);
+
             EditorUtility.SetDirty(fx);
             AssetDatabase.SaveAssets();
             Debug.Log("[SpellFx] assigned: " + fx.entries.Count + " spell(s) with effects");
+        }
+
+        /// <summary>Only the ice wall's pieces -- without making the recoloured effects again.</summary>
+        [MenuItem("Tools/Arena/Assign Ice Wall Effects")]
+        public static void AssignIceWallOnly()
+        {
+            SpellFx fx = AssetDatabase.LoadAssetAtPath<SpellFx>(AssetPath);
+            if (fx == null) { Debug.LogWarning("[SpellFx] no " + AssetPath + " - run Assign Spell Effects first"); return; }
+            AssignIceWall(fx);
+            EditorUtility.SetDirty(fx);
+            AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>
+        /// The ice wall (see IceWall): the AoE pack's pointy rock in its ice material for the spikes, the
+        /// pack's ice burst at its foot as it comes up, the anime pack's ice explosion when it breaks.
+        /// </summary>
+        static void AssignIceWall(SpellFx fx)
+        {
+            SpellFx.Entry ice = fx.entries.Find(x => x.spell == "ICE");
+            if (ice == null) return;
+            ice.wallPiece = null;
+            foreach (Object o in AssetDatabase.LoadAllAssetsAtPath(Area + "VFX/Earth/Meshes/SM_VFX_Pointy_Rock_01.FBX"))
+                if (o is Mesh) { ice.wallPiece = (Mesh)o; break; }
+            ice.wallPieceMaterial = AssetDatabase.LoadAssetAtPath<Material>(Area + "VFX/Ice/Materials/M_VFX_Pointy_Rock_01_Ice.mat");
+            ice.wallRaise = AssetDatabase.LoadAssetAtPath<GameObject>(Area + "VFX/Ice/Particles/VFX_Ice_Burst_01.prefab");
+            ice.wallRaiseScale = 0.8f;
+            ice.wallRaiseLeadIn = 0.5f;
+            ice.wallBreak = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Vefects/Anime Stylized VFX/Shared/Particles/VFX_Explosion_Omni_Ice.prefab");
+            ice.wallBreakScale = 0.5f;
+            ice.wallRaiseSound = Trim(AreaSound("Ice", "Burst_01"), 0.42f, "Ice_Burst_Impact");
+            ice.wallBreakSound = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Vefects/Anime Stylized VFX/Sounds/WAV/SFX_Explosion_Ice.wav");
+            if (ice.wallPiece == null || ice.wallPieceMaterial == null)
+                Debug.LogWarning("[SpellFx] ice wall: the pointy rock or its ice material is missing - plain crystals will be used");
+            else Debug.Log("[SpellFx] ice wall: " + ice.wallPiece.name + " in " + ice.wallPieceMaterial.name);
         }
 
         static void Set(SpellFx fx, string spell, string cast, string projectile, string impact,

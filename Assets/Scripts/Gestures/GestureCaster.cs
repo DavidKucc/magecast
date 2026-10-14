@@ -657,7 +657,12 @@ namespace MageCast.Gestures
             if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Sent, IndexOf(spell));
             Vector3 from;
             Vector3 aim = ResolveAim(out from);
-            Cast(spell, aim, heldPrecision, heldQuality, heldMetrics, from);
+            Vector3 spot;
+            // ice aimed at the floor close in front of you comes up as a wall instead of flying
+            if (spell == ice && WallSpot(aimPoint, aimNormal, aimCollider, out spot))
+                CastWall(spell, spot, heldPrecision, heldQuality);
+            else
+                Cast(spell, aim, heldPrecision, heldQuality, heldMetrics, from);
             Headline(spell.displayName + "  SENT", spell.colour, 1.2f);
         }
 
@@ -815,6 +820,14 @@ namespace MageCast.Gestures
             Spend(spell);
             ClearHeld();
             if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Sent, IndexOf(spell));
+            Vector3 ground, normal, spot;
+            Collider surface;
+            if (spell == ice && GroundBelow(aimPoint + Vector3.up * 0.4f, 1.2f, out ground, out normal, out surface)
+                && WallSpot(ground, normal, surface, out spot))
+            {
+                CastWall(spell, spot, heldPrecision, heldQuality);
+                return true;
+            }
             Vector3 from = Muzzle();
             Vector3 dir = aimPoint - from;
             Cast(spell, dir.sqrMagnitude < 0.01f ? transform.forward : dir.normalized, heldPrecision, heldQuality, heldMetrics, from);
@@ -1212,6 +1225,15 @@ namespace MageCast.Gestures
             float sizeScale = data.SizeScale;
             Vector3 direction = data.Direction;
 
+            if (data.Form == CastData.Wall)
+            {
+                // the barrier's gesture -- hands up, and up comes a wall -- and the wall where it was put
+                if (anim != null) anim.PlaySend(true, data.LeftHand);
+                IceWall.Spawn(data.Target, direction, SpellTiers.Of(quality),
+                              Networked ? net.AttackerId : Combat.Health.NoAttacker, authoritative);
+                return;
+            }
+
             if (anim != null) anim.PlaySend(spell.kind == SpellKind.Barrier, data.LeftHand);
             bool crit = quality == CastQuality.Perfect;
 
@@ -1251,7 +1273,7 @@ namespace MageCast.Gestures
                 CastShield.Spawn(at, flat,
                                  spell.barrierWidth * sizeScale * (second ? SpellTiers.WallWidthII : 1f),
                                  spell.barrierHeight * (second ? SpellTiers.WallHeightII : 1f),
-                                 spell.lifetime,
+                                 SpellTiers.WallSeconds,
                                  colour,
                                  CastShield.BaseDurability * (second ? SpellTiers.WallDurabilityII : SpellTiers.WallDurabilityI),
                                  attacker, Networked ? net : null, authoritative);
@@ -1291,6 +1313,98 @@ namespace MageCast.Gestures
             }
         }
 
+        /// <summary>What the last aim ray met: the point, the surface's normal and its collider (null: nothing).</summary>
+        Vector3 aimPoint, aimNormal;
+        Collider aimCollider;
+
+        /// <summary>
+        /// Where an ice wall would stand for an aim that met <paramref name="point"/>: the floor (not a
+        /// person, a wall or a ledge), no further than SpellTiers.IceWallReach from your feet and roughly at
+        /// their height -- and never closer than IceWallMinDistance, or it would come up through you.
+        /// </summary>
+        bool WallSpot(Vector3 point, Vector3 normal, Collider surface, out Vector3 spot)
+        {
+            spot = point;
+            if (surface == null || normal.y <= Projectile.FloorNormal) return false;
+            if (surface.GetComponentInParent<Combat.Health>() != null || surface.GetComponentInParent<PlayerMotor>() != null
+                || surface.GetComponentInParent<CastShield>() != null || surface.GetComponentInParent<IceWall>() != null)
+                return false;
+
+            Vector3 feet = transform.position;
+            Vector3 flat = point - feet;
+            flat.y = 0f;
+            float d = flat.magnitude;
+            if (d > SpellTiers.IceWallReach || Mathf.Abs(point.y - feet.y) > 1.5f) return false;
+            if (d >= SpellTiers.IceWallMinDistance) return true;
+
+            Vector3 dir = d > 0.01f ? flat / d : new Vector3(transform.forward.x, 0f, transform.forward.z).normalized;
+            Vector3 ground, n;
+            Collider under;
+            if (!GroundBelow(feet + dir * SpellTiers.IceWallMinDistance + Vector3.up * 1.5f, 3.5f, out ground, out n, out under)
+                || n.y <= Projectile.FloorNormal || Mathf.Abs(ground.y - feet.y) > 1.5f) return false;
+            spot = ground;
+            return true;
+        }
+
+        /// <summary>The map straight down from <paramref name="from"/>, looking through people and spells.</summary>
+        static bool GroundBelow(Vector3 from, float depth, out Vector3 point, out Vector3 normal, out Collider surface)
+        {
+            point = from;
+            normal = Vector3.up;
+            surface = null;
+            float nearest = float.MaxValue;
+            foreach (RaycastHit h in Physics.RaycastAll(from, Vector3.down, depth, ~0, QueryTriggerInteraction.Ignore))
+            {
+                Collider c = h.collider;
+                if (c.GetComponentInParent<Combat.Health>() != null || c.GetComponentInParent<PlayerMotor>() != null
+                    || c.GetComponentInParent<CastShield>() != null || c.GetComponentInParent<IceWall>() != null) continue;
+                if (h.distance < nearest) { nearest = h.distance; point = h.point; normal = h.normal; surface = c; }
+            }
+            return surface != null;
+        }
+
+        /// <summary>
+        /// While holding ice: where it would come up as a wall if sent now, for the marker on the floor and
+        /// the word WALL by its name -- so a wall is never a surprise. False if it would fly.
+        /// </summary>
+        public bool WallPreview(out Vector3 spot, out Vector3 facing, out int tier)
+        {
+            spot = Vector3.zero;
+            facing = transform.forward;
+            tier = holding ? SpellTiers.Of(heldQuality) : 0;
+            if (!holding || heldSpell != ice || cam == null) return false;
+            RaycastHit hit;
+            if (!CastShield.AimRay(cam.AimOrigin, cam.AimDirection, 200f, transform, out hit)) return false;
+            if (!WallSpot(hit.point, hit.normal, hit.collider, out spot)) return false;
+            facing = spot - transform.position;
+            facing.y = 0f;
+            if (facing.sqrMagnitude < 0.0001f) facing = transform.forward;
+            return true;
+        }
+
+        /// <summary>The owner's side of an ice wall: where it stands, packed up like any other cast.</summary>
+        void CastWall(Spell spell, Vector3 spot, float precision, CastQuality quality)
+        {
+            Vector3 flat = spot - transform.position;
+            flat.y = 0f;
+            CastData data = new CastData
+            {
+                Spell = IndexOf(spell),
+                Quality = (byte)quality,
+                Precision = precision,
+                SizeScale = 1f,
+                Muzzle = Muzzle(),
+                Direction = flat.sqrMagnitude > 0.0001f ? flat.normalized : transform.forward,
+                Feet = transform.position,
+                SentAt = Networked ? Unity.Netcode.NetworkManager.Singleton.ServerTime.Time : 0.0,
+                LeftHand = LeftHanded,
+                Form = CastData.Wall,
+                Target = spot
+            };
+            if (Networked) net.RequestCast(data);
+            else SpawnCast(data, true);
+        }
+
         /// <summary>The camera sits over the left shoulder, so spells go from the left hand.</summary>
         bool LeftHanded { get { return cam != null && cam.LeftShoulder; } }
 
@@ -1319,9 +1433,11 @@ namespace MageCast.Gestures
             Vector3 forward = cam.AimDirection;
 
             RaycastHit hit;
-            Vector3 target = CastShield.AimRay(origin, forward, 200f, transform, out hit)
-                             ? hit.point
-                             : origin + forward * 200f;
+            bool met = CastShield.AimRay(origin, forward, 200f, transform, out hit);
+            Vector3 target = met ? hit.point : origin + forward * 200f;
+            aimPoint = target;
+            aimNormal = met ? hit.normal : Vector3.zero;
+            aimCollider = met ? hit.collider : null;
 
             // The hand is not where the eye is. Aimed past the edge of a pillar, the camera sees round
             // it while the line from the hand still runs into it -- the shot stopped on the pillar with
@@ -1403,8 +1519,11 @@ namespace MageCast.Gestures
                 int tier = SpellTiers.Of(heldQuality);
                 float wait = CooldownLeft(heldSpell);
                 bigStyle.normal.textColor = wait > 0f ? Color.Lerp(heldSpell.colour, Color.grey, 0.6f) : heldSpell.colour;
+                Vector3 wallSpot, wallFacing;
+                int wallTier;
+                bool wall = WallPreview(out wallSpot, out wallFacing, out wallTier);
                 GUI.Label(new Rect(14f, 10f, 700f, 40f),
-                          heldSpell.displayName + " " + SpellTiers.Roman(tier)
+                          heldSpell.displayName + " " + SpellTiers.Roman(tier) + (wall ? "  WALL" : "")
                           + (wait > 0f ? (LockLeft(heldSpell) > 0f ? "  LOCKED " : "  ") + wait.ToString("0.0") + " s"
                                          + (sendQueued ? "  (queued)" : "")
                              : "  READY"),

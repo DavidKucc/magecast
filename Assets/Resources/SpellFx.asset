@@ -39,6 +39,15 @@ MonoBehaviour:
     hum: {fileID: 0}
     struck: {fileID: 0}
     shatter: {fileID: 0}
+    wallPiece: {fileID: 0}
+    wallPieceMaterial: {fileID: 0}
+    wallRaise: {fileID: 0}
+    wallRaiseScale: 1
+    wallRaiseLeadIn: 0
+    wallBreak: {fileID: 0}
+    wallBreakScale: 1
+    wallRaiseSound: {fileID: 0}
+    wallBreakSound: {fileID: 0}
   - spell: ICE
     cast: {fileID: 8114927945569760447, guid: 7bb06fd48ad0c284e8dcc35a1fd6b53d, type: 3}
     projectile: {fileID: 1771704844123445069, guid: 802822d3553f52b44b96bec3e623625f, type: 3}
@@ -65,6 +74,15 @@ MonoBehaviour:
     hum: {fileID: 0}
     struck: {fileID: 0}
     shatter: {fileID: 0}
+    wallPiece: {fileID: 7396499871053745691, guid: 5f30db55a1573254e831494e1daa4773, type: 3}
+    wallPieceMaterial: {fileID: 2100000, guid: 7982d165dcd857941ac2ea0decd12020, type: 2}
+    wallRaise: {fileID: 4748681987041982144, guid: 2d3b517f9576f5e47838912a58d385f0, type: 3}
+    wallRaiseScale: 0.8
+    wallRaiseLeadIn: 0.5
+    wallBreak: {fileID: 868468853075218060, guid: 14d6e10b8b21c6b40913fdf2d483185d, type: 3}
+    wallBreakScale: 0.5
+    wallRaiseSound: {fileID: 8300000, guid: 9262d3fd65444d2489953bc4f937fc56, type: 3}
+    wallBreakSound: {fileID: 8300000, guid: 15c4c05e917ae594d997d4d93fedea31, type: 3}
   - spell: LIGHTNING
     cast: {fileID: 1658496247936348207, guid: 112492713e5dc7e4c942c0f4fea753d3, type: 3}
     projectile: {fileID: 1319398647745027786, guid: 5871ca9177b82314abc6725d2974a557, type: 3}
@@ -91,6 +109,15 @@ MonoBehaviour:
     hum: {fileID: 0}
     struck: {fileID: 0}
     shatter: {fileID: 0}
+    wallPiece: {fileID: 0}
+    wallPieceMaterial: {fileID: 0}
+    wallRaise: {fileID: 0}
+    wallRaiseScale: 1
+    wallRaiseLeadIn: 0
+    wallBreak: {fileID: 0}
+    wallBreakScale: 1
+    wallRaiseSound: {fileID: 0}
+    wallBreakSound: {fileID: 0}
   - spell: AIR
     cast: {fileID: 1708297399293405800, guid: e0bc616983306df4787db3aee11b1d64, type: 3}
     projectile: {fileID: 6475832785224247900, guid: 112adf10422ebf5449472600acfcc33a, type: 3}
@@ -117,6 +144,15 @@ MonoBehaviour:
     hum: {fileID: 0}
     struck: {fileID: 0}
     shatter: {fileID: 0}
+    wallPiece: {fileID: 0}
+    wallPieceMaterial: {fileID: 0}
+    wallRaise: {fileID: 0}
+    wallRaiseScale: 1
+    wallRaiseLeadIn: 0
+    wallBreak: {fileID: 0}
+    wallBreakScale: 1
+    wallRaiseSound: {fileID: 0}
+    wallBreakSound: {fileID: 0}
   - spell: BARRIER
     cast: {fileID: 0}
     projectile: {fileID: 0}
@@ -143,3 +179,12 @@ MonoBehaviour:
     hum: {fileID: 8300000, guid: e53a5d8793b496344a3100d535e09685, type: 3}
     struck: {fileID: 8300000, guid: 0594f86f76c8df14caf73629192aab26, type: 3}
     shatter: {fileID: 8300000, guid: 15c4c05e917ae594d997d4d93fedea31, type: 3}
+    wallPiece: {fileID: 0}
+    wallPieceMaterial: {fileID: 0}
+    wallRaise: {fileID: 0}
+    wallRaiseScale: 1
+    wallRaiseLeadIn: 0
+    wallBreak: {fileID: 0}
+    wallBreakScale: 1
+    wallRaiseSound: {fileID: 0}
+    wallBreakSound: {fileID: 0}

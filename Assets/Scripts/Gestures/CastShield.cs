@@ -24,7 +24,7 @@ namespace MageCast.Gestures
     public class CastShield : MonoBehaviour
     {
         /// <summary>Durability of a cleanly drawn barrier; the draw scales it 0.6-1.4x.</summary>
-        public const float BaseDurability = 60f;
+        public const float BaseDurability = 90f;
 
         static readonly Dictionary<ulong, CastShield> byOwner = new Dictionary<ulong, CastShield>();
 

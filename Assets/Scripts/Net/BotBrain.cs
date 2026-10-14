@@ -94,6 +94,9 @@ namespace MageCast
         float hideUntil = -1f, hideAgainAt;
         Vector3 hidePoint;
 
+        /// <summary>The ice being drawn is going up as a wall, not at anybody.</summary>
+        bool wallMode;
+
         enum Phase { Idle, Drawing, Holding }
         Phase phase;
         Spell chosen;
@@ -541,6 +544,12 @@ namespace MageCast
                     if (d > 32f) return;
                     chosen = ChooseSpell(d);
                     if (chosen == null) { nextCastAt = Time.time + 0.3f; return; }
+                    // under fire and hurt, with its ice: put it up as a wall in front instead of throwing it
+                    // -- the cover a person would make, more often the better the bot
+                    wallMode = chosen == hands.SpellByIndex(GestureCaster.IceId) && d > 6f
+                               && known.ContainsKey(target) && Time.time - known[target].HurtMeAt < 2.5f
+                               && health.Fraction < 0.7f && CastShield.Of(self.AttackerId) == null
+                               && rnd.NextDouble() < 0.2 + 0.4 * Skill;
                     RollQuality();
                     rune = GestureTemplates.Corners(chosen.gesture);
                     int segments = rune != null ? rune.Length - 1 : 3;
@@ -673,6 +682,14 @@ namespace MageCast
         {
             Vector3 feet = Perceived;
             if (spell == hands.SpellByIndex(GestureCaster.BarrierId)) return feet + Vector3.up * 1.2f;
+            // an ice wall: the floor a couple of metres towards whoever is shooting
+            if (wallMode && spell == hands.SpellByIndex(GestureCaster.IceId))
+            {
+                wallMode = false;
+                Vector3 toward = feet - transform.position;
+                toward.y = 0f;
+                return transform.position + (toward.sqrMagnitude > 0.01f ? toward.normalized : transform.forward) * 2.6f;
+            }
 
             int tier = hands.BotHeldTier;
             float speed = tier <= 1 && spell.speedTierI > 0f ? spell.speedTierI : spell.speed;

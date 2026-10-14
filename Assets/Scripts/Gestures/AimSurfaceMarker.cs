@@ -35,6 +35,35 @@ namespace MageCast.Gestures
             cam = FindObjectOfType<ThirdPersonCamera>();
             ring = MakeLine("AimRing", true);
             bounceRay = MakeLine("AimBounce", false);
+            wallMark = MakeLine("AimWall", true);
+        }
+
+        LineRenderer wallMark;
+
+        /// <summary>
+        /// Ice aimed at the floor close in front: the outline of the wall that will rise there, standing
+        /// where it will stand. Shown in every game, not only training -- it is about what YOUR spell is
+        /// going to do, and a wall you did not mean to raise is a wasted ice.
+        /// </summary>
+        bool WallOutline()
+        {
+            Vector3 spot, facing;
+            int tier;
+            if (caster == null || !caster.WallPreview(out spot, out facing, out tier)) return false;
+
+            float w = SpellTiers.IceWallWidth[Mathf.Clamp(tier, 1, 3)] * 0.5f;
+            float h = SpellTiers.IceWallHeight[Mathf.Clamp(tier, 1, 3)];
+            Vector3 right = Vector3.Cross(Vector3.up, facing.normalized).normalized;
+            Vector3 foot = spot + Vector3.up * 0.04f;
+            wallMark.positionCount = 4;
+            wallMark.SetPosition(0, foot - right * w);
+            wallMark.SetPosition(1, foot + right * w);
+            wallMark.SetPosition(2, foot + right * w * 0.85f + Vector3.up * h * 0.8f);
+            wallMark.SetPosition(3, foot - right * w * 0.85f + Vector3.up * h * 0.8f);
+            Color ice = caster.HeldSpell != null ? caster.HeldSpell.colour : Color.cyan;
+            wallMark.startColor = wallMark.endColor = new Color(ice.r, ice.g, ice.b, 0.85f);
+            wallMark.enabled = true;
+            return true;
         }
 
         LineRenderer MakeLine(string name, bool loop)
@@ -57,6 +86,9 @@ namespace MageCast.Gestures
         {
             ring.enabled = false;
             bounceRay.enabled = false;
+            wallMark.enabled = false;
+
+            if (WallOutline()) return;
 
             // A training aid only. Against a person it would be the game telling you where a bounce
             // lands and how far a burst reaches -- reading that off the geometry is part of the skill.

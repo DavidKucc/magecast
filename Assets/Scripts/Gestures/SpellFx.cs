@@ -73,6 +73,17 @@ namespace MageCast.Gestures
             public AudioClip hum;            // while it stands, quietly
             public AudioClip struck;         // a spell hitting it, on top of the spell's own impact
             public AudioClip shatter;        // worn through
+
+            [Header("Ice wall (ice aimed at the floor at your feet)")]
+            public Mesh wallPiece;              // one spike of it
+            public Material wallPieceMaterial;
+            public GameObject wallRaise;        // the burst at its foot as it goes up
+            public float wallRaiseScale = 1f;   // for a 2.8 m wall
+            public float wallRaiseLeadIn;       // seconds of wind-up the burst plays before its bang
+            public GameObject wallBreak;        // breaking
+            public float wallBreakScale = 1f;
+            public AudioClip wallRaiseSound;
+            public AudioClip wallBreakSound;
         }
 
         /// <summary>The spell whose look a patch of this kind wears -- water has none of its own yet.</summary>

@@ -30,6 +30,14 @@ namespace MageCast.Gestures
         /// <summary>Thrown with the left hand (camera over the left shoulder), for the mirrored animation.</summary>
         public bool LeftHand;
 
+        /// <summary>What the spell takes form as: <see cref="Thrown"/>, or <see cref="Wall"/> (ice at your feet).</summary>
+        public byte Form;
+
+        /// <summary>For a wall: the spot on the floor it stands on.</summary>
+        public Vector3 Target;
+
+        public const byte Thrown = 0, Wall = 1;
+
         public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
         {
             s.SerializeValue(ref Spell);
@@ -41,6 +49,8 @@ namespace MageCast.Gestures
             s.SerializeValue(ref Feet);
             s.SerializeValue(ref SentAt);
             s.SerializeValue(ref LeftHand);
+            s.SerializeValue(ref Form);
+            s.SerializeValue(ref Target);
         }
     }
 

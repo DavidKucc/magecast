@@ -406,6 +406,21 @@ namespace MageCast
             else foreach (Vector3 v in victims) ChargeArc.Spawn(struck, v);
         }
 
+        /// <summary>Server: an ice wall standing at <paramref name="centre"/> was hit and shatters, everywhere.</summary>
+        public void BroadcastIceWallBreak(Vector3 centre)
+        {
+            if (!IsServer) return;
+            IceWallBreakClientRpc(centre);
+        }
+
+        [ClientRpc]
+        void IceWallBreakClientRpc(Vector3 centre)
+        {
+            if (IsServer) return;
+            IceWall wall = IceWall.Find(centre);
+            if (wall != null) wall.Shatter();
+        }
+
         /// <summary>Server: this player's barrier took a hit; this much of it is left.</summary>
         public void BroadcastBarrierWear(float fraction)
         {

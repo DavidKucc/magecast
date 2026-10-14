@@ -107,13 +107,26 @@ namespace MageCast.Gestures
         /// <summary>From the air landing in the patch to the bang: the time to get out of reach.</summary>
         public const float BombDelay = 0.4f;
 
-        // barrier
+        // ice wall: ice aimed at the floor this close in front of you (from your feet) rises as a wall of
+        // ice instead of flying -- cover that one hit shatters, gone in a few seconds anyway. See IceWall.
+        public const float IceWallReach = 4.5f;
+        /// <summary>Never closer than this, or it would come up through its caster.</summary>
+        public const float IceWallMinDistance = 1.6f;
+        public const float IceWallSeconds = 6f;
+        public const float IceWallThickness = 0.7f;
+        /// <summary>By tier (index 1-3): a tier I wall covers you crouched, a III a little more than standing.</summary>
+        public static readonly float[] IceWallWidth = { 0f, 2.0f, 2.8f, 3.4f };
+        public static readonly float[] IceWallHeight = { 0f, 1.7f, 2.3f, 2.6f };
+
+        // barrier -- since 14 Oct the strong, lasting cover (the ice wall is the quick, fragile one):
+        // 50 % more durability and 8 s instead of 6, the dome 6 s instead of 4.5
+        public const float WallSeconds = 8f;
         public const float WallWidthII = 1.35f;
         public const float WallHeightII = 1.15f;
         public const float WallDurabilityI = 0.8f;
         public const float WallDurabilityII = 1.4f;
         public const float DomeRadius = 2.1f;
-        public const float DomeSeconds = 4.5f;
+        public const float DomeSeconds = 6f;
         public const float DomeDurability = 1.6f;
 
         public static int Of(CastQuality q)
