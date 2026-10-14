@@ -20,6 +20,10 @@ namespace MageCast.Gestures
     /// The look is the Stylized AoE pack's pointy rock in its ice material: spikes of varied height in
     /// two staggered rows, bursting up out of the floor from the middle outwards, over the pack's ice
     /// burst. Without the pack, plain crystals of our own.
+    ///
+    /// What is solid: an invisible box the wall's width and height (no gaps between the spikes to shoot
+    /// through), and every spike in its own shape on top -- the needles of a tier III stand above the box,
+    /// and a shot at the ice you see must stop on it. Any of it struck is the wall struck.
     /// </summary>
     public class IceWall : MonoBehaviour
     {
@@ -37,6 +41,7 @@ namespace MageCast.Gestures
         float width, height;
         bool broken;
 
+        BoxCollider box;
         Transform[] pieces;
         Vector3[] pieceAt;
         float[] pieceLength, pieceDelay;
@@ -72,7 +77,9 @@ namespace MageCast.Gestures
 
             // the solid part: a plain box the size of the wall, there from the first frame, so nothing
             // slips through while the spikes are still coming up
+            // invisible: the wall is the ice you see, and this is what makes all of it solid between the spikes
             var box = go.AddComponent<BoxCollider>();
+            w.box = box;
             box.center = new Vector3(0f, w.height * 0.5f, 0f);
             box.size = new Vector3(w.width, w.height, SpellTiers.IceWallThickness);
 
@@ -163,31 +170,19 @@ namespace MageCast.Gestures
                 var r = go.AddComponent<MeshRenderer>();
                 r.sharedMaterial = pieceMaterial;
 
+                // Every spike is solid in its own shape: a tier III's needles stand well above the box, and
+                // a shot at one must stop on the ice you see, not fly through it into you. Hitting a spike
+                // is hitting the wall -- the same shatter, whatever part was struck.
+                var hull = go.AddComponent<MeshCollider>();
+                hull.sharedMesh = pieceMesh;
+                hull.convex = true;
+
                 pieces[i] = go.transform;
                 pieceLength[i] = h;
                 // bursting up from the middle outwards, the front row a beat behind the back
                 pieceDelay[i] = edge * 0.1f + (isBack ? 0f : 0.05f) + Rand(rnd, 0f, 0.02f);
             }
-
-            // A sheet of clear ice through the middle of it, filling the gaps between the spikes: what
-            // stops shots is the whole box, and it should look whole, not like a fence to shoot through.
-            sheet = GameObject.CreatePrimitive(PrimitiveType.Cube).transform;
-            Destroy(sheet.GetComponent<Collider>());
-            sheet.name = "Sheet";
-            sheet.SetParent(transform, false);
-            sheetSize = new Vector3(width * 0.95f, height * 0.6f, 0.22f);
-            sheet.localScale = sheetSize;
-            sheet.localPosition = new Vector3(0f, -sheetSize.y * 0.5f, 0f);
-            var sr = sheet.GetComponent<Renderer>();
-            sheetMaterial = RuntimeMaterials.Fade(new Color(0.55f, 0.82f, 1f), 0.38f, 0.55f);
-            sheetMaterial.SetFloat("_Glossiness", 0.95f);
-            sr.material = sheetMaterial;
-            sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
-
-        Transform sheet;
-        Vector3 sheetSize;
-        Material sheetMaterial;
 
         static float Rand(System.Random r, float a, float b) { return a + (float)r.NextDouble() * (b - a); }
 
@@ -287,6 +282,9 @@ namespace MageCast.Gestures
         {
             if (broken) return;
             broken = true;
+            // gone at once, not at the end of the frame: the meltwater laid right after must not be cut
+            // to the shape of spikes that are no longer there
+            foreach (Collider c in GetComponentsInChildren<Collider>()) c.enabled = false;
             Shattered++;
             Vector3 middle = transform.position + Vector3.up * (height * 0.45f);
             Shards();
@@ -370,11 +368,12 @@ namespace MageCast.Gestures
                 float sunk = (1f - up) + melt * melt;
                 pieces[i].localPosition = pieceAt[i] - Vector3.up * (pieceLength[i] * 1.1f * sunk);
             }
-            if (sheet != null)
+            // the invisible box goes down with the ice as it melts, so it stops nothing that is no longer there
+            if (melt > 0f && box != null)
             {
-                float t = Mathf.Clamp01((age - 0.05f) / RiseTime);
-                float rise = (t < 1f ? EaseOutBack(t) : 1f) * (1f - melt * melt);
-                sheet.localPosition = new Vector3(0f, sheetSize.y * (rise - 0.5f), 0f);
+                float left = height * (1f - melt * melt);
+                box.size = new Vector3(box.size.x, Mathf.Max(0.01f, left), box.size.z);
+                box.center = new Vector3(0f, left * 0.5f, 0f);
             }
         }
 
@@ -388,7 +387,6 @@ namespace MageCast.Gestures
         void OnDestroy()
         {
             all.Remove(this);
-            if (sheetMaterial != null) Destroy(sheetMaterial);
         }
     }
 }

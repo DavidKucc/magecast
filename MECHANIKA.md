@@ -266,9 +266,14 @@ stěna nikdy nebyla nechtěná.
 - **oheň do ní:** roztaví ji a zůstane po ní **voda** (vede blesk) — oheň do ledu jako všude jinde,
 - **boti** ji stavějí, když je někdo ostřeluje a jsou zranění (2,6 m před sebou, směrem k útočníkovi).
 
+**Co je pevné:** neviditelný kvádr šířky a výšky stěny (mezi hroty se nedá prostřelit) a navíc **každý
+hrot ve svém vlastním tvaru** — hroty vykloněné dopředu, do stran nebo jehly tieru III nad kvádr. Střela
+se zastaví o led, který vidíš, a zásah kteréhokoli kusu je zásah stěny (roztříští ji celou). Při tání
+klesá i neviditelný kvádr.
+
 Vzhled: hroty a ledový materiál z balíku Stylized AoE (pointy rock), vyrážejí ze země od středu ke
-krajům za ledovým výbuchem z téhož balíku, mezi nimi průsvitná ledová deska; při rozbití se rozletí na
-střepy s ledovou explozí. Bez balíku (klon z repozitáře) vlastní jednoduché krystaly.
+krajům za ledovým výbuchem z téhož balíku; při rozbití se rozletí na střepy s ledovou explozí. Bez
+balíku (klon z repozitáře) vlastní jednoduché krystaly.
 
 Ověřeno měřením (dřívější čísla): odraz vyšel zrcadlově na desetinu s poškozením 17,6, vzdušný proud
 vyhodil rychlostí 9,4 m/s a výbuch u stěny
