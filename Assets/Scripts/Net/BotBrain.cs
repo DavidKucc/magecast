@@ -103,8 +103,17 @@ namespace MageCast
         float drawStarted, drawLength, holdUntil, nextCastAt;
         int pointsSent;
 
-        float Reaction { get { return Mathf.Lerp(0.38f, 0.17f, Skill); } }
-        float TurnRate { get { return Mathf.Lerp(380f, 760f, Skill); } }
+        // What skill does. Novice = 1 - skill; most of it is felt only low down (novice squared), so
+        // the middle of the slider, where the aim was tuned to land like a person, barely moves, and 0 %
+        // is a real beginner: slow to react and to turn, slow and unsure drawing (a quarter of the runes
+        // fizzle), pauses between spells, a poor lead, rarely a dodge, and no feel for the clever spell.
+        // (Until 14 Oct a 0 % bot drew almost as well as a 60 % one, and killed a strafing player who
+        // never fired back about once a minute.)
+        static float Novice { get { return 1f - Mathf.Clamp01(Skill); } }
+        static float Beginner { get { return Novice * Novice; } }
+
+        float Reaction { get { return 0.17f + 0.43f * Beginner; } }
+        float TurnRate { get { return 760f - 520f * Novice; } }
 
         void Start()
         {
@@ -178,7 +187,7 @@ namespace MageCast
 
             // just spotted: a moment to take it in before the hands start a rune
             if (targetSeen && !sawBefore)
-                nextCastAt = Mathf.Max(nextCastAt, Time.time + Reaction + Rand(0.1f, 0.4f));
+                nextCastAt = Mathf.Max(nextCastAt, Time.time + Reaction + Rand(0.1f, 0.4f) + Beginner * Rand(0.2f, 0.8f));
 
             ConsiderHiding();
         }
@@ -333,7 +342,7 @@ namespace MageCast
 
                 judged.Add(p);
                 if (tHit < Reaction + 0.1f) continue;                           // too late to do anything
-                if (rnd.NextDouble() > 0.2f + 0.5f * Skill) continue;           // did not react
+                if (rnd.NextDouble() > 0.7f - 0.6f * Novice) continue;          // did not react
 
                 Vector3 side = Vector3.Cross(Vector3.up, new Vector3(v.x, 0f, v.z).normalized);
                 if (rnd.NextDouble() < 0.5) side = -side;
@@ -442,7 +451,10 @@ namespace MageCast
                     // in a fight: hold the range and side-step, so a shot has to be led
                     if (Time.time >= strafeSwitchAt)
                     {
-                        if (rnd.NextDouble() < 0.6) strafeSign = -strafeSign;
+                        // a beginner often just stands there while fighting
+                        if (rnd.NextDouble() < 0.6 * Beginner) strafeSign = 0f;
+                        else if (strafeSign == 0f) strafeSign = rnd.NextDouble() < 0.5 ? 1f : -1f;
+                        else if (rnd.NextDouble() < 0.6) strafeSign = -strafeSign;
                         strafeSwitchAt = Time.time + Rand(0.6f, 1.8f);
                         if (!hands.BotBusy && rnd.NextDouble() < 0.1) motor.ScriptedJump = true;
                     }
@@ -532,7 +544,7 @@ namespace MageCast
                     RollQuality();
                     rune = GestureTemplates.Corners(chosen.gesture);
                     int segments = rune != null ? rune.Length - 1 : 3;
-                    drawLength = 0.25f + 0.2f * segments + Rand(0f, 0.2f) + (1f - Skill) * 0.2f;
+                    drawLength = 0.25f + 0.2f * segments + Rand(0f, 0.2f) + 0.2f * Novice + 0.45f * Beginner;
                     drawStarted = Time.time;
                     pointsSent = 0;
                     hands.BotBeginDraw();
@@ -554,7 +566,7 @@ namespace MageCast
                     if (hands.BotHeldTier > 0)
                     {
                         phase = Phase.Holding;
-                        holdUntil = Time.time + Rand(0.2f, 0.6f);
+                        holdUntil = Time.time + Rand(0.2f, 0.6f) + Beginner * Rand(0.1f, 0.6f);
                     }
                     else
                     {
@@ -570,7 +582,7 @@ namespace MageCast
                     if (hands.BotSend(AimFor(chosen)))
                     {
                         phase = Phase.Idle;
-                        nextCastAt = Time.time + Rand(0.35f, 1.1f);
+                        nextCastAt = Time.time + Rand(0.35f, 1.1f) + Beginner * Rand(0.3f, 1.1f);
                     }
                     break;
             }
@@ -589,8 +601,10 @@ namespace MageCast
             bool drawing = target.Drawing.Value && distance <= Sight.ReadRange;
             Add(options, fire, 4f);
             Add(options, ice, distance < 18f ? 3f : 1.5f);
-            Add(options, bolt, onConductor ? 12f : distance > 18f ? 3f : 2f);
-            Add(options, air, distance < 6f ? 6f : drawing ? 4f : 0.8f);
+            // the clever spell for the moment -- lightning into ice, air at somebody drawing -- is seen
+            // less often the less skilled the bot
+            Add(options, bolt, onConductor ? Mathf.Lerp(3f, 12f, Skill) : distance > 18f ? 3f : 2f);
+            Add(options, air, distance < 6f ? 6f : drawing ? Mathf.Lerp(1.2f, 4f, Skill) : 0.8f);
             bool beingShot = known.ContainsKey(target) && Time.time - known[target].HurtMeAt < 2f;
             Add(options, ward, CastShield.Of(self.AttackerId) != null ? 0f
                              : health.Fraction < 0.4f ? 3f : beingShot ? 0.8f : 0.15f);
@@ -627,7 +641,7 @@ namespace MageCast
         void RollQuality()
         {
             float r = (float)rnd.NextDouble();
-            float fizzle = 0.13f - 0.09f * Skill, weak = 0.42f - 0.25f * Skill, perfect = 0.05f + 0.25f * Skill;
+            float fizzle = 0.04f + 0.22f * Beginner, weak = 0.17f + 0.28f * Novice, perfect = 0.30f - 0.28f * Novice;
             if (r < fizzle) { chosenQuality = CastQuality.Fizzle; chosenPrecision = 0f; }
             else if (r < fizzle + weak) { chosenQuality = CastQuality.Weak; chosenPrecision = Rand(0.45f, 0.64f); }
             else if (r > 1f - perfect) { chosenQuality = CastQuality.Perfect; chosenPrecision = Rand(0.86f, 0.98f); }
@@ -663,7 +677,8 @@ namespace MageCast
             int tier = hands.BotHeldTier;
             float speed = tier <= 1 && spell.speedTierI > 0f ? spell.speedTierI : spell.speed;
             Vector3 from = hands.MuzzlePoint;
-            Vector3 velocity = PerceivedVelocity;
+            // a beginner hardly leads at all: shoots where you are, not where you are going
+            Vector3 velocity = PerceivedVelocity * (1f - 0.7f * Beginner);
             // the lead is judged from what it saw, over the time the shot will take -- reaction included
             Vector3 aim = feet + Vector3.up * 1.1f;
             for (int i = 0; i < 2; i++)
@@ -678,7 +693,8 @@ namespace MageCast
             float crossing = Vector3.Cross(line, velocity).magnitude;           // m/s across the line of fire
             float distance = Vector3.Distance(from, aim);
             // tuned (13 Oct) so a 60 % bot lands about 40 % on players, as a person does
-            float error = (0.028f + (1f - Skill) * 0.07f) * distance + crossing * (0.16f - 0.08f * Skill);
+            float error = (0.028f + 0.07f * Novice + 0.08f * Beginner) * distance
+                        + crossing * (0.08f + 0.08f * Novice + 0.12f * Beginner);
             aim += new Vector3(Rand(-1f, 1f), Rand(-0.6f, 0.6f), Rand(-1f, 1f)) * error;
             return aim;
         }

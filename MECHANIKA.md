@@ -367,6 +367,13 @@ snímku):
   přebíháš před očima,
 - **otáčení:** jen rychlostí ruky na myši (380–760 °/s) a kouzlo pošle, až má cíl před sebou.
 
+**Dovednost (posuvník 0–100 %):** ovlivňuje mušku, předsazení, reakci (0,6–0,17 s), otáčení, rychlost a
+jistotu kreslení (na 0 % fizzlne čtvrtina run a kreslí skoro o půl sekundy déle), pauzy mezi kouzly,
+úhyby, jestli v boji stojí na místě a jestli vidí chytré kouzlo (blesk do ledu, vzduch na kreslícího).
+Nejvíc se to projeví dole — kolem 60 % se bot skoro nezměnil, 0 % je začátečník. Naměřeno proti hráči,
+který náhodně uhýbá do stran a nestřílí: 0 % ~15–30 poškození za minutu (dřív 99, tedy smrt každou
+minutu), 50 % ~77, 100 % ~150.
+
 **Chová se jako člověk:** nejdřív odpovídá tomu, kdo na něj střílí; po spatření soupeře chvíli počká, než
 začne kreslit; střele, kterou vidí letět na sebe, uhne úkrokem, když to stihne (ne vždy, podle dovednosti);
 těžce zraněný bez bariéry se na pár sekund schová z dohledu a pak se vrátí. Vybírá kouzlo podle situace:
