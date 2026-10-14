@@ -67,11 +67,11 @@ namespace MageCast
             "Myš - míření\n" +
             "Šplhání: skoč proti hraně a drž směr k ní - vytáhneš se na cokoli do 2,4 m. Během šplhání nekreslíš; " +
             "zásah tě shodí dolů.\n\n" +
-            "<b>Kouzlo - všechno levým tlačítkem</b>\n" +
+            "<b>Kouzlo - levé tlačítko, pravé ruší</b>\n" +
             "1.  Drž levé tlačítko a nakresli runu. Kamera stojí, jdeš pomaleji a nemůžeš sprintovat ani skákat.\n" +
             "2.  Pusť - kouzlo máš v ruce. Nahoře vlevo vidíš, co a v jakém tieru (I / II / III).\n" +
-            "3.  Klikni levým - kouzlo letí tam, kam míříš.\n" +
-            "     Podrž levé a pusť - kouzlo zahodíš a ruku máš prázdnou.\n\n" +
+            "3.  Klikni levým - kouzlo letí tam, kam míříš (hned při stisku).\n" +
+            "     Klikni pravým - kouzlo zahodíš a ruku máš prázdnou.\n\n" +
             "Pravé tlačítko během kreslení - zruší rozkreslenou runu.\n" +
             "Kliknutí kolečkem myši - kamera přeskočí přes druhé rameno a kouzla letí z druhé ruky (výchozí je pravá).\n" +
             "S kouzlem v ruce jen jdeš (70 % rychlosti) a nedá se sprintovat.\n\n" +

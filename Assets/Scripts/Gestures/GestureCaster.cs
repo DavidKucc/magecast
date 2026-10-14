@@ -112,8 +112,9 @@ namespace MageCast.Gestures
     ///    works at reduced speed with sprint and jump locked; that is what makes a long gesture a real
     ///    risk rather than a free action. RMB throws the glyph away mid-draw.
     /// 2. HOLD -- let go and the spell is in your hand, for as long as you like. The camera comes back.
-    /// 3. SEND OR DROP -- click LMB and it flies where you aim. Keep LMB down longer instead and let go:
-    ///    the spell is dropped and your hand is empty again.
+    /// 3. SEND OR DROP -- click LMB and it flies where you aim (on the press). Click RMB instead and the
+    ///    spell is dropped and your hand is empty again. (Until 14 Oct a long hold of LMB dropped it,
+    ///    which made every send wait for the button to come back up.)
     ///
     /// The split exists because the old design -- lock the direction at the moment you START drawing --
     /// made moving targets unhittable. A target running at 6 m/s moves about 8 m during a one-second
@@ -136,13 +137,7 @@ namespace MageCast.Gestures
     {
         [Header("Input")]
         [SerializeField] int castButton = 0;                 // LMB: draw, then send
-        [SerializeField] int cancelButton = 1;               // RMB: throw away a glyph mid-draw
-
-        /// <summary>
-        /// Holding LMB at least this long with a spell in hand drops it instead of sending it -- long
-        /// enough that a click never does it by accident, short enough to be a deliberate gesture.
-        /// </summary>
-        [SerializeField] float dropHold = 0.45f;
+        [SerializeField] int cancelButton = 1;               // RMB: throw away a glyph mid-draw, or drop the spell in hand
         [SerializeField] float drawSensitivity = 14f;        // pixels per unit of mouse delta -- NOT aim sensitivity
         [SerializeField] float minPointSpacing = 4f;         // pixels; stops a stationary mouse flooding the stroke
         [SerializeField] float minStrokeLength = 60f;        // pixels; below this it was a twitch, not a gesture
@@ -302,10 +297,6 @@ namespace MageCast.Gestures
         /// <summary>When a held tier III falls to tier II. See SpellTiers.TopTierHold.</summary>
         float heldTopTierUntil;
 
-        // LMB went down with a spell in hand: a click sends it, a long hold drops it
-        bool pressing;
-        float pressedAt;
-
         string lastResult = "";
         float lastResultTime = -99f;
 
@@ -347,7 +338,6 @@ namespace MageCast.Gestures
             if (GameInput.Blocked)
             {
                 if (drawing) Interrupt();
-                pressing = false;     // a click the menu took is not a send, nor a drop
                 return;
             }
 
@@ -355,28 +345,21 @@ namespace MageCast.Gestures
             if (motor != null && motor.IsClimbing)
             {
                 if (drawing) Interrupt();
-                pressing = false;
                 return;
             }
 
             ReadPracticeTarget();
 
-            // A spell in hand: LMB decides on release -- a click sends it, a long hold drops it. On
-            // release rather than on press, because only then is it known which of the two it was.
+            // A spell in hand: LMB sends it, the moment it goes down; RMB drops it.
             if (holding)
             {
                 if (heldQuality == CastQuality.Perfect && Time.time >= heldTopTierUntil) FallToTierTwo();
+                if (Input.GetMouseButtonDown(cancelButton)) { Drop(); return; }
                 // clicked a moment early: it goes as the cooldown ends
-                if (sendQueued && !pressing && CooldownLeft(heldSpell) <= 0f) { Send(); return; }
-                if (Input.GetMouseButtonDown(castButton)) { pressing = true; pressedAt = Time.time; }
-                if (pressing && !Input.GetMouseButton(castButton))
-                {
-                    pressing = false;
-                    if (Time.time - pressedAt >= dropHold) Drop(); else Send();
-                }
+                if (sendQueued && CooldownLeft(heldSpell) <= 0f) { Send(); return; }
+                if (Input.GetMouseButtonDown(castButton)) Send();
                 return;
             }
-            pressing = false;
 
             // Changed your mind mid-glyph: the other button throws it away. Nothing is cast and nothing
             // is spent; LMB has to be pressed again to start over.
@@ -591,7 +574,6 @@ namespace MageCast.Gestures
             heldPrecision = precision;
             heldMetrics = metrics;
             holding = true;
-            pressing = false;
             motor.SprintLocked = true;    // loaded or fast, not both -- see the class comment
             motor.SpeedMultiplier = HoldSpeed;
 
@@ -1418,26 +1400,18 @@ namespace MageCast.Gestures
             // --- top left: what you are holding, or what just happened ---
             if (holding && heldSpell != null)
             {
-                // Holding LMB down: the bar fills towards the drop. Released before it is full, the
-                // press was a click and the spell flies; full, letting go drops it.
-                float held = pressing ? Time.time - pressedAt : 0f;
-                bool willDrop = pressing && held >= dropHold;
-
                 int tier = SpellTiers.Of(heldQuality);
                 float wait = CooldownLeft(heldSpell);
-                bigStyle.normal.textColor = willDrop ? FailColour
-                                          : wait > 0f ? Color.Lerp(heldSpell.colour, Color.grey, 0.6f)
-                                          : heldSpell.colour;
+                bigStyle.normal.textColor = wait > 0f ? Color.Lerp(heldSpell.colour, Color.grey, 0.6f) : heldSpell.colour;
                 GUI.Label(new Rect(14f, 10f, 700f, 40f),
                           heldSpell.displayName + " " + SpellTiers.Roman(tier)
-                          + (willDrop ? "  - RELEASE TO DROP"
-                             : wait > 0f ? (LockLeft(heldSpell) > 0f ? "  LOCKED " : "  ") + wait.ToString("0.0") + " s"
-                                           + (sendQueued ? "  (queued)" : "")
+                          + (wait > 0f ? (LockLeft(heldSpell) > 0f ? "  LOCKED " : "  ") + wait.ToString("0.0") + " s"
+                                         + (sendQueued ? "  (queued)" : "")
                              : "  READY"),
                           bigStyle);
 
                 // a tier III runs down to II: shown as a draining bar under the name
-                if (tier >= 3 && !pressing)
+                if (tier >= 3)
                 {
                     float left = Mathf.Clamp01((heldTopTierUntil - Time.time) / SpellTiers.TopTierHold);
                     GUI.color = new Color(0f, 0f, 0f, 0.5f);
@@ -1448,16 +1422,7 @@ namespace MageCast.Gestures
                 }
 
                 smallStyle.normal.textColor = Color.white;
-                GUI.Label(new Rect(16f, 46f, 700f, 20f), "LMB click: send     hold LMB: drop", smallStyle);
-
-                if (pressing)
-                {
-                    GUI.color = new Color(0f, 0f, 0f, 0.5f);
-                    GUI.DrawTexture(new Rect(16f, 66f, 220f, 5f), Texture2D.whiteTexture);
-                    GUI.color = willDrop ? FailColour : Color.white;
-                    GUI.DrawTexture(new Rect(16f, 66f, 220f * Mathf.Clamp01(held / dropHold), 5f), Texture2D.whiteTexture);
-                    GUI.color = Color.white;
-                }
+                GUI.Label(new Rect(16f, 46f, 700f, 20f), "LMB: send     RMB: drop", smallStyle);
             }
             else if (Time.time < headlineUntil)
             {

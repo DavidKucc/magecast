@@ -33,22 +33,22 @@ než to vypustíš. Vzniká tím čtení záměru a blafování — a je to ta n
 
 ## Jak se sesílá
 
-Všechno je na **levém tlačítku**:
+Kreslí a posílá se **levým tlačítkem**, ruší **pravým**:
 
 ```
 1.  držíš levé               → kamera zamrzne, myš se změní na pero
-2.  kreslíš runu             → tah se vykresluje, soupeř ho vidí
+2.  kreslíš runu             → tah se vykresluje, soupeř ho vidí   (pravé = zrušit runu)
 3.  pustíš levé              → runa se vyhodnotí a oznámkuje, kouzlo máš v ruce
 4.  míříš, jak dlouho chceš  → crosshair má barvu kouzla, žádný časový limit
-5a. klikneš levým            → kouzlo letí tam, kam míří crosshair
-5b. podržíš levé a pustíš    → kouzlo zahodíš (DROPPED), ruka je prázdná
+5a. klikneš levým            → kouzlo letí tam, kam míří crosshair (hned při stisku)
+5b. klikneš pravým           → kouzlo zahodíš (DROPPED), ruka je prázdná
 ```
 
 Míření je pořád jedno a to samé: z kamery jde paprsek dopředu a kde trefí, tam kouzlo letí.
 
-Rozdíl mezi kliknutím a podržením je **0,45 s**; při držení se vlevo nahoře plní proužek, a jakmile je
-plný, puštění kouzlo zahodí. Dokud kouzlo držíš, **jen jdeš** (70 % rychlosti, animace chůze) a **nejde
-sprint** — buď máš připravené kouzlo, nebo jsi rychlý, ne obojí.
+(Do 14. 10. se kouzlo zahazovalo podržením levého 0,45 s, a proto i každé odeslání čekalo na puštění
+tlačítka.) Dokud kouzlo držíš, **jen jdeš** (70 % rychlosti, animace chůze) a **nejde sprint** — buď
+máš připravené kouzlo, nebo jsi rychlý, ne obojí.
 
 Bariéra se staví gestem bloku (zvednout ruce, spustit), skok z běhu vpřed má vlastní animaci skoku z
 běhu.
