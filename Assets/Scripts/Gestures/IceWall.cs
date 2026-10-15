@@ -254,6 +254,9 @@ namespace MageCast.Gestures
 
         // ---------------------------------------------------------------- breaking
 
+        /// <summary>How far the meltwater reaches either side of where the wall stood.</summary>
+        const float MeltDepth = 0.9f;
+
         /// <summary>
         /// Server (or offline): a spell has hit it. It breaks, for everyone; a fire leaves the meltwater as
         /// a water patch, owned by whoever threw it.
@@ -270,10 +273,14 @@ namespace MageCast.Gestures
 
             if (byFire)
             {
-                float r = Mathf.Clamp(width * 0.5f, 1.2f, 2f);
-                SpellZone water = SpellZone.Spawn(centre, GroundEffect.Water, r, 6f, 0f, WaterColour, true, attacker, attacker);
+                // the meltwater lies where the wall stood: an oval along it, not a round puddle
+                float along = width * 0.5f + 0.3f;
+                float across = Mathf.Clamp01(MeltDepth / along);
+                Vector3 axis = transform.right;
+                SpellZone water = SpellZone.Spawn(centre, GroundEffect.Water, along, 6f, 0f, WaterColour, true, attacker, attacker,
+                                                  axis, across);
                 if (by != null && by.IsSpawned)
-                    by.BroadcastZone(water.transform.position, GroundEffect.Water, r, 6f, 0f, WaterColour);
+                    by.BroadcastZone(water.transform.position, GroundEffect.Water, along, 6f, 0f, WaterColour, axis, across);
             }
         }
 

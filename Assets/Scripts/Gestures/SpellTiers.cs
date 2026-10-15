@@ -133,6 +133,8 @@ namespace MageCast.Gestures
         // them); fire on somebody wet only steams. See Wet.
         public const float WetSeconds = 4f;
         public const float WetShockMultiplier = 2f;
+        /// <summary>Wet feet on an ice patch -- walked onto, or laid under them -- freeze to it for this long.</summary>
+        public const float WetFreezeSeconds = 1.5f;
 
         // barrier -- since 14 Oct the strong, lasting cover (the ice wall is the quick, fragile one):
         // 50 % more durability and 8 s instead of 6, the dome 6 s instead of 4.5

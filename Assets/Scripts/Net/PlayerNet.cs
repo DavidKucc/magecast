@@ -331,19 +331,20 @@ namespace MageCast
 
         /// <summary>Server: a patch landed. Everyone else gets one to see and to be slid or thrown by.</summary>
         public void BroadcastZone(Vector3 at, GroundEffect effect, float radius, float lifetime, float strength,
-                                  Color colour)
+                                  Color colour, Vector3 ovalAxis = default(Vector3), float ovalAcross = 1f)
         {
             if (!IsServer) return;
-            ZoneClientRpc(at, effect, radius, lifetime, strength, colour);
+            ZoneClientRpc(at, effect, radius, lifetime, strength, colour, ovalAxis, ovalAcross);
         }
 
         [ClientRpc]
         void ZoneClientRpc(Vector3 at, GroundEffect effect, float radius, float lifetime, float strength,
-                           Color colour)
+                           Color colour, Vector3 ovalAxis, float ovalAcross)
         {
             if (IsServer) return;
             // owned by this player on every machine, so the two-patch limit takes away the same one everywhere
-            SpellZone.Spawn(at, effect, radius, lifetime, strength, colour, false, Health.NoAttacker, AttackerId);
+            SpellZone.Spawn(at, effect, radius, lifetime, strength, colour, false, Health.NoAttacker, AttackerId,
+                            ovalAxis, ovalAcross);
         }
 
         /// <summary>

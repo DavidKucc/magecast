@@ -264,7 +264,8 @@ aby stěna nikdy nebyla nechtěná.
 - **pevná:** zastaví kouzla, lidi i pohled (runa ani jméno přes ni nejsou vidět),
 - **stojí tvůj led:** spotřebuje cooldown ledu i útočné GCD — volíš mezi útokem a krytem,
 - **velikost podle tieru:** I 2,0 × 1,7 m (kryt v podřepu), II 2,8 × 2,3 m, III 3,4 × 2,6 m,
-- **oheň do ní:** roztaví ji a zůstane po ní **voda** (vede blesk) — oheň do ledu jako všude jinde,
+- **oheň do ní:** roztaví ji a zůstane po ní **voda** (vede blesk) — oheň do ledu jako všude jinde; voda
+  leží **oválem podél stěny** (na každém konci o 0,3 m delším než stěna, 0,9 m na každou stranu od ní),
 - **boti** ji stavějí, když je někdo ostřeluje a jsou zranění (2,6 m před sebou, směrem k útočníkovi).
 
 **Co je pevné:** neviditelný kvádr šířky a výšky stěny (mezi hroty se nedá prostřelit) a navíc **každý
@@ -305,10 +306,18 @@ může schytat i autor. Voda:
 - dá **zásah ledu bez zpomalení** a zasažený je **mokrý 4 s** (modrý nádech a kape z něj, nad ním „WET“),
 - z tieru II nechá na zemi **vodní plochu** (vede blesk),
 - **blesk do mokrého = 2× poškození** („SHOCK x2“) a vysuší ho,
-- **oheň do mokrého jen zasyčí** („STEAM“): nehoří, a je suchý — jediná výhoda mokra.
+- **oheň do mokrého jen zasyčí** („STEAM“): nehoří, a je suchý — jediná výhoda mokra,
+- **mokrý na ledové ploše přimrzne** („FROZEN“) na **1,5 s** — ať na ni vstoupí, nebo mu ji někdo dá pod
+  nohy. Nehne se ani neskočí, kreslit může; voda zmrzla, takže je pak suchý. Kombo: led přes ohnivou čáru,
+  pak led na zem.
 
 Ověřeno (15. 10.): led tieru II přes čáru tieru III → voda, 12 poškození, mokrý; blesk 24 (místo 12), suchý;
-další blesk 12; oheň na mokrého → bez hoření, suchý; bot stojící v čáře hoří.
+další blesk 12; oheň na mokrého → bez hoření, suchý; bot stojící v čáře hoří. Suchý bot na ledové ploše
+nepřimrzne; mokrému ji položenou pod nohy přimrzne (rychlost 0), mokrý přestane být a po 1,5 s se zase
+hýbe. Voda po stěně tieru II rozbité ohněm: 1,7 m podél stěny, 0,9 m napříč.
+
+Zvuk čáry (15. 10.): smyčka ohně je nahlas celou dobu (RMS 0,27), tak praská jen na 0,2 (dřív 0,6) a „vuuf“
+zapálení je na 0,35 (dřív 0,7); hořící člověk 0,4 (dřív 0,6).
 
 Ověřeno měřením (dřívější čísla): odraz vyšel zrcadlově na desetinu s poškozením 17,6, vzdušný proud
 vyhodil rychlostí 9,4 m/s a výbuch u stěny

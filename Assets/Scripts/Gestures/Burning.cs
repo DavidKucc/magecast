@@ -52,7 +52,7 @@ namespace MageCast.Gestures
                 b.flames = SpellFx.Play(look.status, target.transform.position, Quaternion.identity,
                                         look.statusScale, target.transform);
                 SpellFx.KeepBurning(b.flames, 8f);      // the pack's fire is one puff; this burns on until it ends
-                SpellFx.OneShot(look.statusSound, target.transform.position, 0.6f, seconds);
+                SpellFx.OneShot(look.statusSound, target.transform.position, 0.4f, seconds);   // a loud loop: under the fight
             }
         }
 

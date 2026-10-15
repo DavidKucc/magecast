@@ -29,6 +29,12 @@ namespace MageCast.Gestures
         static readonly Color Ember = new Color(1f, 0.45f, 0.12f);
 
         const int Segments = 12;
+
+        /// <summary>
+        /// The fire patch's loop under it, quietly: the clip is loud all the way through (RMS 0.27), and
+        /// at the 0.6 it had at first (15 Oct) a line drowned out the fight around it.
+        /// </summary>
+        const float CrackleVolume = 0.2f;
         const float CheckEvery = 0.1f;
 
         float length, width, remaining, age;
@@ -116,7 +122,7 @@ namespace MageCast.Gestures
                 SpellFx.MakeSpatial(crackle);
                 crackle.clip = fx.zoneLoop;
                 crackle.loop = true;
-                crackle.volume = 0.6f * SpellFx.Volume;
+                crackle.volume = CrackleVolume * SpellFx.Volume;
                 crackle.Play();
             }
         }
@@ -155,7 +161,7 @@ namespace MageCast.Gestures
             }
 
             Vector3 middle = transform.position + Vector3.up * 0.3f;
-            if (fx.specialSound != null) SpellFx.OneShot(fx.specialSound, middle, 0.7f);
+            if (fx.specialSound != null) SpellFx.OneShot(fx.specialSound, middle, 0.35f);
 
             var lit = new GameObject("Glow");
             lit.transform.SetParent(transform, false);
@@ -173,7 +179,7 @@ namespace MageCast.Gestures
                 SpellFx.MakeSpatial(crackle);
                 crackle.clip = fx.zoneLoop;
                 crackle.loop = true;
-                crackle.volume = 0.6f * SpellFx.Volume;
+                crackle.volume = CrackleVolume * SpellFx.Volume;
                 crackle.Play();
             }
         }
@@ -318,7 +324,7 @@ namespace MageCast.Gestures
                 band.color = c;
                 band.SetColor("_EmissionColor", Ember * (1.6f * a));
             }
-            if (crackle != null) crackle.volume = 0.6f * SpellFx.Volume * Mathf.Clamp01(remaining / 0.5f);
+            if (crackle != null) crackle.volume = CrackleVolume * SpellFx.Volume * Mathf.Clamp01(remaining / 0.5f);
             if (remaining <= 0f) { Destroy(gameObject); return; }
 
             if (Time.time < nextCheck || remaining <= 0.4f) return;

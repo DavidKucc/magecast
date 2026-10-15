@@ -105,7 +105,20 @@ namespace MageCast.Gestures
         /// </summary>
         public static Shape SupportedShape(Vector3 ground, float radius)
         {
+            return SupportedShape(ground, radius, Vector3.zero, 1f);
+        }
+
+        /// <summary>
+        /// The same, for an oval: <paramref name="radius"/> along <paramref name="axis"/>, that times
+        /// <paramref name="across"/> across it (1 is a circle). Meltwater from a wall lies along the wall.
+        /// </summary>
+        public static Shape SupportedShape(Vector3 ground, float radius, Vector3 axis, float across)
+        {
             var shape = new Shape { Reach = new float[Spokes], Heights = new float[Spokes * Rings] };
+            axis.y = 0f;
+            bool oval = across < 0.999f && axis.sqrMagnitude > 1e-4f;
+            if (oval) axis.Normalize();
+            float full = radius;
             var rs = new List<float>();
             var ys = new List<float>();
 
@@ -113,6 +126,7 @@ namespace MageCast.Gestures
             {
                 float a = i / (float)Spokes * Mathf.PI * 2f;
                 Vector3 dir = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+                radius = oval ? full * OvalReach(dir, axis, across) : full;
                 rs.Clear();
                 ys.Clear();
                 rs.Add(0f);
@@ -153,6 +167,14 @@ namespace MageCast.Gestures
                     shape.Heights[i * Rings + k - 1] = Along(rs, ys, reached * k / Rings);
             }
             return shape;
+        }
+
+        /// <summary>An ellipse's radius in direction <paramref name="dir"/>, as a share of its long half-axis.</summary>
+        static float OvalReach(Vector3 dir, Vector3 axis, float across)
+        {
+            float c = Vector3.Dot(dir, axis);
+            float s2 = Mathf.Max(0f, 1f - c * c);
+            return across / Mathf.Sqrt(across * across * c * c + s2);
         }
 
         /// <summary>How far the patch reaches along each spoke -- for the aim marker, which shows the patch ahead.</summary>
@@ -285,7 +307,8 @@ namespace MageCast.Gestures
         public static SpellZone Spawn(Vector3 at, GroundEffect effect, float radius, float lifetime,
                                       float strength, Color colour,
                                       bool authoritative = true, ulong attacker = Health.NoAttacker,
-                                      ulong owner = Health.NoAttacker)
+                                      ulong owner = Health.NoAttacker,
+                                      Vector3 ovalAxis = default(Vector3), float ovalAcross = 1f)
         {
             // The per-player limit, applied the same way on every machine: they all see the same patches
             // arrive in the same order, so they all take away the same oldest one.
@@ -308,7 +331,7 @@ namespace MageCast.Gestures
 
             // Cut to the ground it actually lies on, so it ends where the platform ends, and shaped to it,
             // so it lies on a hill rather than cutting through one.
-            Shape shape = SupportedShape(ground, radius);
+            Shape shape = SupportedShape(ground, radius, ovalAxis, ovalAcross);
             float[] reach = shape.Reach;
             go.AddComponent<MeshFilter>().sharedMesh = BuildMesh(shape);
             MeshRenderer renderer = go.AddComponent<MeshRenderer>();
@@ -524,6 +547,11 @@ namespace MageCast.Gestures
                         // it holds while you are on it and lets go almost as you step off.
                         if (t.Motor != null && t.Motor.IsLocallyControlled && t.Touching)
                             t.Motor.ApplySlippery(strength, TickInterval + 0.15f);
+                        // Wet feet freeze to it -- whether they walked on or it was laid under them. On
+                        // every machine (each sees the same wet body touch the same ice); Frozen holds
+                        // the body still only where it is moved from.
+                        if (t.Touching && Wet.Is(t.Health != null ? (Component)t.Health : t.Root))
+                            Frozen.Apply(t.Health, t.Motor, t.Root, SpellTiers.WetFreezeSeconds);
                         break;
 
                     case GroundEffect.Shock:

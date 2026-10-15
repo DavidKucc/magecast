@@ -41,9 +41,10 @@ namespace MageCast
                 Basics = "22 poškození, 17 m/s (tier I 24 m/s). Pomalý a tlustý, dá se uhnout. Zasažený se vždy zpomalí. " +
                          "Zamířený na zem do " + SpellTiers.IceWallReach + " m před sebe (svítí WALL a ukáže se obrys na zemi) nevyletí, " +
                          "ale vyrazí jako ledová stěna: první zásah ji roztříští, po " + SpellTiers.IceWallSeconds + " s roztaje, oheň z ní nechá vodu. " +
-                         "Proletí-li ohnivou čárou, je z něj voda: bez zpomalení, ale zasažený je " + SpellTiers.WetSeconds + " s mokrý (i ty).",
+                         "Proletí-li ohnivou čárou, je z něj voda: bez zpomalení, ale zasažený je " + SpellTiers.WetSeconds + " s mokrý (i ty) " +
+                         "a na ledové ploše přimrzne.",
                 I = "zásah se zpomalením, rychlejší let; dopad na zem, zeď nebo bariéru zraní každého do " + SpellTiers.SplashRadius + " m (i tebe)",
-                II = "+ kluzká ledová plocha na zemi",
+                II = "+ kluzká ledová plocha na zemi; kdo je mokrý, na ní na " + SpellTiers.WetFreezeSeconds + " s přimrzne",
                 III = "+ zmrazí na " + SpellTiers.FreezeSeconds + " s: nehne se ani neskočí, kreslit ale může" },
             new SpellInfo { Rune = GestureTemplates.Sowulo, Name = "LIGHTNING", Czech = "Sowulo (slunce) - blesk",
                 Colour = new Color(1f, 0.9f, 0.35f),
