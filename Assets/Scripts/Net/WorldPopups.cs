@@ -76,6 +76,8 @@ namespace MageCast
         public static void Damage(Transform target, float amount)
         {
             if (target == null || amount <= 0f) return;
+            // your own losses are counted out on the health panel (PlayerHud), not over your head
+            if (PlayerNet.Local != null && target == PlayerNet.Local.transform) return;
             WorldPopups w = Instance;
 
             // add to a number still rising from the same target instead of starting another one

@@ -76,8 +76,8 @@ namespace MageCast.Gestures
 
             float x = Mathf.Round((Screen.width - width) * 0.5f);
             float y = Screen.height - size - nameHeight - 12f;
-            // clear of the health bar in the bottom left, on a narrow screen
-            if (x < 300f) y -= 62f;
+            // clear of the health panel in the bottom left, on a narrow screen
+            if (x < PlayerHud.Right + 12f) y -= PlayerHud.Height + 4f;
 
             // a plate behind the whole bar, so it reads against a bright floor as well as a dark one
             Fill(new Rect(x - 12f, y - 10f, width + 24f, size + nameHeight + 18f), new Color(0f, 0f, 0f, 0.32f));

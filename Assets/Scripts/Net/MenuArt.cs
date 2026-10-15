@@ -43,6 +43,18 @@ namespace MageCast
             }
         }
 
+        static Texture2D edges;
+
+        /// <summary>White at the edges of the screen, nothing in the middle -- tinted, a flash or a throb round the view.</summary>
+        public static Texture2D Edges
+        {
+            get
+            {
+                if (edges == null) edges = Radial(128, d => Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.55f, 1.2f, d)));
+                return edges;
+            }
+        }
+
         /// <summary>A line seen across: bright in the middle, soft at the sides.</summary>
         static Texture2D LineTex
         {
