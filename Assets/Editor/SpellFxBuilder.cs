@@ -134,10 +134,35 @@ namespace MageCast.EditorTools
             }
 
             AssignIceWall(fx);
+            AssignWater(fx);
 
             EditorUtility.SetDirty(fx);
             AssetDatabase.SaveAssets();
             Debug.Log("[SpellFx] assigned: " + fx.entries.Count + " spell(s) with effects");
+        }
+
+        /// <summary>Only water's pieces -- without making the recoloured effects again.</summary>
+        [MenuItem("Tools/Arena/Assign Water Effects")]
+        public static void AssignWaterOnly()
+        {
+            SpellFx fx = AssetDatabase.LoadAssetAtPath<SpellFx>(AssetPath);
+            if (fx == null) { Debug.LogWarning("[SpellFx] no " + AssetPath + " - run Assign Spell Effects first"); return; }
+            AssignWater(fx);
+            EditorUtility.SetDirty(fx);
+            AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>
+        /// Water is not a spell anybody draws: it is ice that went through a line of fire (Projectile), and
+        /// the patch fire and ice leave together. It looks like the pack's own water set -- the same
+        /// pieces as fire and ice -- and its patch is the AoE pack's water area.
+        /// </summary>
+        static void AssignWater(SpellFx fx)
+        {
+            Set(fx, "WATER", Magic + "Water/VFX_Water_Magic_Cast.prefab", Magic + "Water/VFX_Water_Magic_Projectile.prefab",
+                Magic + "Water/VFX_Water_Magic_Hit.prefab", projectileScale: 1f, castScale: 0.22f, impactScale: 0.5f,
+                castTurn: new Vector3(0f, -90f, 0f));
+            SetZone(fx, "WATER", "Water");
         }
 
         /// <summary>Only the ice wall's pieces -- without making the recoloured effects again.</summary>

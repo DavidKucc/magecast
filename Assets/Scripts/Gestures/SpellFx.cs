@@ -220,6 +220,31 @@ namespace MageCast.Gestures
         /// Lets a flying effect go when its projectile is gone: it stops emitting and fades out where it
         /// is, trail and all, instead of vanishing mid-air along with the object carrying it.
         /// </summary>
+        /// <summary>
+        /// The anime pack's fire is one puff -- three flames for a fraction of a second. This keeps it
+        /// burning: its flames emitted steadily, <paramref name="flamesPerSecond"/>, with a spark and a
+        /// flicker of glow now and then, for as long as it is left on (until Release).
+        /// </summary>
+        public static void KeepBurning(GameObject effect, float flamesPerSecond)
+        {
+            if (effect == null) return;
+            ParticleSystem[] systems = effect.GetComponentsInChildren<ParticleSystem>(true);
+            if (systems.Length == 0) return;
+            foreach (ParticleSystem ps in systems) ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+            foreach (ParticleSystem ps in systems)
+            {
+                var emission = ps.emission;
+                if (emission.burstCount == 0) continue;          // the root, which emits nothing itself
+                float share = ps.name.StartsWith("Flames") ? 1f : ps.name.StartsWith("Sparks") ? 0.35f : 0.12f;
+                emission.SetBursts(new ParticleSystem.Burst[0]);
+                emission.rateOverTime = flamesPerSecond * share;
+                var main = ps.main;
+                main.loop = true;
+                main.startDelay = 0f;
+            }
+            systems[0].Play(true);
+        }
+
         public static void Release(GameObject effect)
         {
             if (effect == null) return;

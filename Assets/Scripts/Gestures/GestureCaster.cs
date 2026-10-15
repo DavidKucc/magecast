@@ -658,8 +658,8 @@ namespace MageCast.Gestures
             Vector3 from;
             Vector3 aim = ResolveAim(out from);
             Vector3 spot;
-            // ice aimed at the floor close in front of you comes up as a wall instead of flying
-            if (spell == ice && WallSpot(aimPoint, aimNormal, aimCollider, out spot))
+            // ice aimed at the floor close in front of you comes up as a wall instead of flying; fire lays a line
+            if (Placed(spell) && WallSpot(aimPoint, aimNormal, aimCollider, out spot))
                 CastWall(spell, spot, heldPrecision, heldQuality);
             else
                 Cast(spell, aim, heldPrecision, heldQuality, heldMetrics, from);
@@ -812,8 +812,13 @@ namespace MageCast.Gestures
         /// <summary>The tier of the spell in hand, or 0.</summary>
         public int BotHeldTier { get { return holding ? SpellTiers.Of(heldQuality) : 0; } }
 
-        /// <summary>Sends the spell in hand at a point. False if there is none, or its element is cooling down.</summary>
-        public bool BotSend(Vector3 aimPoint)
+        /// <summary>
+        /// Sends the spell in hand at a point. False if there is none, or its element is cooling down.
+        /// <paramref name="place"/>: ice or fire at the floor close in front is meant as a wall or a line --
+        /// the same rule as a player's, but a bot means it: without it, its shot at the feet of somebody
+        /// close flies as the shot it chose, the way a person sees WALL / LINE come up and lifts the aim.
+        /// </summary>
+        public bool BotSend(Vector3 aimPoint, bool place = false)
         {
             if (!holding || heldSpell == null || CooldownLeft(heldSpell) > 0f) return false;
             Spell spell = heldSpell;
@@ -822,7 +827,7 @@ namespace MageCast.Gestures
             if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Sent, IndexOf(spell));
             Vector3 ground, normal, spot;
             Collider surface;
-            if (spell == ice && GroundBelow(aimPoint + Vector3.up * 0.4f, 1.2f, out ground, out normal, out surface)
+            if (place && Placed(spell) && GroundBelow(aimPoint + Vector3.up * 0.4f, 1.2f, out ground, out normal, out surface)
                 && WallSpot(ground, normal, surface, out spot))
             {
                 CastWall(spell, spot, heldPrecision, heldQuality);
@@ -1227,10 +1232,17 @@ namespace MageCast.Gestures
 
             if (data.Form == CastData.Wall)
             {
+                ulong by = Networked ? net.AttackerId : Combat.Health.NoAttacker;
+                if (spell == fire)
+                {
+                    // thrown at the floor, and the floor catches along a line
+                    if (anim != null) anim.PlaySend(false, data.LeftHand);
+                    FireLine.Spawn(data.Target, direction, SpellTiers.Of(quality), by, authoritative);
+                    return;
+                }
                 // the barrier's gesture -- hands up, and up comes a wall -- and the wall where it was put
                 if (anim != null) anim.PlaySend(true, data.LeftHand);
-                IceWall.Spawn(data.Target, direction, SpellTiers.Of(quality),
-                              Networked ? net.AttackerId : Combat.Health.NoAttacker, authoritative);
+                IceWall.Spawn(data.Target, direction, SpellTiers.Of(quality), by, authoritative);
                 return;
             }
 
@@ -1363,22 +1375,38 @@ namespace MageCast.Gestures
             return surface != null;
         }
 
+        /// <summary>The spells that take a shape on the floor at your feet: ice a wall, fire a line.</summary>
+        bool Placed(Spell spell) { return spell == ice || spell == fire; }
+
         /// <summary>
-        /// While holding ice: where it would come up as a wall if sent now, for the marker on the floor and
-        /// the word WALL by its name -- so a wall is never a surprise. False if it would fly.
+        /// While holding ice or fire: where it would take shape on the floor if sent now -- a wall of ice, a
+        /// line of fire -- with the size of what it covers on the ground, for the outline the marker draws
+        /// and the word by its name, so it is never a surprise. False if it would fly.
+        /// <paramref name="length"/> runs across the aim, <paramref name="depth"/> along it.
         /// </summary>
-        public bool WallPreview(out Vector3 spot, out Vector3 facing, out int tier)
+        public bool PlacePreview(out Vector3 spot, out Vector3 facing, out float length, out float depth)
         {
             spot = Vector3.zero;
             facing = transform.forward;
-            tier = holding ? SpellTiers.Of(heldQuality) : 0;
-            if (!holding || heldSpell != ice || cam == null) return false;
+            length = depth = 0f;
+            if (!holding || !Placed(heldSpell) || cam == null) return false;
             RaycastHit hit;
             if (!CastShield.AimRay(cam.AimOrigin, cam.AimDirection, 200f, transform, out hit)) return false;
             if (!WallSpot(hit.point, hit.normal, hit.collider, out spot)) return false;
             facing = spot - transform.position;
             facing.y = 0f;
             if (facing.sqrMagnitude < 0.0001f) facing = transform.forward;
+            int tier = SpellTiers.Of(heldQuality);
+            if (heldSpell == fire)
+            {
+                length = SpellTiers.FireLineLength[tier];
+                depth = SpellTiers.FireLineWidth;
+            }
+            else
+            {
+                length = SpellTiers.IceWallWidth[tier];
+                depth = SpellTiers.IceWallThickness;
+            }
             return true;
         }
 
@@ -1519,11 +1547,12 @@ namespace MageCast.Gestures
                 int tier = SpellTiers.Of(heldQuality);
                 float wait = CooldownLeft(heldSpell);
                 bigStyle.normal.textColor = wait > 0f ? Color.Lerp(heldSpell.colour, Color.grey, 0.6f) : heldSpell.colour;
-                Vector3 wallSpot, wallFacing;
-                int wallTier;
-                bool wall = WallPreview(out wallSpot, out wallFacing, out wallTier);
+                Vector3 placeAt, placeFacing;
+                float placeLength, placeDepth;
+                bool placed = PlacePreview(out placeAt, out placeFacing, out placeLength, out placeDepth);
                 GUI.Label(new Rect(14f, 10f, 700f, 40f),
-                          heldSpell.displayName + " " + SpellTiers.Roman(tier) + (wall ? "  WALL" : "")
+                          heldSpell.displayName + " " + SpellTiers.Roman(tier)
+                          + (placed ? (heldSpell == fire ? "  LINE" : "  WALL") : "")
                           + (wait > 0f ? (LockLeft(heldSpell) > 0f ? "  LOCKED " : "  ") + wait.ToString("0.0") + " s"
                                          + (sendQueued ? "  (queued)" : "")
                              : "  READY"),

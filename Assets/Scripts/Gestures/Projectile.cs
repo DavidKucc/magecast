@@ -96,7 +96,11 @@ namespace MageCast.Gestures
         }
 
         bool IsFire { get { return spell != null && spell.groundEffect == GroundEffect.Burn; } }
-        bool IsIce { get { return spell != null && spell.groundEffect == GroundEffect.Ice; } }
+        bool IsIce { get { return spell != null && spell.groundEffect == GroundEffect.Ice && !watery; } }
+
+        /// <summary>An ice bolt that went through a line of fire: the ice's hit, no slow, and it soaks (Wet).</summary>
+        bool watery;
+        public bool IsWater { get { return watery; } }
         bool IsAir { get { return spell != null && spell.groundEffect == GroundEffect.Updraft; } }
         bool IsLightning { get { return spell != null && spell.chargeDamage > 0f; } }
 
@@ -210,6 +214,11 @@ namespace MageCast.Gestures
                 velocity += Vector3.up * (DraftLift * dt);
 
             Vector3 step = velocity * dt;
+
+            // Ice through a line of fire comes out the other side as water. Anybody's ice through anybody's
+            // line -- every machine's copy flies the same path through the same line, so all of them turn.
+            if (IsIce && step.sqrMagnitude > 1e-8f && FireLine.Crosses(transform.position, transform.position + step))
+                BecomeWater();
             float distance = step.magnitude;
             if (distance > 1e-5f)
             {
@@ -381,7 +390,17 @@ namespace MageCast.Gestures
                 // your own shot: its damage numbers are yours to see from any distance
                 if (owner != null && MageCast.PlayerNet.Local != null && owner == MageCast.PlayerNet.Local.transform)
                     MageCast.Sight.MarkMyHit(hp != null ? hp.transform : motor.transform);
-                if (authoritative) HitPerson(hp, motor, heading);
+
+                // lightning into somebody wet: twice the hit, and it dries them -- on every machine, so the
+                // soak goes for everyone at once; only the deciding copy deals the damage
+                bool soaked = IsLightning && hp != null && Wet.Is(hp);
+                if (authoritative) HitPerson(hp, motor, heading, soaked ? damage * SpellTiers.WetShockMultiplier : damage);
+                if (soaked)
+                {
+                    Wet.Remove(hp);
+                    WorldPopups.Word(hp.transform, "SHOCK x" + SpellTiers.WetShockMultiplier.ToString("0"), colour);
+                }
+                if (watery && hp != null) Wet.Apply(hp, SpellTiers.WetSeconds);
                 Flash(at, 1.4f, 2.5f);
                 TierHit(hp, at);
                 End();
@@ -404,9 +423,9 @@ namespace MageCast.Gestures
             return wear;
         }
 
-        void HitPerson(Health hp, PlayerMotor motor, Vector3 heading)
+        void HitPerson(Health hp, PlayerMotor motor, Vector3 heading, float amount)
         {
-            if (hp != null && damage > 0f) hp.TakeDamage(damage, attacker);
+            if (hp != null && amount > 0f) hp.TakeDamage(amount, attacker);
 
             // Lightning into somebody standing on ice runs through the ice as well: everyone else on
             // it takes the charge. Them too -- they are touching it.
@@ -433,7 +452,7 @@ namespace MageCast.Gestures
 
                 // ice: slowed at every tier (tier I's one effect besides the hit), frozen in place at
                 // III -- which still lets you draw
-                if (spell != null && spell.hitSlowDuration > 0f && spell.hitSlow < 1f)
+                if (spell != null && spell.hitSlowDuration > 0f && spell.hitSlow < 1f && !watery)
                 {
                     if (tier >= 3) motor.ApplySlow(0f, SpellTiers.FreezeSeconds);
                     else motor.ApplySlow(spell.hitSlow, spell.hitSlowDuration);
@@ -539,7 +558,7 @@ namespace MageCast.Gestures
         /// </summary>
         void Splash(Vector3 at, Vector3 outward)
         {
-            if (!authoritative || tier > 1 || damage <= 0f || !(IsFire || IsIce)) return;
+            if (!authoritative || tier > 1 || damage <= 0f || !(IsFire || IsIce || watery)) return;
             Vector3 origin = at + outward.normalized * 0.25f;
             float reach = SpellTiers.SplashRadius;
             var done = new System.Collections.Generic.HashSet<Health>();
@@ -685,6 +704,31 @@ namespace MageCast.Gestures
         static readonly Color WaterColour = new Color(0.2f, 0.45f, 0.95f);
 
         /// <summary>
+        /// Through the flames: it is water from here on. It looks it -- the water bolt from the same pack the
+        /// ice and fire come from, in place of the ice -- with a burst of spray where it changed.
+        /// </summary>
+        void BecomeWater()
+        {
+            watery = true;
+            colour = WaterColour;
+            SpellFx.Entry water = SpellFx.ByName("WATER");
+            if (water != null && water.projectile != null)
+            {
+                SpellFx.Release(fx);
+                fx = SpellFx.Play(water.projectile, transform.position, Quaternion.LookRotation(velocity.normalized),
+                                  water.projectileScale * radius, transform);
+                fxEntry = water;
+                if (water.impact != null) SpellFx.Play(water.impact, transform.position, Quaternion.identity, water.impactScale * 0.6f);
+            }
+            else
+            {
+                Renderer r = GetComponent<Renderer>();
+                if (r != null) { r.enabled = true; r.material = RuntimeMaterials.Emissive(WaterColour, 1.8f); }
+                FlashAt(transform.position, WaterColour, 1f, 1.5f);
+            }
+        }
+
+        /// <summary>
         /// A spell landing in a patch that already lies there. Combinations happen one after the other --
         /// something is on the ground, something else arrives -- never as two shots at once.
         ///
@@ -700,6 +744,7 @@ namespace MageCast.Gestures
         bool Combine(Vector3 at)
         {
             if (!authoritative || spell == null || tier < 2) return false;   // tier I: the plain spell
+            if (watery) return false;                                        // water lays its own patch (HitFloor)
             PlayerNet caster = owner != null ? owner.GetComponent<PlayerNet>() : null;
             Vector3 wind = new Vector3(velocity.x, 0f, velocity.z);
             wind = wind.sqrMagnitude > 0.01f ? wind.normalized : Vector3.forward;
@@ -818,6 +863,22 @@ namespace MageCast.Gestures
             }
 
             if (IsFire && tier >= 3) Explode(at, null);
+
+            // water, from tier II: a water patch where it lands -- nothing standing in it, but it carries lightning
+            if (watery && tier >= 2)
+            {
+                Flash(at, 1f, 2f);
+                if (authoritative)
+                {
+                    float r = spell.zoneRadius * sizeScale;
+                    SpellZone pool = SpellZone.Spawn(at, GroundEffect.Water, r, 6f, 0f, WaterColour, true, attacker, attacker);
+                    PlayerNet caster = owner != null ? owner.GetComponent<PlayerNet>() : null;
+                    if (caster != null && caster.IsSpawned)
+                        caster.BroadcastZone(pool.transform.position, GroundEffect.Water, r, 6f, 0f, WaterColour);
+                }
+                End();
+                return true;
+            }
 
             // tier I leaves nothing on the floor -- only its splash
             if (spell != null && spell.groundEffect != GroundEffect.None && tier < 2)

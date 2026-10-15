@@ -188,3 +188,38 @@ MonoBehaviour:
     wallBreakScale: 1
     wallRaiseSound: {fileID: 0}
     wallBreakSound: {fileID: 0}
+  - spell: WATER
+    cast: {fileID: 1031292443845770088, guid: 0d3c27fca96096b43a22e7016c45e71d, type: 3}
+    projectile: {fileID: 1186733052419325546, guid: 4b4dce8cb3d83bc4bb5d5db9b9bc8272, type: 3}
+    impact: {fileID: 3407677716088049748, guid: 1b231e37909d73645914ddf8954f5225, type: 3}
+    projectileScale: 1
+    castScale: 0.22
+    impactScale: 0.5
+    castTurn: {x: 0, y: -90, z: 0}
+    launch: {fileID: 0}
+    status: {fileID: 0}
+    statusScale: 1
+    special: {fileID: 0}
+    specialScale: 1
+    specialLeadIn: 0
+    specialSound: {fileID: 0}
+    statusSound: {fileID: 0}
+    zone: {fileID: 4748681987041982144, guid: 021d54810f361784f96100cd66734aba, type: 3}
+    zoneAuthoredRadius: 3
+    zoneLeadIn: 2
+    zoneStart: {fileID: 0}
+    zoneLoop: {fileID: 8300000, guid: d9c81018e52984c4f8ec267078b85c1c, type: 3}
+    zoneEnd: {fileID: 8300000, guid: c09446d2f91871047805c56084dc52d6, type: 3}
+    raise: {fileID: 0}
+    hum: {fileID: 0}
+    struck: {fileID: 0}
+    shatter: {fileID: 0}
+    wallPiece: {fileID: 0}
+    wallPieceMaterial: {fileID: 0}
+    wallRaise: {fileID: 0}
+    wallRaiseScale: 1
+    wallRaiseLeadIn: 0
+    wallBreak: {fileID: 0}
+    wallBreakScale: 1
+    wallRaiseSound: {fileID: 0}
+    wallBreakSound: {fileID: 0}

@@ -94,7 +94,7 @@ namespace MageCast
         float hideUntil = -1f, hideAgainAt;
         Vector3 hidePoint;
 
-        /// <summary>The ice being drawn is going up as a wall, not at anybody.</summary>
+        /// <summary>The ice or fire being drawn goes on the floor in front -- a wall, a line -- not at anybody.</summary>
         bool wallMode;
 
         enum Phase { Idle, Drawing, Holding }
@@ -550,6 +550,14 @@ namespace MageCast
                                && known.ContainsKey(target) && Time.time - known[target].HurtMeAt < 2.5f
                                && health.Fraction < 0.7f && CastShield.Of(self.AttackerId) == null
                                && rnd.NextDouble() < 0.2 + 0.4 * Skill;
+                    // somebody coming in close, or it hurt and wanting room: a line of fire across the way
+                    if (chosen == hands.SpellByIndex(GestureCaster.FireId) && d > 3f && d < 8f)
+                    {
+                        Vector3 away = transform.position - Perceived;
+                        away.y = 0f;
+                        bool closing = away.sqrMagnitude > 0.01f && Vector3.Dot(PerceivedVelocity, away.normalized) > 1.5f;
+                        wallMode = (closing || health.Fraction < 0.5f) && rnd.NextDouble() < 0.15 + 0.35 * Skill;
+                    }
                     RollQuality();
                     rune = GestureTemplates.Corners(chosen.gesture);
                     int segments = rune != null ? rune.Length - 1 : 3;
@@ -588,7 +596,7 @@ namespace MageCast
                     if (hands.BotHeldTier == 0) { phase = Phase.Idle; nextCastAt = Time.time + 0.4f; return; }
                     // like a person: sends when it has the target in front of it, not over its shoulder
                     if (target == null || !targetSeen || Hiding || Time.time < holdUntil || FacingError > 18f) return;
-                    if (hands.BotSend(AimFor(chosen)))
+                    if (hands.BotSend(AimFor(chosen), wallMode))
                     {
                         phase = Phase.Idle;
                         nextCastAt = Time.time + Rand(0.35f, 1.1f) + Beginner * Rand(0.3f, 1.1f);
@@ -682,13 +690,15 @@ namespace MageCast
         {
             Vector3 feet = Perceived;
             if (spell == hands.SpellByIndex(GestureCaster.BarrierId)) return feet + Vector3.up * 1.2f;
-            // an ice wall: the floor a couple of metres towards whoever is shooting
-            if (wallMode && spell == hands.SpellByIndex(GestureCaster.IceId))
+            // an ice wall, a line of fire: the floor a couple of metres towards whoever it is about --
+            // the line about halfway, so it lies between them
+            if (wallMode)
             {
-                wallMode = false;
                 Vector3 toward = feet - transform.position;
                 toward.y = 0f;
-                return transform.position + (toward.sqrMagnitude > 0.01f ? toward.normalized : transform.forward) * 2.6f;
+                float along = spell == hands.SpellByIndex(GestureCaster.FireId)
+                    ? Mathf.Clamp(toward.magnitude * 0.5f, 2f, 3.5f) : 2.6f;
+                return transform.position + (toward.sqrMagnitude > 0.01f ? toward.normalized : transform.forward) * along;
             }
 
             int tier = hands.BotHeldTier;

@@ -35,35 +35,84 @@ namespace MageCast.Gestures
             cam = FindObjectOfType<ThirdPersonCamera>();
             ring = MakeLine("AimRing", true);
             bounceRay = MakeLine("AimBounce", false);
-            wallMark = MakeLine("AimWall", true);
+            footprint = MakeLine("AimFootprint", true);
         }
 
-        LineRenderer wallMark;
+        LineRenderer footprint;
+
+        // the outline is a few dozen raycasts, worked out again only when the spot or the size moved
+        Vector3 footAt = new Vector3(float.NaN, 0f, 0f);
+        Vector3 footFacing;
+        float footLength = -1f, footDepth = -1f;
+        Vector3[] footPoints;
+
+        /// <summary>Points along each long side of the outline, and along each short one.</summary>
+        const int FootLong = 14, FootShort = 3;
 
         /// <summary>
-        /// Ice aimed at the floor close in front: the outline of the wall that will rise there, standing
-        /// where it will stand. Shown in every game, not only training -- it is about what YOUR spell is
-        /// going to do, and a wall you did not mean to raise is a wasted ice.
+        /// Ice or fire aimed at the floor close in front: the ground the wall or the line will cover, as
+        /// an outline lying on the floor -- following its rises and dips, nothing drawn upward. How tall
+        /// the thing is does not read from a frame in the air, and it is not what you are choosing; where
+        /// it goes is. Shown in every game, not only training -- it is about what YOUR spell is going to
+        /// do, and a wall or a line you did not mean to lay is a wasted spell.
         /// </summary>
-        bool WallOutline()
+        bool Footprint()
         {
             Vector3 spot, facing;
-            int tier;
-            if (caster == null || !caster.WallPreview(out spot, out facing, out tier)) return false;
+            float length, depth;
+            if (caster == null || !caster.PlacePreview(out spot, out facing, out length, out depth)) return false;
 
-            float w = SpellTiers.IceWallWidth[Mathf.Clamp(tier, 1, 3)] * 0.5f;
-            float h = SpellTiers.IceWallHeight[Mathf.Clamp(tier, 1, 3)];
-            Vector3 right = Vector3.Cross(Vector3.up, facing.normalized).normalized;
-            Vector3 foot = spot + Vector3.up * 0.04f;
-            wallMark.positionCount = 4;
-            wallMark.SetPosition(0, foot - right * w);
-            wallMark.SetPosition(1, foot + right * w);
-            wallMark.SetPosition(2, foot + right * w * 0.85f + Vector3.up * h * 0.8f);
-            wallMark.SetPosition(3, foot - right * w * 0.85f + Vector3.up * h * 0.8f);
-            Color ice = caster.HeldSpell != null ? caster.HeldSpell.colour : Color.cyan;
-            wallMark.startColor = wallMark.endColor = new Color(ice.r, ice.g, ice.b, 0.85f);
-            wallMark.enabled = true;
+            facing = facing.normalized;
+            if (footPoints == null || (spot - footAt).sqrMagnitude > 0.0004f || Vector3.Dot(facing, footFacing) < 0.9995f
+                || Mathf.Abs(length - footLength) > 0.01f || Mathf.Abs(depth - footDepth) > 0.01f)
+            {
+                footPoints = Outline(spot, facing, length, depth);
+                footAt = spot;
+                footFacing = facing;
+                footLength = length;
+                footDepth = depth;
+            }
+
+            footprint.positionCount = footPoints.Length;
+            footprint.SetPositions(footPoints);
+            Color c = caster.HeldSpell != null ? caster.HeldSpell.colour : Color.cyan;
+            footprint.startColor = footprint.endColor = new Color(c.r, c.g, c.b, 0.9f);
+            footprint.enabled = true;
             return true;
+        }
+
+        /// <summary>
+        /// The rectangle <paramref name="length"/> across the aim by <paramref name="depth"/> along it,
+        /// centred on <paramref name="spot"/>, each point dropped onto the map (through people and spells,
+        /// the way the wall and the line find their floor) and lifted a hair so it does not z-fight.
+        /// </summary>
+        static Vector3[] Outline(Vector3 spot, Vector3 facing, float length, float depth)
+        {
+            Vector3 right = Vector3.Cross(Vector3.up, facing).normalized;
+            float hl = length * 0.5f, hd = depth * 0.5f;
+            Vector3[] corners =
+            {
+                spot - right * hl - facing * hd,
+                spot + right * hl - facing * hd,
+                spot + right * hl + facing * hd,
+                spot - right * hl + facing * hd,
+            };
+            int[] steps = { FootLong, FootShort, FootLong, FootShort };
+            var points = new Vector3[FootLong * 2 + FootShort * 2];
+            int k = 0;
+            for (int side = 0; side < 4; side++)
+            {
+                Vector3 a = corners[side], b = corners[(side + 1) % 4];
+                for (int i = 0; i < steps[side]; i++)
+                {
+                    Vector3 p = Vector3.Lerp(a, b, i / (float)steps[side]);
+                    RaycastHit h;
+                    if (FireLine.Ground(p + Vector3.up * 1.5f, 3.5f, out h) && Mathf.Abs(h.point.y - spot.y) < 1.5f)
+                        p.y = h.point.y;
+                    points[k++] = p + Vector3.up * 0.05f;
+                }
+            }
+            return points;
         }
 
         LineRenderer MakeLine(string name, bool loop)
@@ -86,9 +135,9 @@ namespace MageCast.Gestures
         {
             ring.enabled = false;
             bounceRay.enabled = false;
-            wallMark.enabled = false;
+            footprint.enabled = false;
 
-            if (WallOutline()) return;
+            if (Footprint()) return;
 
             // A training aid only. Against a person it would be the game telling you where a bounce
             // lands and how far a burst reaches -- reading that off the geometry is part of the skill.

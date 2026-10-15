@@ -255,8 +255,9 @@ pryč. **Jedna na hráče**: nová zruší starou.
 **Led zamířený na zem blízko před sebe nevyletí, ale vyrazí ze země jako stěna ledových hrotů.**
 Spouštěč: zaměřovač na zemi (ne na člověku, zdi ani římse) do **4,5 m** od tvých nohou a zhruba v jejich
 výšce; blíž než 1,6 m se stěna posune na 1,6 m, aby nevyrostla skrz tebe. Když to platí, u drženého ledu
-svítí **„WALL“** a na zemi stojí **obrys stěny**, kde vyroste — ve všech hrách, ne jen v tréninku, aby
-stěna nikdy nebyla nechtěná.
+svítí **„WALL“** a na zemi leží **2D obrys plochy**, kterou stěna zabere (jen půdorys po terénu, žádný
+rám do výšky — ten nešel poznat a stěna tak vysoko pokaždé nevyroste) — ve všech hrách, ne jen v tréninku,
+aby stěna nikdy nebyla nechtěná.
 
 - **rychlá a křehká:** stojí hned, **první zásah jakýmkoli kouzlem ji roztříští** (i tvým — je pevná z obou
   stran), po **6 s** sama roztaje do země,
@@ -274,6 +275,35 @@ klesá i neviditelný kvádr.
 Vzhled: hroty a ledový materiál z balíku Stylized AoE (pointy rock), vyrážejí ze země od středu ke
 krajům za ledovým výbuchem z téhož balíku; při rozbití se rozletí na střepy s ledovou explozí. Bez
 balíku (klon z repozitáře) vlastní jednoduché krystaly.
+
+## Ohnivá čára
+
+**Oheň zamířený na zem blízko před sebe nevyletí, ale zapálí na zemi čáru napříč** — ohnivá obdoba ledové
+stěny, jenže **nic nezastaví**. Spouštěč je stejný jako u stěny (do 4,5 m od nohou, ne blíž než 1,6 m);
+u drženého ohně svítí **„LINE“** a na zemi leží 2D obrys čáry.
+
+- **kdo jí projde, hoří** jako po zásahu tierem II (3/s na 2 s) — a znovu každou **1 s**, co v ní stojí;
+  přeskočit se dá, spojenci ani autor nehoří,
+- **délka podle tieru:** I 3 m, II 4,5 m, III 6 m; šířka 0,8 m, plameny do 1,8 m, hoří **4 s**,
+- **stojí tvůj oheň:** cooldown ohně i útočné GCD jako výstřel,
+- **čára přes průchod = dveře, za které se platí** — nebo zeď, za kterou soupeř nepůjde,
+- **boti** ji kladou mezi sebe a soupeře, když se k nim blíží nebo když jsou zranění.
+
+Vzhled: plameny ohně z anime balíku stojí v řadě nad pásem žhavých uhlíků (efekt je v balíku jen krátký
+záblesk, tady hoří ve smyčce, dokud čára hoří — stejně teď hoří i hořící člověk po celou dobu hoření).
+
+## Voda a mokrý (WET)
+
+**Led, který proletí ohnivou čárou, z ní vyletí jako voda** — kohokoli led, kteroukoli čárou, takže to
+může schytat i autor. Voda:
+
+- dá **zásah ledu bez zpomalení** a zasažený je **mokrý 4 s** (modrý nádech a kape z něj, nad ním „WET“),
+- z tieru II nechá na zemi **vodní plochu** (vede blesk),
+- **blesk do mokrého = 2× poškození** („SHOCK x2“) a vysuší ho,
+- **oheň do mokrého jen zasyčí** („STEAM“): nehoří, a je suchý — jediná výhoda mokra.
+
+Ověřeno (15. 10.): led tieru II přes čáru tieru III → voda, 12 poškození, mokrý; blesk 24 (místo 12), suchý;
+další blesk 12; oheň na mokrého → bez hoření, suchý; bot stojící v čáře hoří.
 
 Ověřeno měřením (dřívější čísla): odraz vyšel zrcadlově na desetinu s poškozením 17,6, vzdušný proud
 vyhodil rychlostí 9,4 m/s a výbuch u stěny

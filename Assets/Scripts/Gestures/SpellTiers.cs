@@ -118,6 +118,22 @@ namespace MageCast.Gestures
         public static readonly float[] IceWallWidth = { 0f, 2.0f, 2.8f, 3.4f };
         public static readonly float[] IceWallHeight = { 0f, 1.7f, 2.3f, 2.6f };
 
+        // fire line: fire aimed at the floor this close in front of you (the ice wall's reach) lays a line
+        // of fire across the way instead of flying. It stops nothing; walking through it sets you burning
+        // like a tier II hit, again every FireLineReburn seconds you stay. See FireLine.
+        public const float FireLineSeconds = 4f;
+        public const float FireLineWidth = 0.8f;
+        public const float FireLineFlameHeight = 1.8f;
+        public const float FireLineReburn = 1f;
+        /// <summary>By tier (index 1-3).</summary>
+        public static readonly float[] FireLineLength = { 0f, 3f, 4.5f, 6f };
+
+        // water: ice thrown through a fire line comes out as water -- the ice's hit, no slow, and whoever it
+        // hits is wet for WetSeconds. Lightning into somebody wet strikes this many times as hard (and dries
+        // them); fire on somebody wet only steams. See Wet.
+        public const float WetSeconds = 4f;
+        public const float WetShockMultiplier = 2f;
+
         // barrier -- since 14 Oct the strong, lasting cover (the ice wall is the quick, fragile one):
         // 50 % more durability and 8 s instead of 6, the dome 6 s instead of 4.5
         public const float WallSeconds = 8f;

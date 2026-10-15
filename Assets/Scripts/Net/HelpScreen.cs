@@ -29,21 +29,26 @@ namespace MageCast
         {
             new SpellInfo { Rune = GestureTemplates.Kenaz, Name = "FIRE", Czech = "Kenaz (pochodeň) - oheň",
                 Colour = new Color(1f, 0.45f, 0.15f),
-                Basics = "16 poškození, 26 m/s (tier I 34 m/s). Běžný útok.",
+                Basics = "16 poškození, 26 m/s (tier I 34 m/s). Běžný útok. " +
+                         "Zamířený na zem do " + SpellTiers.IceWallReach + " m před sebe (svítí LINE a ukáže se obrys na zemi) nevyletí, " +
+                         "ale zapálí ohnivou čáru napříč na " + SpellTiers.FireLineSeconds + " s: nic nezastaví, ale kdo jí projde, hoří. " +
+                         "Mokrého nezapálí, jen zasyčí a vysuší ho.",
                 I = "zásah, rychlejší let; dopad na zem, zeď nebo bariéru zraní každého do " + SpellTiers.SplashRadius + " m (i tebe)",
                 II = "+ hoření na zasaženém (" + SpellTiers.BurnPerSecond + "/s na " + SpellTiers.BurnSeconds + " s), hořící plocha na zemi, jednou se odrazí od zdi",
                 III = "+ výbuch: všichni do " + SpellTiers.ExplosionRadius + " m kromě zasaženého dostanou polovinu zásahu - i ty, když stojíš blízko" },
             new SpellInfo { Rune = GestureTemplates.Laguz, Name = "ICE", Czech = "Laguz (voda) - led",
                 Colour = new Color(0.55f, 0.85f, 1f),
                 Basics = "22 poškození, 17 m/s (tier I 24 m/s). Pomalý a tlustý, dá se uhnout. Zasažený se vždy zpomalí. " +
-                         "Zamířený na zem do " + SpellTiers.IceWallReach + " m před sebe (svítí WALL a ukáže se obrys) nevyletí, " +
-                         "ale vyrazí jako ledová stěna: první zásah ji roztříští, po " + SpellTiers.IceWallSeconds + " s roztaje, oheň z ní nechá vodu.",
+                         "Zamířený na zem do " + SpellTiers.IceWallReach + " m před sebe (svítí WALL a ukáže se obrys na zemi) nevyletí, " +
+                         "ale vyrazí jako ledová stěna: první zásah ji roztříští, po " + SpellTiers.IceWallSeconds + " s roztaje, oheň z ní nechá vodu. " +
+                         "Proletí-li ohnivou čárou, je z něj voda: bez zpomalení, ale zasažený je " + SpellTiers.WetSeconds + " s mokrý (i ty).",
                 I = "zásah se zpomalením, rychlejší let; dopad na zem, zeď nebo bariéru zraní každého do " + SpellTiers.SplashRadius + " m (i tebe)",
                 II = "+ kluzká ledová plocha na zemi",
                 III = "+ zmrazí na " + SpellTiers.FreezeSeconds + " s: nehne se ani neskočí, kreslit ale může" },
             new SpellInfo { Rune = GestureTemplates.Sowulo, Name = "LIGHTNING", Czech = "Sowulo (slunce) - blesk",
                 Colour = new Color(1f, 0.9f, 0.35f),
-                Basics = "12 poškození, 44 m/s (tier I 52 m/s) - skoro se nedá uhnout. Do ledu nebo vody vybije všechny, kdo na ní stojí.",
+                Basics = "12 poškození, 44 m/s (tier I 52 m/s) - skoro se nedá uhnout. Do ledu nebo vody vybije všechny, kdo na ní stojí. " +
+                         "Do mokrého " + SpellTiers.WetShockMultiplier + "x poškození (a vysuší ho).",
                 I = "zásah, rychlejší let",
                 II = "+ přeskočí na nejbližší jiný cíl do " + SpellTiers.ChainRange + " m za polovinu; do země nechá elektrickou plochu " +
                      "(" + SpellTiers.ShockPerSecond + "/s, kdo v ní stojí, nemůže kreslit)",

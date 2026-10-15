@@ -27,6 +27,15 @@ namespace MageCast.Gestures
                                  SpellFx.Entry look)
         {
             if (target == null || target.IsDead) return;
+
+            // Wet: fire only steams. No burning, and they are dry again -- the one upside of being soaked.
+            if (Wet.Is(target))
+            {
+                Wet.Remove(target);
+                WorldPopups.Word(target.transform, "STEAM", new Color(0.85f, 0.9f, 0.95f));
+                return;
+            }
+
             Burning b = target.GetComponent<Burning>();
             bool fresh = b == null;
             if (fresh) b = target.gameObject.AddComponent<Burning>();
@@ -42,6 +51,7 @@ namespace MageCast.Gestures
             {
                 b.flames = SpellFx.Play(look.status, target.transform.position, Quaternion.identity,
                                         look.statusScale, target.transform);
+                SpellFx.KeepBurning(b.flames, 8f);      // the pack's fire is one puff; this burns on until it ends
                 SpellFx.OneShot(look.statusSound, target.transform.position, 0.6f, seconds);
             }
         }
