@@ -84,6 +84,13 @@ namespace MageCast.Gestures
             public float wallBreakScale = 1f;
             public AudioClip wallRaiseSound;
             public AudioClip wallBreakSound;
+
+            [Header("Fire line (fire aimed at the floor at your feet)")]
+            /// <summary>
+            /// One metre of a wall of flame, made of the packs' own fire (see SpellFxBuilder.BuildFireLinePiece);
+            /// a line stands as many of them as it is long. Its particle systems emit along a 1 m box.
+            /// </summary>
+            public GameObject linePiece;
         }
 
         /// <summary>The spell whose look a patch of this kind wears -- water has none of its own yet.</summary>

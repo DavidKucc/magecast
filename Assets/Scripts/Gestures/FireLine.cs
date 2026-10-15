@@ -15,8 +15,9 @@ namespace MageCast.Gestures
     /// steams. Anybody's ice, through anybody's line: you can be soaked by your own.
     ///
     /// Every machine lays its own copy where the caster said and sees the same bodies walk through
-    /// it; only the server's burning deals the damage (see Burning). The look is the burning status's
-    /// own flames standing in a row over a band of embers, with the fire patch's sound.
+    /// it; only the server's burning deals the damage (see Burning). The look is a wall of the packs'
+    /// own fire -- the fireball's flames, hot smoke, embers and a glow on the floor -- catching from the
+    /// middle out, with the fire patch's sound; without the packs, simple flames over a band of embers.
     /// </summary>
     public class FireLine : MonoBehaviour
     {
@@ -37,6 +38,8 @@ namespace MageCast.Gestures
         float[] ground;               // the floor's height under the line, Segments + 1 points, relative to its middle
         readonly Dictionary<Health, float> burntAt = new Dictionary<Health, float>();
         readonly List<GameObject> flames = new List<GameObject>();
+        readonly List<float> lightsAt = new List<float>();      // when each piece catches, from the middle out
+        Light glow;
         Material band;
         Mesh bandMesh;
         AudioSource crackle;
@@ -83,9 +86,11 @@ namespace MageCast.Gestures
                 ground[i] = y;
             }
 
+            if (fx != null && fx.linePiece != null) { BuildWall(); return; }
+
             BuildBand();
 
-            // flames standing along it, a little apart, a little different each
+            // without the packs: flames standing along it, a little apart, a little different each
             int count = Mathf.Max(3, Mathf.RoundToInt(length / 0.55f));
             var rnd = new System.Random(Mathf.RoundToInt(transform.position.x * 31f + transform.position.z * 17f));
             for (int i = 0; i < count; i++)
@@ -114,6 +119,75 @@ namespace MageCast.Gestures
                 crackle.volume = 0.6f * SpellFx.Volume;
                 crackle.Play();
             }
+        }
+
+        /// <summary>How fast it catches along its length from where it was thrown, m/s: a 6 m line in a quarter second.</summary>
+        const float Spread = 12f;
+
+        /// <summary>
+        /// The look with the packs: a wall of the fire's own flames, hot smoke and embers over a soft glow on
+        /// the floor (see SpellFxBuilder.BuildFireLinePiece), one piece per metre or so, each standing on the
+        /// floor under it. It catches from the middle out, with the fire burst's whoomph, and lights what
+        /// is around it.
+        /// </summary>
+        void BuildWall()
+        {
+            int count = Mathf.Max(2, Mathf.RoundToInt(length));
+            float spacing = length / count;
+            for (int i = 0; i < count; i++)
+            {
+                float x = -length * 0.5f + spacing * (i + 0.5f);
+                Vector3 at = transform.TransformPoint(new Vector3(x, GroundAt(x) + 0.02f, 0f));
+                if (InsideWall(at)) continue;      // laid against a wall: no flames standing out of the stone
+                GameObject piece = SpellFx.Play(fx.linePiece, at, transform.rotation, 1f, transform, false);
+                if (piece == null) continue;
+                foreach (ParticleSystem ps in piece.GetComponentsInChildren<ParticleSystem>(true))
+                {
+                    // the piece is a metre; this one covers its own share of the line
+                    var shape = ps.shape;
+                    shape.scale = new Vector3(spacing, shape.scale.y, shape.scale.z);
+                    var emission = ps.emission;
+                    emission.rateOverTimeMultiplier *= spacing;
+                    ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+                }
+                flames.Add(piece);
+                lightsAt.Add(Mathf.Abs(x) / Spread);
+            }
+
+            Vector3 middle = transform.position + Vector3.up * 0.3f;
+            if (fx.specialSound != null) SpellFx.OneShot(fx.specialSound, middle, 0.7f);
+
+            var lit = new GameObject("Glow");
+            lit.transform.SetParent(transform, false);
+            lit.transform.localPosition = Vector3.up * 0.9f;
+            glow = lit.AddComponent<Light>();
+            glow.type = LightType.Point;
+            glow.color = new Color(1f, 0.55f, 0.2f);
+            glow.range = length * 0.5f + 3f;
+            glow.intensity = 0f;
+            glow.shadows = LightShadows.None;
+
+            if (fx.zoneLoop != null)
+            {
+                crackle = gameObject.AddComponent<AudioSource>();
+                SpellFx.MakeSpatial(crackle);
+                crackle.clip = fx.zoneLoop;
+                crackle.loop = true;
+                crackle.volume = 0.6f * SpellFx.Volume;
+                crackle.Play();
+            }
+        }
+
+        /// <summary>Whether a piece standing at <paramref name="foot"/> would be inside the map (a wall, a pillar).</summary>
+        static bool InsideWall(Vector3 foot)
+        {
+            foreach (Collider c in Physics.OverlapSphere(foot + Vector3.up * 0.9f, 0.3f, ~0, QueryTriggerInteraction.Ignore))
+            {
+                if (c.GetComponentInParent<Health>() != null || c.GetComponentInParent<PlayerMotor>() != null
+                    || c.GetComponentInParent<CastShield>() != null || c.GetComponentInParent<IceWall>() != null) continue;
+                return true;
+            }
+            return false;
         }
 
         /// <summary>A glowing band of embers on the floor under the flames -- exactly where it burns.</summary>
@@ -214,11 +288,27 @@ namespace MageCast.Gestures
             age += Time.deltaTime;
             remaining -= Time.deltaTime;
 
+            // catching, from the middle out
+            for (int i = 0; i < lightsAt.Count && i < flames.Count; i++)
+            {
+                if (lightsAt[i] < 0f || age < lightsAt[i]) continue;
+                lightsAt[i] = -1f;
+                if (flames[i] != null)
+                    foreach (ParticleSystem ps in flames[i].GetComponentsInChildren<ParticleSystem>(true)) ps.Play(false);
+            }
+            if (glow != null)
+            {
+                // a fire's light: never quite still, and dying with it
+                float flicker = 0.85f + 0.15f * Mathf.PerlinNoise(Time.time * 7f, transform.position.x);
+                glow.intensity = 1.6f * flicker * Mathf.Clamp01(age / 0.25f) * Mathf.Clamp01(remaining / 0.6f);
+            }
+
             // the last half second: flames out, embers fading
             if (remaining <= 0.5f && flames.Count > 0)
             {
                 foreach (GameObject f in flames) SpellFx.Release(f);
                 flames.Clear();
+                lightsAt.Clear();
             }
             if (band != null)
             {

@@ -289,8 +289,13 @@ u drženého ohně svítí **„LINE“** a na zemi leží 2D obrys čáry.
 - **čára přes průchod = dveře, za které se platí** — nebo zeď, za kterou soupeř nepůjde,
 - **boti** ji kladou mezi sebe a soupeře, když se k nim blíží nebo když jsou zranění.
 
-Vzhled: plameny ohně z anime balíku stojí v řadě nad pásem žhavých uhlíků (efekt je v balíku jen krátký
-záblesk, tady hoří ve smyčce, dokud čára hoří — stejně teď hoří i hořící člověk po celou dobu hoření).
+Vzhled: **stěna ohně složená z efektů balíků** — plameny ohnivé koule (Stylized VFX) stoupají z pásu
+podél čáry, nad nimi žhavý kouř z jejího zásahu, jiskry a měkká záře na zemi z AoE ohně (žádný ostrý
+obdélník). Čára se zapálí od místa dopadu ke krajům za ¼ s s ohnivým „vuuf“, svítí oranžovým světlem a
+plameny sahají zhruba do výšky ramen. Kousek, který by stál ve zdi, se vynechá. Složené to je v
+Tools/Arena/Assign Fire Line Effects (prefab v Assets/Vefects/_MageCast/FireLine, mimo repozitář); bez
+balíků jednoduché plameny nad pásem uhlíků. Hořící člověk má plameny po celou dobu hoření (efekt z
+anime balíku je jen krátký záblesk, tady hoří ve smyčce).
 
 ## Voda a mokrý (WET)
 

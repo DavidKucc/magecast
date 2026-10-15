@@ -135,6 +135,7 @@ namespace MageCast.EditorTools
 
             AssignIceWall(fx);
             AssignWater(fx);
+            AssignFireLine(fx);
 
             EditorUtility.SetDirty(fx);
             AssetDatabase.SaveAssets();
@@ -150,6 +151,167 @@ namespace MageCast.EditorTools
             AssignWater(fx);
             EditorUtility.SetDirty(fx);
             AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>Only the fire line's piece -- without making the recoloured effects again.</summary>
+        [MenuItem("Tools/Arena/Assign Fire Line Effects")]
+        public static void AssignFireLineOnly()
+        {
+            SpellFx fx = AssetDatabase.LoadAssetAtPath<SpellFx>(AssetPath);
+            if (fx == null) { Debug.LogWarning("[SpellFx] no " + AssetPath + " - run Assign Spell Effects first"); return; }
+            AssignFireLine(fx);
+            EditorUtility.SetDirty(fx);
+            AssetDatabase.SaveAssets();
+        }
+
+        static void AssignFireLine(SpellFx fx)
+        {
+            SpellFx.Entry fire = fx.entries.Find(x => x.spell == "FIRE");
+            if (fire == null) return;
+            fire.linePiece = BuildFireLinePiece();
+            if (fire.linePiece == null) Debug.LogWarning("[SpellFx] fire line: pack pieces missing - the plain look will be used");
+            else Debug.Log("[SpellFx] fire line: " + AssetDatabase.GetAssetPath(fire.linePiece));
+        }
+
+        const string FireMagic = Magic + "Fire/";
+
+        /// <summary>
+        /// One metre of a wall of flame, put together from the packs' own fire rather than drawn anew:
+        ///   flames      the fireball's flames (Stylized VFX), rising from a 1 m strip instead of trailing a ball
+        ///   hot smoke   the fire hit's glowing smoke, slower and above them -- what makes it read tall
+        ///   embers      the AoE fire burst's sparks, drifting up
+        ///   floor glow  the AoE fire burst's soft glow on the floor -- the line on the ground, without a hard edge
+        /// Every system emits along a box 1 m long (x) by the line's width (z), upwards; FireLine stretches
+        /// the box and the rate to however far apart it stands its pieces.
+        /// </summary>
+        static GameObject BuildFireLinePiece()
+        {
+            const string AreaBurst = Area + "VFX/Fire/Particles/VFX_Fire_Burst_01.prefab";
+            ParticleSystem flamesSrc = PackSystem(FireMagic + "VFX_Fire_Magic_Projectile.prefab", "PS_VFX_Flames");
+            ParticleSystem smokeSrc = PackSystem(FireMagic + "VFX_Fire_Magic_Hit.prefab", "PS_VFX_Fire_Smokes");
+            ParticleSystem embersSrc = PackSystem(AreaBurst, "Embers");
+            ParticleSystem glowSrc = PackSystem(AreaBurst, "Glow Floor");
+            if (flamesSrc == null) return null;
+
+            var root = new GameObject("VFX_FireLine_Piece");
+            try
+            {
+                // tall tongues: big at the foot, narrowing as they rise, pushed up harder the higher they get
+                ParticleSystem flames = Piece(flamesSrc, root, "Flames", 0f);
+                Rising(flames, life: new Vector2(0.65f, 1.0f), speed: new Vector2(1.8f, 2.8f), lift: 2.5f,
+                       size: new Vector2(1.2f, 1.7f), perMetre: 38f, depth: 0.45f);
+                var shrink = flames.sizeOverLifetime;
+                shrink.enabled = true;
+                shrink.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+                    new Keyframe(0f, 0.75f), new Keyframe(0.25f, 1f), new Keyframe(1f, 0.3f)));
+                var wobble = flames.noise;
+                wobble.strength = 0.5f;
+
+                if (smokeSrc != null)
+                {
+                    ParticleSystem smoke = Piece(smokeSrc, root, "Hot Smoke", 0.4f);
+                    Rising(smoke, life: new Vector2(0.9f, 1.25f), speed: new Vector2(1.8f, 2.6f), lift: 1.2f,
+                           size: new Vector2(1.3f, 1.9f), perMetre: 4f, depth: 0.3f);
+                }
+                if (embersSrc != null)
+                {
+                    ParticleSystem embers = Piece(embersSrc, root, "Embers", 0.1f);
+                    Rising(embers, life: new Vector2(0.6f, 1.3f), speed: new Vector2(2f, 4f), lift: 0.5f,
+                           size: new Vector2(0.03f, 0.07f), perMetre: 9f, depth: 0.5f);
+                    var drift = embers.noise;
+                    drift.enabled = true;
+                    drift.strength = 0.8f;
+                }
+                if (glowSrc != null)
+                {
+                    ParticleSystem glow = Piece(glowSrc, root, "Floor Glow", 0.06f);
+                    Rising(glow, life: new Vector2(0.45f, 0.7f), speed: Vector2.zero, lift: 0f,
+                           size: new Vector2(2.0f, 2.6f), perMetre: 6f, depth: 0.2f);
+                }
+
+                string folder = Recoloured + "/FireLine";
+                EnsureFolder(folder);
+                string path = folder + "/VFX_FireLine_Piece.prefab";
+                PrefabUtility.SaveAsPrefabAsset(root, path);
+                return AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        static ParticleSystem PackSystem(string prefabPath, string name)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            if (prefab == null) return null;
+            foreach (ParticleSystem ps in prefab.GetComponentsInChildren<ParticleSystem>(true))
+                if (ps.name == name) return ps;
+            return null;
+        }
+
+        /// <summary>A copy of one of a pack effect's particle systems, on its own, under the piece.</summary>
+        static ParticleSystem Piece(ParticleSystem source, GameObject root, string name, float height)
+        {
+            var copy = (GameObject)Object.Instantiate(source.gameObject);
+            copy.name = name;
+            foreach (Transform child in copy.transform) Object.DestroyImmediate(child.gameObject);
+            copy.transform.SetParent(root.transform, false);
+            copy.transform.localPosition = Vector3.up * height;
+            copy.transform.localRotation = Quaternion.identity;
+            copy.transform.localScale = Vector3.one;
+            return copy.GetComponent<ParticleSystem>();
+        }
+
+        /// <summary>
+        /// Made to burn on and rise: looping, emitted steadily along a 1 m box lying on the floor, going up
+        /// at <paramref name="speed"/> and pushed up by <paramref name="lift"/> m/s^2, not slowed.
+        /// </summary>
+        static void Rising(ParticleSystem ps, Vector2 life, Vector2 speed, float lift, Vector2 size, float perMetre, float depth)
+        {
+            var main = ps.main;
+            main.loop = true;
+            main.duration = 1f;
+            main.startDelay = 0f;
+            main.prewarm = false;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(life.x, life.y);
+            // not along the shape: a flat box throws its particles out sideways, so the rise is a velocity of its own
+            main.startSpeed = 0f;
+            main.startSize = new ParticleSystem.MinMaxCurve(size.x, size.y);
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+            main.maxParticles = 200;
+
+            var emission = ps.emission;
+            emission.enabled = true;
+            emission.SetBursts(new ParticleSystem.Burst[0]);
+            emission.rateOverTime = perMetre;
+            emission.rateOverDistance = 0f;
+
+            // a box 1 m along the line by its depth, lying flat
+            var shape = ps.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(1f, depth, 0f);
+            shape.rotation = new Vector3(-90f, 0f, 0f);
+            shape.position = Vector3.zero;
+            shape.randomDirectionAmount = 0f;
+
+            var limit = ps.limitVelocityOverLifetime;
+            limit.enabled = false;
+            var velocity = ps.velocityOverLifetime;
+            velocity.enabled = speed.y > 0f;
+            velocity.space = ParticleSystemSimulationSpace.World;
+            velocity.x = new ParticleSystem.MinMaxCurve(0f, 0f);
+            velocity.y = new ParticleSystem.MinMaxCurve(speed.x, speed.y);
+            velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
+            velocity.speedModifier = 1f;          // the fireball's flames had it at half
+            var force = ps.forceOverLifetime;
+            force.enabled = lift > 0f;
+            force.space = ParticleSystemSimulationSpace.World;
+            force.x = new ParticleSystem.MinMaxCurve(0f);
+            force.y = new ParticleSystem.MinMaxCurve(lift);
+            force.z = new ParticleSystem.MinMaxCurve(0f);
         }
 
         /// <summary>
