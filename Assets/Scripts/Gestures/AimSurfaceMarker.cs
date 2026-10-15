@@ -12,12 +12,13 @@ namespace MageCast.Gestures
     /// In training only, and only what the spell in hand does AT ITS TIER (SpellTiers) -- a tier I
     /// leaves no patch, so it shows none:
     ///
-    ///   floor   fire, ice: tier I its splash, from II its patch (fire III: and the blast round it);
-    ///           lightning from II its shock patch; air from II its updraft, at III into a patch the
-    ///           reach of the air bomb
-    ///   wall    fire from II the bounce and the line it takes, at I its splash; ice at I its splash;
-    ///           air the burst, every tier
-    ///   a person, or nothing happens there: nothing
+    ///   floor   fire, ice from II their patch (fire III: and the blast round it); lightning from II
+    ///           its shock patch; air from II its updraft, at III into a patch the reach of the air bomb
+    ///   wall    fire from II the bounce and the line it takes; air the burst, every tier
+    ///   a person, or no patch, burst or bounce there: nothing
+    ///
+    /// A tier I's splash is not drawn: a ring on the floor reads as a patch, and a tier I lays none
+    /// (15 Oct, the player took it for one).
     /// </summary>
     public class AimSurfaceMarker : MonoBehaviour
     {
@@ -168,17 +169,15 @@ namespace MageCast.Gestures
             bool floor = hit.normal.y > Projectile.FloorNormal;
             bool fire = spell.groundEffect == GroundEffect.Burn, ice = spell.groundEffect == GroundEffect.Ice;
             bool air = spell.groundEffect == GroundEffect.Updraft, lightning = spell.chargeDamage > 0f;
-            Color splash = new Color(spell.colour.r, spell.colour.g, spell.colour.b, 0.55f);
+            Color blast = new Color(spell.colour.r, spell.colour.g, spell.colour.b, 0.55f);
 
             if (floor)
             {
-                if ((fire || ice) && tier < 2)
-                    DrawRing(ring, hit.point, Vector3.up, SpellTiers.SplashRadius, splash);
-                else if (fire || ice)
+                if ((fire || ice) && tier >= 2)
                 {
                     DrawReach(hit.point, spell.zoneRadius * scale, spell.colour);
                     if (fire && tier >= 3)
-                        DrawRing(ring2, hit.point, Vector3.up, SpellTiers.ExplosionRadius, splash);
+                        DrawRing(ring2, hit.point, Vector3.up, SpellTiers.ExplosionRadius, blast);
                 }
                 else if (lightning && tier >= 2)
                     DrawReach(hit.point, SpellTiers.ShockRadius * scale, spell.colour);
@@ -209,10 +208,6 @@ namespace MageCast.Gestures
             else if (spell.wallBurstRadius > 0f)
             {
                 DrawRing(ring, hit.point, hit.normal, spell.wallBurstRadius * scale, spell.colour);
-            }
-            else if ((fire || ice) && tier < 2)
-            {
-                DrawRing(ring, hit.point, hit.normal, SpellTiers.SplashRadius, splash);
             }
         }
 

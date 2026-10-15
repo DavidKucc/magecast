@@ -15,6 +15,10 @@ namespace MageCast
     /// readable at a glance. Low on health, the bar pulses red. What you are suffering -- burning, wet,
     /// frozen -- sits over it as chips.
     ///
+    /// Stamina is a ring beside the crosshair, where the eyes are while running: it shows up when you
+    /// sprint, empties round the clock, turns orange when low and red and throbbing once run dry --
+    /// with a mark at the point where sprinting comes back -- and flashes as it fills and goes.
+    ///
     /// In the menus' look (MenuArt), scaled with the screen.
     /// </summary>
     [RequireComponent(typeof(Health))]
@@ -29,7 +33,7 @@ namespace MageCast
         float lastValue = -1f;
         float hitAt = -99f, hitSize;
         float popupAmount, popupAt = -99f, popupX;
-        float staminaAlpha;
+        float staminaAlpha, lastStamina = 1f, staminaFullAt = -99f, drainingUntil = -99f;
 
         /// <summary>The panel's right edge and height on screen, for the spell bar to keep clear of.</summary>
         public static float Right { get; private set; }
@@ -181,10 +185,10 @@ namespace MageCast
                 GUI.matrix = m;
             }
 
-            Stamina(panel, dt);
             Chips(panel);
 
             GUI.matrix = keep;
+            StaminaWheel(now, dt);
         }
 
         /// <summary>The edges of the screen redden for an instant with a hit, and throb while low.</summary>
@@ -203,24 +207,87 @@ namespace MageCast
             GUI.matrix = keep;
         }
 
-        /// <summary>Stamina: a thin gold bar over the plate, only while it is not full.</summary>
-        void Stamina(Rect panel, float dt)
+        /// <summary>
+        /// Stamina: a ring just right of and below the crosshair, constant in pixels like the crosshair.
+        /// Full, it shows for a moment with a flash and goes; in use, it empties round the clock from the
+        /// top, gold, orange when low, red and throbbing once dry -- with a white mark where sprinting
+        /// comes back -- and a bright head while it is draining.
+        /// </summary>
+        void StaminaWheel(float now, float dt)
         {
             if (motor == null) return;
-            staminaAlpha = Mathf.MoveTowards(staminaAlpha, motor.Stamina < 0.999f ? 1f : 0f, dt * 4f);
+            float st = Mathf.Clamp01(motor.Stamina);
+            bool full = st >= 0.999f;
+            if (st < lastStamina - 1e-4f) drainingUntil = now + 0.15f;
+            if (full && lastStamina < 0.999f) staminaFullAt = now;
+            lastStamina = st;
+            bool show = !full || now - staminaFullAt < 0.6f;
+            staminaAlpha = Mathf.MoveTowards(staminaAlpha, show ? 1f : 0f, dt * (show ? 6f : 2.5f));
             if (staminaAlpha <= 0.01f) return;
-            Rect r = new Rect(panel.x + 12f, panel.y - 12f, W - 24f, 6f);
-            MenuArt.RoundRect(MenuArt.Grow(r, 2f), new Color(0f, 0f, 0f, 0.55f * staminaAlpha), 5f);
-            Color c = motor.Winded ? new Color(0.8f, 0.42f, 0.25f) : new Color(1f, 0.85f, 0.4f);
-            c.a = staminaAlpha;
-            MenuArt.RoundRect(new Rect(r.x, r.y, Mathf.Max(4f, r.width * motor.Stamina), r.height), c, 3f);
+
+            float px = Mathf.Clamp(Screen.height / 1000f, 0.9f, 1.4f);
+            Vector2 c = new Vector2(Screen.width * 0.5f + 64f * px, Screen.height * 0.5f + 40f * px);
+            float r = 20f * px, dotSize = 6.5f * px;
+            const int N = 64;
+            float a = staminaAlpha;
+            bool winded = motor.Winded;
+            float pulse = 0.5f + 0.5f * Mathf.Sin(now * 9f);
+
+            Color col = winded ? Color.Lerp(new Color(0.85f, 0.15f, 0.1f), new Color(1f, 0.45f, 0.25f), pulse)
+                       : st < 0.3f ? new Color(1f, 0.55f, 0.2f)
+                       : Color.Lerp(new Color(1f, 0.85f, 0.4f), new Color(0.75f, 0.95f, 0.5f), Mathf.InverseLerp(0.6f, 1f, st));
+
+            // a soft halo, warmer while it drains
+            bool draining = now < drainingUntil;
+            MenuArt.Glow(c, r * 4.2f, new Color(col.r, col.g, col.b, (draining ? 0.16f : 0.08f) * a));
+
+            // the empty track, then the stamina left, round from the top
+            GUI.color = new Color(0f, 0f, 0f, 0.5f * a);
+            for (int i = 0; i < N; i++) DotAt(c, r, i / (float)N, dotSize + 2f * px);
+            GUI.color = new Color(1f, 1f, 1f, 0.12f * a);
+            for (int i = 0; i < N; i++) DotAt(c, r, i / (float)N, dotSize);
+            int filled = Mathf.RoundToInt(st * N);
+            GUI.color = new Color(col.r, col.g, col.b, a);
+            for (int i = 0; i < filled; i++) DotAt(c, r, i / (float)N, dotSize);
+
+            // the head of the arc, bright while it drains
+            if (filled > 0 && draining)
+            {
+                float t = st;
+                Vector2 head = c + new Vector2(Mathf.Sin(t * Mathf.PI * 2f), -Mathf.Cos(t * Mathf.PI * 2f)) * r;
+                MenuArt.Glow(head, dotSize * 4f, new Color(1f, 0.95f, 0.8f, 0.8f * a));
+            }
+
+            // dry: where it has to come back to before Shift works again
+            if (winded)
+            {
+                float t = motor.SprintAgainAt;
+                Vector2 dir = new Vector2(Mathf.Sin(t * Mathf.PI * 2f), -Mathf.Cos(t * Mathf.PI * 2f));
+                MenuArt.Line(c + dir * (r - 5f * px), c + dir * (r + 5f * px), 2.5f * px, new Color(1f, 1f, 1f, 0.9f * a));
+            }
+
+            // filled up: a ring flashes out from it
+            float since = now - staminaFullAt;
+            if (since < 0.45f)
+            {
+                float k = since / 0.45f, size = (r + 4f * px + 14f * px * k) * 2f;
+                MenuArt.RoundRect(new Rect(c.x - size * 0.5f, c.y - size * 0.5f, size, size),
+                                  new Color(0.85f, 1f, 0.6f, (1f - k) * 0.8f * a), size * 0.5f, 2f * px);
+            }
+            GUI.color = Color.white;
+        }
+
+        static void DotAt(Vector2 c, float r, float t, float size)
+        {
+            Vector2 p = c + new Vector2(Mathf.Sin(t * Mathf.PI * 2f), -Mathf.Cos(t * Mathf.PI * 2f)) * r;
+            GUI.DrawTexture(new Rect(p.x - size * 0.5f, p.y - size * 0.5f, size, size), MenuArt.Dot);
         }
 
         /// <summary>What is being done to you, as small chips above the plate.</summary>
         void Chips(Rect panel)
         {
             float x = panel.x;
-            float y = panel.y - (staminaAlpha > 0.01f ? 40f : 28f);
+            float y = panel.y - 28f;
             if (GetComponent<Burning>() != null) x = Chip(x, y, "BURNING", new Color(1f, 0.5f, 0.15f));
             if (GetComponent<Wet>() != null) x = Chip(x, y, "WET", new Color(0.45f, 0.75f, 1f));
             if (GetComponent<Frozen>() != null) x = Chip(x, y, "FROZEN", new Color(0.75f, 0.95f, 1f));

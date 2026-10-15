@@ -43,7 +43,17 @@ namespace MageCast
             }
         }
 
-        static Texture2D edges;
+        static Texture2D edges, dot;
+
+        /// <summary>A round dot with a crisp, smoothed edge -- strung close together, a clean arc.</summary>
+        public static Texture2D Dot
+        {
+            get
+            {
+                if (dot == null) dot = Radial(32, d => Mathf.Clamp01((1f - d) * 10f));
+                return dot;
+            }
+        }
 
         /// <summary>White at the edges of the screen, nothing in the middle -- tinted, a flash or a throb round the view.</summary>
         public static Texture2D Edges

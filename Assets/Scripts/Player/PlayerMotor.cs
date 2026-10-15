@@ -61,6 +61,8 @@ namespace MageCast
         public float Stamina { get; private set; }
         /// <summary>Ran the bar dry and waiting for it to come back to sprintAgainAt.</summary>
         public bool Winded { get; private set; }
+        /// <summary>Where on the bar sprinting comes back after running it dry, 0..1 -- marked on the HUD.</summary>
+        public float SprintAgainAt { get { return sprintAgainAt; } }
         float lastSprintTime = -99f;
 
         /// <summary>
