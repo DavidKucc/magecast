@@ -303,8 +303,6 @@ namespace MageCast.Gestures
         string headline = "";
         Color headlineColour = Color.white;
         float headlineUntil = -99f;
-        GUIStyle bigStyle;
-        GUIStyle smallStyle;
 
         void Awake()
         {
@@ -1522,7 +1520,10 @@ namespace MageCast.Gestures
             headline = text;
             headlineColour = colour;
             headlineUntil = Time.time + seconds;
+            headlineSeconds = seconds;
         }
+
+        float headlineSeconds = 2f;
 
         public static readonly Color FailColour = new Color(0.72f, 0.72f, 0.76f);
 
@@ -1533,64 +1534,223 @@ namespace MageCast.Gestures
                            Time.time - castStartedAt, strokeLength, stroke.Count, movedWhileCasting, metrics);
         }
 
+        GUIStyle cardName, cardTier, cardState, cardSmall, keyCap, bannerStyle;
+        float cooldownSeen;          // the longest wait seen on the spell in hand, for the sweep over its rune
+        Spell cooldownOf;
+
+        /// <summary>Training (or offline): the calibration aids are shown; in a game with others they are not.</summary>
+        static bool Training
+        {
+            get
+            {
+                NetSession session = NetSession.Instance;
+                return session == null || session.Current == NetSession.Mode.Training || session.Current == NetSession.Mode.None;
+            }
+        }
+
+        void ReadoutStyles()
+        {
+            if (cardName != null) return;
+            cardName = new GUIStyle(GUI.skin.label) { fontSize = 26, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleLeft };
+            cardTier = new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            cardState = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            cardSmall = new GUIStyle(GUI.skin.label) { fontSize = 12, alignment = TextAnchor.MiddleLeft };
+            keyCap = new GUIStyle(GUI.skin.label) { fontSize = 11, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            bannerStyle = new GUIStyle(GUI.skin.label) { fontSize = 24, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleLeft };
+        }
+
+        /// <summary>
+        /// Top left: the spell in hand as a card -- its rune glowing in its colour (darkened and swept while
+        /// it cools down), its name, its tier on a badge with pips, and what it is doing: READY, the
+        /// seconds left, LOCKED, QUEUED, and LINE / WALL when it is going on the floor. A tier III drains
+        /// along the bottom of the card. With nothing in hand, what just happened (SENT, FIZZLE, NOT
+        /// READY) slides in as a banner and fades. In training, the calibration aids under it: the
+        /// last reading and the practice keys.
+        /// </summary>
         void OnGUI()
         {
             if (IsBot) return;      // a bot has no screen
-            if (bigStyle == null)
+            if (Event.current.type != EventType.Repaint) return;
+            ReadoutStyles();
+
+            float s = Mathf.Clamp(Screen.height / 1000f, 0.85f, 1.3f);
+            Matrix4x4 keep = GUI.matrix;
+            GUI.matrix = Matrix4x4.Scale(new Vector3(s, s, 1f));
+
+            const float X = 14f, Y = 12f;
+            if (holding && heldSpell != null) HeldCard(X, Y);
+            else if (Time.time < headlineUntil) Banner(X, Y);
+
+            if (Training && logCasts) Diagnostics(X, Y + 128f);
+
+            GUI.matrix = keep;
+        }
+
+        void HeldCard(float x, float y)
+        {
+            const float W = 330f, H = 84f;
+            int tier = SpellTiers.Of(heldQuality);
+            float wait = CooldownLeft(heldSpell);
+            float locked = LockLeft(heldSpell);
+            Color c = heldSpell.colour;
+            float now = Time.time;
+            bool ready = wait <= 0f;
+
+            if (cooldownOf != heldSpell || wait <= 0f) { cooldownOf = heldSpell; cooldownSeen = 0f; }
+            cooldownSeen = Mathf.Max(cooldownSeen, wait);
+
+            Vector3 placeAt, placeFacing;
+            float placeLength, placeDepth;
+            bool placed = PlacePreview(out placeAt, out placeFacing, out placeLength, out placeDepth);
+
+            // the card
+            Rect card = new Rect(x, y, W, H);
+            float breathe = ready ? 0.5f + 0.5f * Mathf.Sin(now * 3f) : 0f;
+            MenuArt.Glow(new Vector2(x + 42f, y + H * 0.5f), 150f, new Color(c.r, c.g, c.b, (ready ? 0.12f + 0.06f * breathe : 0.05f)));
+            MenuArt.RoundRect(new Rect(x, y + 4f, W, H), new Color(0f, 0f, 0f, 0.35f), 14f);
+            MenuArt.RoundRect(card, new Color(0.045f, 0.05f, 0.072f, 0.86f), 14f);
+            Color edge = ready ? new Color(c.r, c.g, c.b, 0.45f + 0.3f * breathe) : new Color(0.6f, 0.6f, 0.65f, 0.35f);
+            MenuArt.RoundRect(card, edge, 14f, 1.4f);
+
+            // the rune, dimmed and swept from the top while it cools down
+            Rect plate = new Rect(x + 12f, y + 12f, 60f, 60f);
+            MenuArt.RoundRect(plate, new Color(0.025f, 0.03f, 0.045f, 0.95f), 10f);
+            MenuArt.RoundRect(plate, new Color(c.r, c.g, c.b, ready ? 0.7f : 0.3f), 10f, 1.3f);
+            Texture2D rune = RuneIcons.Get(heldSpell.gesture, c, 64);
+            if (rune != null)
             {
-                bigStyle = new GUIStyle(GUI.skin.label) { fontSize = 30, fontStyle = FontStyle.Bold };
-                smallStyle = new GUIStyle(GUI.skin.label) { fontSize = 12 };
+                GUI.color = new Color(1f, 1f, 1f, ready ? 1f : 0.4f);
+                GUI.DrawTexture(MenuArt.Grow(plate, -6f), rune);
+                GUI.color = Color.white;
+            }
+            if (!ready && cooldownSeen > 0f)
+            {
+                float share = Mathf.Clamp01(wait / cooldownSeen);
+                MenuArt.RoundRect(new Rect(plate.x + 2f, plate.y + 2f, plate.width - 4f, (plate.height - 4f) * share),
+                                  new Color(0f, 0f, 0f, 0.55f), 8f);
             }
 
-            // --- top left: what you are holding, or what just happened ---
-            if (holding && heldSpell != null)
+            // the name and the tier
+            float nx = plate.xMax + 14f;
+            MenuArt.GlowText(new Rect(nx, y + 8f, 180f, 34f), heldSpell.displayName, cardName,
+                             ready ? c : Color.Lerp(c, Color.grey, 0.55f), ready ? 0.7f : 0f);
+            float nameW = cardName.CalcSize(new GUIContent(heldSpell.displayName)).x;
+            Rect badge = new Rect(nx + nameW + 12f, y + 13f, 58f, 24f);
+            Color gold = MenuArt.Gold;
+            MenuArt.RoundRect(badge, new Color(gold.r * 0.22f, gold.g * 0.22f, gold.b * 0.22f, 0.95f), 12f);
+            MenuArt.RoundRect(badge, new Color(gold.r, gold.g, gold.b, tier >= 3 ? 0.95f : 0.5f), 12f, tier >= 3 ? 1.8f : 1.2f);
+            if (tier >= 3) MenuArt.Glow(badge.center, 90f, new Color(gold.r, gold.g, gold.b, 0.18f + 0.1f * Mathf.Sin(now * 6f)));
+            cardTier.normal.textColor = gold;
+            GUI.Label(new Rect(badge.x + 4f, badge.y, 28f, badge.height), SpellTiers.Roman(tier), cardTier);
+            for (int i = 0; i < 3; i++)
             {
-                int tier = SpellTiers.Of(heldQuality);
-                float wait = CooldownLeft(heldSpell);
-                bigStyle.normal.textColor = wait > 0f ? Color.Lerp(heldSpell.colour, Color.grey, 0.6f) : heldSpell.colour;
-                Vector3 placeAt, placeFacing;
-                float placeLength, placeDepth;
-                bool placed = PlacePreview(out placeAt, out placeFacing, out placeLength, out placeDepth);
-                GUI.Label(new Rect(14f, 10f, 700f, 40f),
-                          heldSpell.displayName + " " + SpellTiers.Roman(tier)
-                          + (placed ? (heldSpell == fire ? "  LINE" : "  WALL") : "")
-                          + (wait > 0f ? (LockLeft(heldSpell) > 0f ? "  LOCKED " : "  ") + wait.ToString("0.0") + " s"
-                                         + (sendQueued ? "  (queued)" : "")
-                             : "  READY"),
-                          bigStyle);
-
-                // a tier III runs down to II: shown as a draining bar under the name
-                if (tier >= 3)
-                {
-                    float left = Mathf.Clamp01((heldTopTierUntil - Time.time) / SpellTiers.TopTierHold);
-                    GUI.color = new Color(0f, 0f, 0f, 0.5f);
-                    GUI.DrawTexture(new Rect(16f, 66f, 220f, 5f), Texture2D.whiteTexture);
-                    GUI.color = Color.Lerp(heldSpell.colour, Color.white, 0.4f);
-                    GUI.DrawTexture(new Rect(16f, 66f, 220f * left, 5f), Texture2D.whiteTexture);
-                    GUI.color = Color.white;
-                }
-
-                smallStyle.normal.textColor = Color.white;
-                GUI.Label(new Rect(16f, 46f, 700f, 20f), "LMB: send     RMB: drop", smallStyle);
-            }
-            else if (Time.time < headlineUntil)
-            {
-                bigStyle.normal.textColor = headlineColour;
-                GUI.Label(new Rect(14f, 10f, 700f, 40f), headline, bigStyle);
+                Rect pip = new Rect(badge.x + 34f + i * 7f, badge.center.y - 2.5f, 5f, 5f);
+                MenuArt.RoundRect(pip, i < tier ? gold : new Color(1f, 1f, 1f, 0.18f), 2.5f);
             }
 
-            // --- below that: diagnostics, for us rather than for the player ---
-            smallStyle.normal.textColor = new Color(1f, 1f, 1f, 0.75f);
+            // what it is doing
+            float sx = nx, sy = y + 48f;
+            if (ready) sx = Chip(sx, sy, "READY", new Color(0.55f, 1f, 0.6f));
+            else if (locked > 0f) sx = Chip(sx, sy, "LOCKED  " + wait.ToString("0.0") + " s", new Color(1f, 0.4f, 0.35f));
+            else sx = Chip(sx, sy, wait.ToString("0.0") + " s", new Color(0.75f, 0.78f, 0.85f));
+            if (!ready && sendQueued) sx = Chip(sx, sy, "QUEUED", MenuArt.Gold);
+            if (placed) sx = Chip(sx, sy, heldSpell == fire ? "LINE" : "WALL", MenuArt.Gold);
 
-            if (Time.time - lastResultTime <= 2.5f)
-                GUI.Label(new Rect(16f, 86f, 900f, 20f), lastResult, smallStyle);
+            // a tier III runs down to II, along the bottom of the card
+            if (tier >= 3)
+            {
+                float left = Mathf.Clamp01((heldTopTierUntil - now) / SpellTiers.TopTierHold);
+                Rect track = new Rect(x + 12f, y + H - 7f, W - 24f, 3f);
+                MenuArt.RoundRect(track, new Color(0f, 0f, 0f, 0.5f), 1.5f);
+                MenuArt.RoundRect(new Rect(track.x, track.y, Mathf.Max(3f, track.width * left), track.height),
+                                  Color.Lerp(c, Color.white, 0.4f), 1.5f);
+            }
 
-            if (logCasts)
-                GUI.Label(new Rect(16f, 104f, 900f, 20f),
-                          "practice target: " + practiceTarget +
-                          "   (F1 uruz/barrier  F2 kenaz/fire  F3 laguz/ice  F4 sowulo/lightning  F5 ehwaz/air" +
-                          "   F7 recognizer: " + (segmentRecognition ? "lines+angles" : "$P") + ")",
-                          smallStyle);
+            // how to let it go
+            float kx = x + 4f, ky = y + H + 8f;
+            kx = Key(kx, ky, "LMB") + 4f;
+            cardSmall.normal.textColor = new Color(1f, 1f, 1f, 0.7f);
+            GUI.Label(new Rect(kx, ky, 40f, 18f), "send", cardSmall);
+            kx += 44f;
+            kx = Key(kx, ky, "RMB") + 4f;
+            GUI.Label(new Rect(kx, ky, 40f, 18f), "drop", cardSmall);
+        }
+
+        /// <summary>A small pill with a word on it, in a colour; returns where the next one goes.</summary>
+        float Chip(float x, float y, string text, Color c)
+        {
+            float w = cardState.CalcSize(new GUIContent(text)).x + 18f;
+            Rect r = new Rect(x, y, w, 22f);
+            MenuArt.RoundRect(r, new Color(c.r * 0.2f, c.g * 0.2f, c.b * 0.2f, 0.9f), 11f);
+            MenuArt.RoundRect(r, new Color(c.r, c.g, c.b, 0.75f), 11f, 1.2f);
+            cardState.normal.textColor = c;
+            GUI.Label(r, text, cardState);
+            return x + w + 6f;
+        }
+
+        /// <summary>A key cap -- a mouse button, an F key.</summary>
+        float Key(float x, float y, string key, bool lit = false)
+        {
+            float w = Mathf.Max(22f, keyCap.CalcSize(new GUIContent(key)).x + 10f);
+            Rect r = new Rect(x, y, w, 18f);
+            MenuArt.RoundRect(new Rect(r.x, r.y + 2f, r.width, r.height), new Color(0f, 0f, 0f, 0.5f), 4f);
+            MenuArt.RoundRect(r, lit ? new Color(0.32f, 0.25f, 0.1f, 0.95f) : new Color(0.16f, 0.17f, 0.21f, 0.95f), 4f);
+            MenuArt.RoundRect(r, lit ? MenuArt.Gold : new Color(1f, 1f, 1f, 0.25f), 4f, 1f);
+            keyCap.normal.textColor = lit ? MenuArt.Gold : new Color(1f, 1f, 1f, 0.85f);
+            GUI.Label(r, key, keyCap);
+            return x + w;
+        }
+
+        /// <summary>What just happened, sliding in from the left and fading out.</summary>
+        void Banner(float x, float y)
+        {
+            float age = Time.time - (headlineUntil - headlineSeconds);
+            float left = headlineUntil - Time.time;
+            float a = Mathf.Clamp01(age / 0.12f) * Mathf.Clamp01(left / 0.35f);
+            float slide = (1f - Mathf.Clamp01(age / 0.18f)) * -24f;
+            float w = bannerStyle.CalcSize(new GUIContent(headline)).x + 44f;
+            Rect r = new Rect(x + slide, y, w, 50f);
+            Color c = headlineColour;
+            MenuArt.RoundRect(new Rect(r.x, r.y + 4f, r.width, r.height), new Color(0f, 0f, 0f, 0.35f * a), 12f);
+            MenuArt.RoundRect(r, new Color(0.045f, 0.05f, 0.072f, 0.86f * a), 12f);
+            MenuArt.RoundRect(r, new Color(c.r, c.g, c.b, 0.4f * a), 12f, 1.2f);
+            MenuArt.RoundRect(new Rect(r.x + 10f, r.y + 12f, 4f, r.height - 24f), new Color(c.r, c.g, c.b, a), 2f);
+            MenuArt.GlowText(new Rect(r.x + 24f, r.y, w, r.height), headline, bannerStyle, new Color(c.r, c.g, c.b, a), 0.5f * a);
+        }
+
+        /// <summary>Training only: the last reading of a rune, and the practice keys.</summary>
+        void Diagnostics(float x, float y)
+        {
+            if (Time.time - lastResultTime <= 2.5f && lastResult.Length > 0)
+            {
+                float w = cardSmall.CalcSize(new GUIContent(lastResult)).x + 20f;
+                Rect r = new Rect(x, y, w, 22f);
+                MenuArt.RoundRect(r, new Color(0f, 0f, 0f, 0.45f), 11f);
+                cardSmall.normal.textColor = new Color(1f, 1f, 1f, 0.75f);
+                GUI.Label(new Rect(r.x + 10f, r.y, w, r.height), lastResult, cardSmall);
+            }
+            y += 30f;
+
+            // the practice keys, the chosen target lit
+            float kx = x;
+            cardSmall.normal.textColor = new Color(MenuArt.Gold.r, MenuArt.Gold.g, MenuArt.Gold.b, 0.85f);
+            GUI.Label(new Rect(kx, y, 80f, 18f), "PRACTICE", cardSmall);
+            kx += 66f;
+            string[] keys = { "F1", "F2", "F3", "F4", "F5" };
+            string[] runes = { GestureTemplates.Uruz, GestureTemplates.Kenaz, GestureTemplates.Laguz, GestureTemplates.Sowulo, GestureTemplates.Ehwaz };
+            string[] names = { "barrier", "fire", "ice", "lightning", "air" };
+            for (int i = 0; i < keys.Length; i++)
+            {
+                bool lit = practiceTarget == runes[i];
+                kx = Key(kx, y, keys[i], lit) + 3f;
+                cardSmall.normal.textColor = lit ? MenuArt.Gold : new Color(1f, 1f, 1f, 0.6f);
+                float nw = cardSmall.CalcSize(new GUIContent(names[i])).x;
+                GUI.Label(new Rect(kx, y, nw + 4f, 18f), names[i], cardSmall);
+                kx += nw + 10f;
+            }
+            kx = Key(kx + 4f, y, "F7") + 3f;
+            cardSmall.normal.textColor = new Color(1f, 1f, 1f, 0.6f);
+            GUI.Label(new Rect(kx, y, 200f, 18f), "reader: " + (segmentRecognition ? "lines + angles" : "$P"), cardSmall);
         }
     }
 }

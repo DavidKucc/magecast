@@ -14,6 +14,12 @@ namespace MageCast
     ///
     /// Damage merges per target. A burn ticks four times a second, and four numbers a second stacked
     /// on top of each other is noise; one number that counts up while you stand in it is information.
+    ///
+    /// The look: a damage number is outlined in black so it reads over anything, pops in big and
+    /// settles with a bounce, and is warmer and bigger the bigger the hit -- pale gold for a tick, gold
+    /// for a hit, orange-red with a glow behind it for a big one; it gives a little kick as it grows
+    /// when hits merge into it. Words and spell names sit on a dark pill edged in their colour, like
+    /// the tags in the HUD.
     /// </summary>
     public class WorldPopups : MonoBehaviour
     {
@@ -31,6 +37,7 @@ namespace MageCast
             public float Life;
             public float Rise;
             public float Drift;          // sideways, so two numbers in a row do not overlap
+            public float Bumped = -9f;   // when a merged hit last made it grow
         }
 
         const float MergeWindow = 0.45f;
@@ -87,7 +94,8 @@ namespace MageCast
                 if (!p.IsDamage || p.Anchor != target || Time.time - p.Born > MergeWindow) continue;
                 p.Amount += amount;
                 p.Text = Format(p.Amount);
-                p.Born = Time.time;
+                p.Born = Time.time - 0.12f;          // past the pop-in: it kicks instead (Bumped)
+                p.Bumped = Time.time;
                 p.Size = SizeFor(p.Amount);
                 return;
             }
@@ -96,7 +104,7 @@ namespace MageCast
             w.Add(new Popup {
                 Anchor = target, Point = target.position, Height = 2.1f, Text = Format(amount),
                 Amount = amount, IsDamage = true, Colour = new Color(1f, 0.92f, 0.55f),
-                Size = SizeFor(amount), Life = 1.1f, Rise = 0.9f,
+                Size = SizeFor(amount), Life = 1.2f, Rise = 0.9f,
                 Drift = (w.driftFlip == 0 ? -1f : 1f) * 0.25f });
         }
 
@@ -109,7 +117,30 @@ namespace MageCast
 
         static int SizeFor(float amount)
         {
-            return Mathf.RoundToInt(Mathf.Lerp(18f, 34f, Mathf.Clamp01(amount / 40f)));
+            return Mathf.RoundToInt(Mathf.Lerp(20f, 40f, Mathf.Clamp01(amount / 40f)));
+        }
+
+        /// <summary>Pale gold for a tick, gold for a hit, orange-red for a big one.</summary>
+        static Color DamageColour(float amount)
+        {
+            Color tick = new Color(1f, 0.93f, 0.66f), hit = new Color(1f, 0.8f, 0.3f), big = new Color(1f, 0.42f, 0.22f);
+            return amount < 12f ? Color.Lerp(tick, hit, amount / 12f) : Color.Lerp(hit, big, Mathf.Clamp01((amount - 12f) / 18f));
+        }
+
+        static readonly Vector2[] Around =
+        {
+            new Vector2(-1f, 0f), new Vector2(1f, 0f), new Vector2(0f, -1f), new Vector2(0f, 1f),
+            new Vector2(-0.7f, -0.7f), new Vector2(0.7f, -0.7f), new Vector2(-0.7f, 0.7f), new Vector2(0.7f, 0.7f)
+        };
+
+        /// <summary>Text with a black outline all round it, so it reads over sky, fire and floor alike.</summary>
+        void Outlined(Rect r, string text, Color colour, float width)
+        {
+            style.normal.textColor = new Color(0.05f, 0.03f, 0.02f, 0.9f * colour.a);
+            foreach (Vector2 d in Around)
+                GUI.Label(new Rect(r.x + d.x * width, r.y + d.y * width + 1f, r.width, r.height), text, style);
+            style.normal.textColor = colour;
+            GUI.Label(r, text, style);
         }
 
         void Awake()
@@ -173,17 +204,40 @@ namespace MageCast
                 float distanceScale = Mathf.Clamp(12f / screen.z, 0.7f, 1.25f);
                 int size = Mathf.RoundToInt(p.Size * distanceScale);
 
-                // a pop on arrival, then a fade over the last 40%
-                float pop = age < 0.12f ? Mathf.Lerp(1.35f, 1f, age / 0.12f) : 1f;
+                // in big and settling with a bounce, a kick when a merged hit makes it grow, then a fade
+                float pop = 1f;
+                if (age < 0.28f)
+                {
+                    float k = age / 0.28f;
+                    pop = 1f + 0.7f * Mathf.Exp(-6f * k) * Mathf.Cos(k * 9f);
+                }
+                float bump = Time.time - p.Bumped;
+                if (bump < 0.2f) pop *= 1f + 0.3f * (1f - bump / 0.2f);
                 float alpha = (t < 0.6f ? 1f : 1f - (t - 0.6f) / 0.4f) * near;
 
-                style.fontSize = Mathf.RoundToInt(size * pop);
-                Rect r = new Rect(screen.x - 200f, Screen.height - screen.y - 30f, 400f, 60f);
+                style.fontSize = Mathf.Max(8, Mathf.RoundToInt(size * pop));
+                Vector2 at = new Vector2(screen.x, Screen.height - screen.y);
+                Rect r = new Rect(at.x - 200f, at.y - 30f, 400f, 60f);
 
-                style.normal.textColor = new Color(0f, 0f, 0f, 0.8f * alpha);
-                GUI.Label(new Rect(r.x + 2f, r.y + 2f, r.width, r.height), p.Text, style);
-                style.normal.textColor = new Color(p.Colour.r, p.Colour.g, p.Colour.b, alpha);
-                GUI.Label(r, p.Text, style);
+                if (p.IsDamage)
+                {
+                    Color c = DamageColour(p.Amount);
+                    // a hit of yours on somebody else is edged in gold light
+                    bool mine = p.Anchor != null && Sight.HitByMe(p.Anchor);
+                    if (p.Amount >= 18f || mine)
+                        MenuArt.Glow(at, size * (p.Amount >= 18f ? 3.2f : 2.4f),
+                                     new Color(c.r, c.g * 0.8f, c.b * 0.6f, (p.Amount >= 18f ? 0.3f : 0.18f) * alpha));
+                    Outlined(r, p.Text, new Color(c.r, c.g, c.b, alpha), Mathf.Max(1.5f, size * 0.07f));
+                }
+                else
+                {
+                    // a word or a spell's name: on a dark pill edged in its colour
+                    Vector2 box = style.CalcSize(new GUIContent(p.Text));
+                    Rect pill = new Rect(at.x - box.x * 0.5f - 12f, at.y - box.y * 0.5f - 1f, box.x + 24f, box.y + 2f);
+                    MenuArt.RoundRect(pill, new Color(0.03f, 0.035f, 0.05f, 0.72f * alpha), pill.height * 0.5f);
+                    MenuArt.RoundRect(pill, new Color(p.Colour.r, p.Colour.g, p.Colour.b, 0.75f * alpha), pill.height * 0.5f, 1.5f);
+                    Outlined(r, p.Text, new Color(p.Colour.r, p.Colour.g, p.Colour.b, alpha), 1.2f);
+                }
             }
         }
     }
