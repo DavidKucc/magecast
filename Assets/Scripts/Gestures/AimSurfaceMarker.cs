@@ -6,27 +6,30 @@ namespace MageCast.Gestures
     /// <summary>
     /// While a spell is held, shows what it will do where the crosshair is pointing -- BEFORE you send it.
     ///
-    /// Aiming at the floor, at a wall and at a person now produce different spells from one gesture, and
-    /// the choice is made by what a ray happens to strike. Without this the player would find out which
-    /// one they got by watching it happen, which is the same as the game deciding for them.
+    /// In every game: ice or fire aimed at the floor at your feet shows the ground the wall or the line
+    /// will take (Footprint). That is about where YOUR spell goes, not about reading anyone.
     ///
-    ///   floor, leaves a patch      a ring the size of the patch, in the spell's colour
-    ///   wall, bounces              a small ring and the line the bounce will take
-    ///   wall, bursts               a ring the size of the burst
-    ///   does nothing there         a small grey ring -- lightning into the ground, say
-    ///   a person                   nothing; a direct hit needs no explaining
+    /// In training only, and only what the spell in hand does AT ITS TIER (SpellTiers) -- a tier I
+    /// leaves no patch, so it shows none:
+    ///
+    ///   floor   fire, ice: tier I its splash, from II its patch (fire III: and the blast round it);
+    ///           lightning from II its shock patch; air from II its updraft, at III into a patch the
+    ///           reach of the air bomb
+    ///   wall    fire from II the bounce and the line it takes, at I its splash; ice at I its splash;
+    ///           air the burst, every tier
+    ///   a person, or nothing happens there: nothing
     /// </summary>
     public class AimSurfaceMarker : MonoBehaviour
     {
         [SerializeField] float lineWidth = 0.05f;
         [SerializeField] float bounceRayLength = 5f;
-        [SerializeField] Color nothingColour = new Color(0.6f, 0.6f, 0.65f, 0.8f);
 
         const int Segments = 40;
 
         GestureCaster caster;
         ThirdPersonCamera cam;
         LineRenderer ring;
+        LineRenderer ring2;          // a second reach at once: fire III's blast round its patch
         LineRenderer bounceRay;
 
         void Awake()
@@ -34,6 +37,7 @@ namespace MageCast.Gestures
             caster = GetComponent<GestureCaster>();
             cam = FindObjectOfType<ThirdPersonCamera>();
             ring = MakeLine("AimRing", true);
+            ring2 = MakeLine("AimRing2", true);
             bounceRay = MakeLine("AimBounce", false);
             footprint = MakeLine("AimFootprint", true);
         }
@@ -134,6 +138,7 @@ namespace MageCast.Gestures
         void LateUpdate()
         {
             ring.enabled = false;
+            ring2.enabled = false;
             bounceRay.enabled = false;
             footprint.enabled = false;
 
@@ -159,20 +164,38 @@ namespace MageCast.Gestures
             if (person) return;
 
             float scale = caster.HeldSizeScale;
+            int tier = caster.HeldTier;
             bool floor = hit.normal.y > Projectile.FloorNormal;
+            bool fire = spell.groundEffect == GroundEffect.Burn, ice = spell.groundEffect == GroundEffect.Ice;
+            bool air = spell.groundEffect == GroundEffect.Updraft, lightning = spell.chargeDamage > 0f;
+            Color splash = new Color(spell.colour.r, spell.colour.g, spell.colour.b, 0.55f);
 
             if (floor)
             {
-                if (spell.groundEffect != GroundEffect.None)
+                if ((fire || ice) && tier < 2)
+                    DrawRing(ring, hit.point, Vector3.up, SpellTiers.SplashRadius, splash);
+                else if (fire || ice)
+                {
                     DrawReach(hit.point, spell.zoneRadius * scale, spell.colour);
-                else
-                    DrawRing(hit.point, Vector3.up, 0.3f, nothingColour);
+                    if (fire && tier >= 3)
+                        DrawRing(ring2, hit.point, Vector3.up, SpellTiers.ExplosionRadius, splash);
+                }
+                else if (lightning && tier >= 2)
+                    DrawReach(hit.point, SpellTiers.ShockRadius * scale, spell.colour);
+                else if (air && tier >= 3 && SpellZone.AnyAt(hit.point, spell.radius) != null)
+                {
+                    // into a patch: the bomb, which pulls in everyone in it and this far round it
+                    SpellZone patch = SpellZone.AnyAt(hit.point, spell.radius);
+                    DrawRing(ring, patch.transform.position, Vector3.up, patch.Radius + SpellTiers.BombReachBeyondPatch, spell.colour);
+                }
+                else if (air && tier >= 2)
+                    DrawReach(hit.point, spell.zoneRadius * scale, spell.colour);
                 return;
             }
 
-            if (spell.wallBounces > 0)
+            if (spell.wallBounces > 0 && tier >= 2)
             {
-                DrawRing(hit.point, hit.normal, 0.35f, spell.colour);
+                DrawRing(ring, hit.point, hit.normal, 0.35f, spell.colour);
 
                 Vector3 incoming = (hit.point - caster.MuzzlePoint).normalized;
                 Vector3 outgoing = Vector3.Reflect(incoming, hit.normal);
@@ -185,11 +208,11 @@ namespace MageCast.Gestures
             }
             else if (spell.wallBurstRadius > 0f)
             {
-                DrawRing(hit.point, hit.normal, spell.wallBurstRadius * scale, spell.colour);
+                DrawRing(ring, hit.point, hit.normal, spell.wallBurstRadius * scale, spell.colour);
             }
-            else
+            else if ((fire || ice) && tier < 2)
             {
-                DrawRing(hit.point, hit.normal, 0.3f, nothingColour);
+                DrawRing(ring, hit.point, hit.normal, SpellTiers.SplashRadius, splash);
             }
         }
 
@@ -237,7 +260,7 @@ namespace MageCast.Gestures
         }
 
         /// <summary>A circle lying flat on a surface, lifted a hair off it so it does not z-fight.</summary>
-        void DrawRing(Vector3 centre, Vector3 normal, float radius, Color colour)
+        void DrawRing(LineRenderer ring, Vector3 centre, Vector3 normal, float radius, Color colour)
         {
             Vector3 n = normal.normalized;
             Vector3 tangent = Vector3.Cross(n, Mathf.Abs(n.y) > 0.9f ? Vector3.forward : Vector3.up).normalized;

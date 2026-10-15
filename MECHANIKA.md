@@ -225,10 +225,19 @@ schopnost uhýbat, takže kdo na něm kreslí, je terč; a je to plocha, na kter
 - **Výbuch u stěny slábne se vzdáleností.** Kdo se o zeď opírá, dostane plnou sílu; kdo stojí dva metry
   opodál, jen štulec.
 
-**Značka při míření — jen v tréninku.** Dokud držíš nakreslené kouzlo, ukazuje, co se stane tam, kam
-míříš: kruh na zemi velký jako budoucí plocha, na stěně čáru, kudy se oheň odrazí, kruh výbuchu vzduchu
-(leží na zdi, proto je svislý) a šedý kroužek tam, kde kouzlo nic neudělá. Slouží k naučení. **Ve hře
-proti člověku se neukazuje** — odhadnout odraz a dosah z geometrie je součást dovednosti.
+**Značka při míření — jen v tréninku, a jen co kouzlo v ruce na svém tieru opravdu udělá.** Dokud držíš
+nakreslené kouzlo, ukazuje, co se stane tam, kam míříš (od 15. 10. podle tieru — tier I plochu nedělá,
+tak ji ani neukazuje):
+
+- **zem:** oheň a led na tieru I kruh splashe (2 m, slabší), od II kruh budoucí plochy, oheň III k tomu
+  kruh výbuchu (2,5 m); blesk od II kruh elektrické plochy; vzduch od II kruh updraftu, na III mířený do
+  plochy kruh dosahu vzduchové bomby; jinak nic,
+- **stěna:** oheň od II čára odrazu, na I kruh splashe; led na I kruh splashe; vzduch kruh výbuchu u
+  stěny (každý tier, leží na zdi, proto je svislý); jinak nic.
+
+Slouží k naučení. **Ve hře s jinými hráči se neukazuje** — odhadnout odraz a dosah z geometrie je
+součást dovednosti. Ve všech hrách zůstává jen 2D obrys ledové stěny a ohnivé čáry u nohou — to je o tom,
+kam TY dáváš své kouzlo.
 
 ## Bariéra
 

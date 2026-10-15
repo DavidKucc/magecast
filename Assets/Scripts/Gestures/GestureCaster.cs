@@ -810,7 +810,8 @@ namespace MageCast.Gestures
         }
 
         /// <summary>The tier of the spell in hand, or 0.</summary>
-        public int BotHeldTier { get { return holding ? SpellTiers.Of(heldQuality) : 0; } }
+        public int HeldTier { get { return holding ? SpellTiers.Of(heldQuality) : 0; } }
+        public int BotHeldTier { get { return HeldTier; } }
 
         /// <summary>
         /// Sends the spell in hand at a point. False if there is none, or its element is cooling down.
