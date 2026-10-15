@@ -15,11 +15,12 @@ namespace MageCast
     /// Damage merges per target. A burn ticks four times a second, and four numbers a second stacked
     /// on top of each other is noise; one number that counts up while you stand in it is information.
     ///
-    /// The look: a damage number is outlined in black so it reads over anything, pops in big and
-    /// settles with a bounce, and is warmer and bigger the bigger the hit -- pale gold for a tick, gold
-    /// for a hit, orange-red with a glow behind it for a big one; it gives a little kick as it grows
-    /// when hits merge into it. Words and spell names sit on a dark pill edged in their colour, like
-    /// the tags in the HUD.
+    /// The look, three kinds kept apart at a glance, none of them on a background:
+    ///   damage       a modest number, not bold, outlined in black so it reads over anything; it pops
+    ///                in and settles, kicks when hits merge into it, and goes from pale gold for a
+    ///                tick to orange-red for a big hit
+    ///   a spell      what somebody just made ("FIRE III"): bold, in its colour, with a soft glow
+    ///   a status     what is happening to somebody ("WET", "STEAM", "FIZZLE"): smaller, italic, plain
     /// </summary>
     public class WorldPopups : MonoBehaviour
     {
@@ -31,6 +32,7 @@ namespace MageCast
             public string Text;
             public float Amount;         // damage only; the text is rebuilt from it when merged
             public bool IsDamage;
+            public bool IsSpell;
             public Color Colour;
             public int Size;
             public float Born;
@@ -67,8 +69,8 @@ namespace MageCast
             if (caster == null) return;
             Instance.Add(new Popup {
                 // above the name tag (2.95), so the two never sit on top of each other
-                Anchor = caster, Point = caster.position, Height = 3.25f, Text = text,
-                Colour = colour, Size = big ? 30 : 24, Life = 1.8f, Rise = 0.55f });
+                Anchor = caster, Point = caster.position, Height = 3.25f, Text = text, IsSpell = true,
+                Colour = colour, Size = big ? 28 : 23, Life = 1.8f, Rise = 0.55f });
         }
 
         /// <summary>A plain word over somebody -- FIZZLE, INTERRUPTED, DOWN.</summary>
@@ -76,8 +78,8 @@ namespace MageCast
         {
             if (over == null) return;
             Instance.Add(new Popup {
-                Anchor = over, Point = over.position, Height = 3.25f, Text = text,
-                Colour = colour, Size = 20, Life = 1.3f, Rise = 0.4f });
+                Anchor = over, Point = over.position, Height = 3.0f, Text = text,
+                Colour = colour, Size = 17, Life = 1.3f, Rise = 0.4f });
         }
 
         public static void Damage(Transform target, float amount)
@@ -117,7 +119,7 @@ namespace MageCast
 
         static int SizeFor(float amount)
         {
-            return Mathf.RoundToInt(Mathf.Lerp(20f, 40f, Mathf.Clamp01(amount / 40f)));
+            return Mathf.RoundToInt(Mathf.Lerp(15f, 25f, Mathf.Clamp01(amount / 40f)));
         }
 
         /// <summary>Pale gold for a tick, gold for a hit, orange-red for a big one.</summary>
@@ -209,10 +211,10 @@ namespace MageCast
                 if (age < 0.28f)
                 {
                     float k = age / 0.28f;
-                    pop = 1f + 0.7f * Mathf.Exp(-6f * k) * Mathf.Cos(k * 9f);
+                    pop = 1f + (p.IsDamage ? 0.35f : 0.25f) * Mathf.Exp(-6f * k) * Mathf.Cos(k * 9f);
                 }
                 float bump = Time.time - p.Bumped;
-                if (bump < 0.2f) pop *= 1f + 0.3f * (1f - bump / 0.2f);
+                if (bump < 0.2f) pop *= 1f + 0.18f * (1f - bump / 0.2f);
                 float alpha = (t < 0.6f ? 1f : 1f - (t - 0.6f) / 0.4f) * near;
 
                 style.fontSize = Mathf.Max(8, Mathf.RoundToInt(size * pop));
@@ -221,22 +223,22 @@ namespace MageCast
 
                 if (p.IsDamage)
                 {
+                    style.fontStyle = FontStyle.Normal;
                     Color c = DamageColour(p.Amount);
-                    // a hit of yours on somebody else is edged in gold light
-                    bool mine = p.Anchor != null && Sight.HitByMe(p.Anchor);
-                    if (p.Amount >= 18f || mine)
-                        MenuArt.Glow(at, size * (p.Amount >= 18f ? 3.2f : 2.4f),
-                                     new Color(c.r, c.g * 0.8f, c.b * 0.6f, (p.Amount >= 18f ? 0.3f : 0.18f) * alpha));
-                    Outlined(r, p.Text, new Color(c.r, c.g, c.b, alpha), Mathf.Max(1.5f, size * 0.07f));
+                    Outlined(r, p.Text, new Color(c.r, c.g, c.b, alpha), 1.2f);
+                }
+                else if (p.IsSpell)
+                {
+                    // what somebody made: bold, in its colour, glowing softly
+                    style.fontStyle = FontStyle.Bold;
+                    MenuArt.Glow(at, size * 3.4f, new Color(p.Colour.r, p.Colour.g, p.Colour.b, 0.22f * alpha));
+                    Outlined(r, p.Text, new Color(p.Colour.r, p.Colour.g, p.Colour.b, alpha), 1.5f);
                 }
                 else
                 {
-                    // a word or a spell's name: on a dark pill edged in its colour
-                    Vector2 box = style.CalcSize(new GUIContent(p.Text));
-                    Rect pill = new Rect(at.x - box.x * 0.5f - 12f, at.y - box.y * 0.5f - 1f, box.x + 24f, box.y + 2f);
-                    MenuArt.RoundRect(pill, new Color(0.03f, 0.035f, 0.05f, 0.72f * alpha), pill.height * 0.5f);
-                    MenuArt.RoundRect(pill, new Color(p.Colour.r, p.Colour.g, p.Colour.b, 0.75f * alpha), pill.height * 0.5f, 1.5f);
-                    Outlined(r, p.Text, new Color(p.Colour.r, p.Colour.g, p.Colour.b, alpha), 1.2f);
+                    // what is happening to somebody: smaller, slanted, plain
+                    style.fontStyle = FontStyle.BoldAndItalic;
+                    Outlined(r, p.Text, new Color(p.Colour.r, p.Colour.g, p.Colour.b, alpha), 1.1f);
                 }
             }
         }

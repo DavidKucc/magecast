@@ -1552,7 +1552,7 @@ namespace MageCast.Gestures
         {
             if (cardName != null) return;
             cardName = new GUIStyle(GUI.skin.label) { fontSize = 26, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleLeft };
-            cardTier = new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            cardTier = new GUIStyle(GUI.skin.label) { fontSize = 34, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
             cardState = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
             cardSmall = new GUIStyle(GUI.skin.label) { fontSize = 12, alignment = TextAnchor.MiddleLeft };
             keyCap = new GUIStyle(GUI.skin.label) { fontSize = 11, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
@@ -1586,9 +1586,15 @@ namespace MageCast.Gestures
             GUI.matrix = keep;
         }
 
+        /// <summary>The colour a tier is shown in: I a dull grey, II silver-blue, III gold.</summary>
+        static Color TierColour(int tier)
+        {
+            return tier >= 3 ? MenuArt.Gold : tier == 2 ? new Color(0.72f, 0.84f, 1f) : new Color(0.62f, 0.62f, 0.66f);
+        }
+
         void HeldCard(float x, float y)
         {
-            const float W = 330f, H = 84f;
+            const float W = 360f, H = 84f;
             int tier = SpellTiers.Of(heldQuality);
             float wait = CooldownLeft(heldSpell);
             float locked = LockLeft(heldSpell);
@@ -1610,7 +1616,15 @@ namespace MageCast.Gestures
             MenuArt.RoundRect(new Rect(x, y + 4f, W, H), new Color(0f, 0f, 0f, 0.35f), 14f);
             MenuArt.RoundRect(card, new Color(0.045f, 0.05f, 0.072f, 0.86f), 14f);
             Color edge = ready ? new Color(c.r, c.g, c.b, 0.45f + 0.3f * breathe) : new Color(0.6f, 0.6f, 0.65f, 0.35f);
-            MenuArt.RoundRect(card, edge, 14f, 1.4f);
+            if (tier >= 3)
+            {
+                // a perfect rune owns the card: gold round it, glowing
+                float shine = 0.5f + 0.5f * Mathf.Sin(now * 5f);
+                MenuArt.Glow(card.center, W * 1.15f, new Color(MenuArt.Gold.r, MenuArt.Gold.g, MenuArt.Gold.b, 0.1f + 0.06f * shine));
+                edge = Color.Lerp(edge, MenuArt.Gold, 0.65f);
+                MenuArt.RoundRect(MenuArt.Grow(card, 3f), new Color(MenuArt.Gold.r, MenuArt.Gold.g, MenuArt.Gold.b, 0.25f + 0.25f * shine), 17f, 1.2f);
+            }
+            MenuArt.RoundRect(card, edge, 14f, tier >= 3 ? 2f : 1.4f);
 
             // the rune, dimmed and swept from the top while it cools down
             Rect plate = new Rect(x + 12f, y + 12f, 60f, 60f);
@@ -1635,17 +1649,26 @@ namespace MageCast.Gestures
             MenuArt.GlowText(new Rect(nx, y + 8f, 180f, 34f), heldSpell.displayName, cardName,
                              ready ? c : Color.Lerp(c, Color.grey, 0.55f), ready ? 0.7f : 0f);
             float nameW = cardName.CalcSize(new GUIContent(heldSpell.displayName)).x;
-            Rect badge = new Rect(nx + nameW + 12f, y + 13f, 58f, 24f);
-            Color gold = MenuArt.Gold;
-            MenuArt.RoundRect(badge, new Color(gold.r * 0.22f, gold.g * 0.22f, gold.b * 0.22f, 0.95f), 12f);
-            MenuArt.RoundRect(badge, new Color(gold.r, gold.g, gold.b, tier >= 3 ? 0.95f : 0.5f), 12f, tier >= 3 ? 1.8f : 1.2f);
-            if (tier >= 3) MenuArt.Glow(badge.center, 90f, new Color(gold.r, gold.g, gold.b, 0.18f + 0.1f * Mathf.Sin(now * 6f)));
-            cardTier.normal.textColor = gold;
-            GUI.Label(new Rect(badge.x + 4f, badge.y, 28f, badge.height), SpellTiers.Roman(tier), cardTier);
+
+            // how well it was drawn, in words, after the name
+            Color tc = TierColour(tier);
+            string quality = tier >= 3 ? "PERFECT" : tier == 2 ? "CLEAN" : "WEAK";
+            cardSmall.normal.textColor = tc;
+            GUI.Label(new Rect(nx + nameW + 10f, y + 16f, 90f, 20f), quality, cardSmall);
+
+            // the tier, big, on its own plate at the right: grey I, silver II, gold III glowing
+            Rect tb = new Rect(x + W - 74f, y + 10f, 62f, 64f);
+            if (tier >= 3) MenuArt.Glow(tb.center, 150f, new Color(tc.r, tc.g, tc.b, 0.22f + 0.12f * Mathf.Sin(now * 6f)));
+            MenuArt.RoundRect(tb, new Color(tc.r * 0.16f, tc.g * 0.16f, tc.b * 0.16f, 0.96f), 10f);
+            MenuArt.RoundRect(tb, new Color(tc.r, tc.g, tc.b, tier >= 3 ? 1f : tier == 2 ? 0.7f : 0.45f), 10f, tier >= 3 ? 2f : 1.3f);
+            keyCap.normal.textColor = new Color(tc.r, tc.g, tc.b, 0.75f);
+            GUI.Label(new Rect(tb.x, tb.y + 3f, tb.width, 14f), "TIER", keyCap);
+            MenuArt.GlowText(new Rect(tb.x, tb.y + 14f, tb.width, 46f), SpellTiers.Roman(tier), cardTier, tc, tier >= 3 ? 1.2f : 0f);
+            // pips: one per tier, filled up to this one
             for (int i = 0; i < 3; i++)
             {
-                Rect pip = new Rect(badge.x + 34f + i * 7f, badge.center.y - 2.5f, 5f, 5f);
-                MenuArt.RoundRect(pip, i < tier ? gold : new Color(1f, 1f, 1f, 0.18f), 2.5f);
+                Rect pip = new Rect(tb.center.x - 12.5f + i * 9f, tb.yMax - 9f, 6f, 4f);
+                MenuArt.RoundRect(pip, i < tier ? tc : new Color(1f, 1f, 1f, 0.15f), 2f);
             }
 
             // what it is doing
@@ -1660,7 +1683,7 @@ namespace MageCast.Gestures
             if (tier >= 3)
             {
                 float left = Mathf.Clamp01((heldTopTierUntil - now) / SpellTiers.TopTierHold);
-                Rect track = new Rect(x + 12f, y + H - 7f, W - 24f, 3f);
+                Rect track = new Rect(x + 12f, y + H - 7f, W - 96f, 3f);
                 MenuArt.RoundRect(track, new Color(0f, 0f, 0f, 0.5f), 1.5f);
                 MenuArt.RoundRect(new Rect(track.x, track.y, Mathf.Max(3f, track.width * left), track.height),
                                   Color.Lerp(c, Color.white, 0.4f), 1.5f);
