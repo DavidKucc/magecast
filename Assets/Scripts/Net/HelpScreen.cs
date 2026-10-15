@@ -134,103 +134,271 @@ namespace MageCast
             "vzduch III do plochy - vzduchová bomba\n" +
             "Updraft odkloní střely, které jím letí, nahoru.";
 
+        static GUIStyle cardHeading, badge;
+        static float openedAt = -1f;
+        static float tabSlide = -1f;
+
         static void Styles()
         {
             if (heading != null) return;
-            heading = new GUIStyle(GUI.skin.label) { fontSize = 26, fontStyle = FontStyle.Bold };
-            heading.normal.textColor = Color.white;
+            heading = new GUIStyle(GUI.skin.label) { fontSize = 30, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleLeft };
             body = new GUIStyle(GUI.skin.label) { fontSize = 15, wordWrap = true, richText = true };
-            body.normal.textColor = new Color(0.92f, 0.92f, 0.95f);
-            tabStyle = new GUIStyle(GUI.skin.button) { fontSize = 16, fontStyle = FontStyle.Bold };
-            name = new GUIStyle(GUI.skin.label) { fontSize = 18, fontStyle = FontStyle.Bold };
+            body.normal.textColor = new Color(0.9f, 0.9f, 0.93f);
+            tabStyle = new GUIStyle(GUI.skin.label) { fontSize = 17, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            name = new GUIStyle(GUI.skin.label) { fontSize = 20, fontStyle = FontStyle.Bold, richText = true };
             small = new GUIStyle(GUI.skin.label) { fontSize = 14, wordWrap = true, richText = true };
-            small.normal.textColor = new Color(0.9f, 0.9f, 0.93f);
-            close = new GUIStyle(GUI.skin.button) { fontSize = 16, fontStyle = FontStyle.Bold };
+            small.normal.textColor = new Color(0.88f, 0.88f, 0.92f);
+            close = new GUIStyle(GUI.skin.label) { fontSize = 15, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            cardHeading = new GUIStyle(GUI.skin.label) { fontSize = 17, fontStyle = FontStyle.Bold };
+            badge = new GUIStyle(GUI.skin.label) { fontSize = 12, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
         }
 
-        /// <summary>Draws the help over everything, if it is open. Returns whether it is.</summary>
+        /// <summary>
+        /// Draws the help over everything, if it is open. Returns whether it is.
+        ///
+        /// In the menus' look (MenuArt): a pane of dark glass with a gold edge that eases in, tabs with a
+        /// gold bar sliding under the chosen one, the rules in cards with gold headings, and each spell
+        /// as a card with its rune glowing in its colour and its tiers on badges. Cards light up at the
+        /// edge under the mouse.
+        /// </summary>
         public static bool Draw()
         {
-            if (!Open) return false;
+            if (!Open) { openedAt = -1f; return false; }
             Styles();
+            Event e = Event.current;
+            bool repaint = e.type == EventType.Repaint;
+            if (openedAt < 0f) openedAt = Time.unscaledTime;
+            float appear = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((Time.unscaledTime - openedAt) / 0.22f));
 
-            GUI.color = new Color(0f, 0f, 0f, 0.75f);
-            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
-            GUI.color = Color.white;
+            if (repaint)
+            {
+                // the room behind goes dark (linear blending: 0.85 reads as about two thirds)
+                GUI.color = new Color(0.01f, 0.012f, 0.02f, 0.85f * appear);
+                GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
+                GUI.color = Color.white;
+            }
 
-            float w = Mathf.Min(900f, Screen.width - 40f), h = Mathf.Min(680f, Screen.height - 40f);
-            Rect panel = new Rect((Screen.width - w) * 0.5f, (Screen.height - h) * 0.5f, w, h);
-            GUI.color = new Color(0.08f, 0.09f, 0.12f, 0.96f);
-            GUI.DrawTexture(panel, Texture2D.whiteTexture);
-            GUI.color = Color.white;
+            float w = Mathf.Min(940f, Screen.width - 40f), h = Mathf.Min(720f, Screen.height - 40f);
+            Rect panel = new Rect((Screen.width - w) * 0.5f, (Screen.height - h) * 0.5f + (1f - appear) * 24f, w, h);
+            if (repaint)
+            {
+                GUI.color = new Color(0f, 0f, 0f, 0.6f * appear);
+                GUI.DrawTexture(MenuArt.Grow(panel, 70f), MenuArt.Soft);
+                GUI.color = Color.white;
+                MenuArt.RoundRect(panel, new Color(0.045f, 0.05f, 0.072f, 0.96f * appear), 18f);
+                MenuArt.RoundRect(panel, new Color(MenuArt.Gold.r, MenuArt.Gold.g, MenuArt.Gold.b, 0.28f * appear), 18f, 1.3f);
+            }
 
-            GUI.Label(new Rect(panel.x + 20f, panel.y + 14f, 400f, 34f), "Jak hrát", heading);
-            if (GUI.Button(new Rect(panel.xMax - 110f, panel.y + 16f, 90f, 32f), "Zavřít", close)) Open = false;
+            MenuArt.GlowText(new Rect(panel.x + 26f, panel.y + 14f, 400f, 44f), "Jak hrát", heading, MenuArt.Gold, 0.8f);
+            if (MenuArt.Button(new Rect(panel.xMax - 126f, panel.y + 18f, 104f, 38f), "Zavřít", close)) Open = false;
 
-            float tx = panel.x + 20f;
+            // the tabs, with a gold bar sliding under the chosen one
+            float tx = panel.x + 26f, tw = 150f, ty = panel.y + 70f;
             for (int i = 0; i < Tabs.Length; i++)
             {
-                GUI.color = i == tab ? Color.white : new Color(1f, 1f, 1f, 0.6f);
-                if (GUI.Button(new Rect(tx, panel.y + 60f, 150f, 34f), Tabs[i], tabStyle)) { tab = i; scroll = Vector2.zero; }
-                GUI.color = Color.white;
-                tx += 158f;
+                Rect r = new Rect(tx + i * (tw + 8f), ty, tw, 36f);
+                bool over = r.Contains(e.mousePosition);
+                float hv = MenuArt.Hover(MenuArt.Key("tab" + Tabs[i], r), over);
+                if (repaint)
+                {
+                    if (hv > 0.01f) MenuArt.RoundRect(r, new Color(1f, 1f, 1f, 0.05f * hv), 8f);
+                    tabStyle.normal.textColor = i == tab ? MenuArt.Gold : Color.Lerp(new Color(1f, 1f, 1f, 0.55f), Color.white, hv);
+                    GUI.Label(r, Tabs[i], tabStyle);
+                }
+                if (GUI.Button(r, GUIContent.none, GUIStyle.none) && tab != i)
+                {
+                    tab = i;
+                    scroll = Vector2.zero;
+                    MenuArt.Ripple(GUI.matrix.MultiplyPoint3x4(e.mousePosition), MenuArt.Gold);
+                }
             }
-
-            Rect view = new Rect(panel.x + 20f, panel.y + 106f, w - 40f, h - 122f);
-            float contentWidth = view.width - 24f;
-
-            if (tab == 2) DrawSpells(view, contentWidth);
-            else
+            if (repaint)
             {
-                string text = tab == 0 ? Controls : Rules;
-                float textHeight = body.CalcHeight(new GUIContent(text), contentWidth) + 20f;
-                scroll = GUI.BeginScrollView(view, scroll, new Rect(0f, 0f, contentWidth, textHeight));
-                GUI.Label(new Rect(0f, 0f, contentWidth, textHeight), text, body);
-                GUI.EndScrollView();
+                if (tabSlide < 0f) tabSlide = tab;
+                tabSlide = Mathf.Lerp(tabSlide, tab, Mathf.Clamp01(Time.unscaledDeltaTime * 14f));
+                float bx = tx + tabSlide * (tw + 8f);
+                MenuArt.RoundRect(new Rect(panel.x + 20f, ty + 40f, w - 40f, 1f), new Color(1f, 1f, 1f, 0.08f), 0f);
+                MenuArt.Glow(new Vector2(bx + tw * 0.5f, ty + 40f), tw * 0.9f, new Color(MenuArt.Gold.r, MenuArt.Gold.g, MenuArt.Gold.b, 0.18f));
+                MenuArt.RoundRect(new Rect(bx + 18f, ty + 38f, tw - 36f, 3f), MenuArt.Gold, 1.5f);
             }
+
+            Rect view = new Rect(panel.x + 22f, panel.y + 124f, w - 44f, h - 140f);
+            float contentWidth = view.width - 18f;
+
+            ThinScrollbars(true);
+            if (tab == 2) DrawSpells(view, contentWidth);
+            else DrawSections(view, contentWidth, tab == 0 ? Controls : Rules);
+            ThinScrollbars(false);
+
+            MenuArt.EndFrame();
 
             // Esc closes the help before it closes anything else
-            Event e = Event.current;
             if (e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape) { Open = false; e.Use(); }
             return true;
         }
 
+        // ---------------------------------------------------------------- a thin gold scrollbar
+
+        static Texture2D track, thumb;
+        static GUIStyle keepBar, keepThumb, keepUp, keepDown;
+
+        /// <summary>Swaps the skin's scrollbar for a thin gold one while the help draws, and back after.</summary>
+        static void ThinScrollbars(bool on)
+        {
+            if (on)
+            {
+                if (track == null) { track = Pill(new Color(1f, 1f, 1f, 0.06f)); thumb = Pill(new Color(0.95f, 0.78f, 0.42f, 0.75f)); }
+                keepBar = GUI.skin.verticalScrollbar;
+                keepThumb = GUI.skin.verticalScrollbarThumb;
+                GUI.skin.verticalScrollbar = new GUIStyle(keepBar) { fixedWidth = 8f, border = new RectOffset(4, 4, 4, 4), margin = new RectOffset(6, 0, 0, 0), padding = new RectOffset(0, 0, 0, 0) };
+                GUI.skin.verticalScrollbar.normal.background = track;
+                GUI.skin.verticalScrollbarThumb = new GUIStyle(keepThumb) { fixedWidth = 8f, border = new RectOffset(4, 4, 4, 4) };
+                GUI.skin.verticalScrollbarThumb.normal.background = thumb;
+                keepUp = GUI.skin.verticalScrollbarUpButton;
+                keepDown = GUI.skin.verticalScrollbarDownButton;
+                GUI.skin.verticalScrollbarUpButton = new GUIStyle(GUIStyle.none) { name = keepUp.name, fixedWidth = 8f, fixedHeight = 0.01f };
+                GUI.skin.verticalScrollbarDownButton = new GUIStyle(GUIStyle.none) { name = keepDown.name, fixedWidth = 8f, fixedHeight = 0.01f };
+            }
+            else if (keepBar != null)
+            {
+                GUI.skin.verticalScrollbar = keepBar;
+                GUI.skin.verticalScrollbarThumb = keepThumb;
+                GUI.skin.verticalScrollbarUpButton = keepUp;
+                GUI.skin.verticalScrollbarDownButton = keepDown;
+            }
+        }
+
+        static Texture2D Pill(Color c)
+        {
+            var t = new Texture2D(8, 16, TextureFormat.RGBA32, false) { hideFlags = HideFlags.DontSave, wrapMode = TextureWrapMode.Clamp };
+            for (int y = 0; y < 16; y++)
+                for (int x = 0; x < 8; x++)
+                {
+                    float cy = Mathf.Clamp(y + 0.5f, 4f, 12f);
+                    float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(4f, cy));
+                    t.SetPixel(x, y, new Color(c.r, c.g, c.b, c.a * Mathf.Clamp01(4f - d)));
+                }
+            t.Apply();
+            return t;
+        }
+
+        // ---------------------------------------------------------------- the rules, in cards
+
+        struct Section { public string Heading, Body; }
+        static readonly System.Collections.Generic.Dictionary<string, Section[]> parsed = new System.Collections.Generic.Dictionary<string, Section[]>();
+
+        /// <summary>The text cut at its bold headings: one card each.</summary>
+        static Section[] Sections(string text)
+        {
+            Section[] found;
+            if (parsed.TryGetValue(text, out found)) return found;
+            var list = new System.Collections.Generic.List<Section>();
+            foreach (string block in text.Split(new[] { "<b>" }, System.StringSplitOptions.RemoveEmptyEntries))
+            {
+                int end = block.IndexOf("</b>");
+                if (end < 0) { list.Add(new Section { Heading = "", Body = block.Trim() }); continue; }
+                list.Add(new Section { Heading = block.Substring(0, end), Body = block.Substring(end + 4).Trim() });
+            }
+            found = list.ToArray();
+            parsed[text] = found;
+            return found;
+        }
+
+        static void DrawSections(Rect view, float width, string text)
+        {
+            Section[] sections = Sections(text);
+            float inner = width - 36f;
+            float total = 0f;
+            foreach (Section sec in sections) total += SectionHeight(sec, inner) + 14f;
+
+            scroll = GUI.BeginScrollView(view, scroll, new Rect(0f, 0f, width, total));
+            float y = 0f;
+            foreach (Section sec in sections)
+            {
+                float hgt = SectionHeight(sec, inner);
+                Rect card = new Rect(0f, y, width, hgt);
+                float hv = MenuArt.Hover(MenuArt.Key("sec" + sec.Heading, card), card.Contains(Event.current.mousePosition));
+                if (Event.current.type == EventType.Repaint)
+                {
+                    MenuArt.RoundRect(card, CardFill(hv), 12f);
+                    MenuArt.RoundRect(card, new Color(MenuArt.Gold.r, MenuArt.Gold.g, MenuArt.Gold.b, 0.1f + 0.35f * hv), 12f, 1f);
+                    MenuArt.RoundRect(new Rect(card.x, card.y + 14f, 3f, 22f), MenuArt.Gold, 1.5f);
+                }
+                cardHeading.normal.textColor = MenuArt.Gold;
+                GUI.Label(new Rect(18f, y + 12f, inner, 26f), sec.Heading, cardHeading);
+                float bh = body.CalcHeight(new GUIContent(sec.Body), inner);
+                GUI.Label(new Rect(18f, y + 42f, inner, bh), sec.Body, body);
+                y += hgt + 14f;
+            }
+            GUI.EndScrollView();
+        }
+
+        /// <summary>A card a shade lighter than the pane, a touch more under the mouse.</summary>
+        static Color CardFill(float hover)
+        {
+            return Color.Lerp(new Color(0.08f, 0.085f, 0.115f, 0.95f), new Color(0.1f, 0.105f, 0.14f, 0.95f), hover);
+        }
+
+        static float SectionHeight(Section sec, float inner)
+        {
+            return 42f + body.CalcHeight(new GUIContent(sec.Body), inner) + 14f;
+        }
+
+        // ---------------------------------------------------------------- the spells, in cards
+
         static void DrawSpells(Rect view, float width)
         {
-            const float icon = 64f;
-            float textX = icon + 16f, textW = width - textX;
+            const float icon = 76f;
+            float textX = icon + 40f, textW = width - textX - 18f;
 
             // measured first, so the scroll area is as tall as what is in it
             float total = 0f;
-            foreach (SpellInfo s in Spells) total += SpellHeight(s, textW) + 18f;
+            foreach (SpellInfo s in Spells) total += SpellHeight(s, textW) + 14f;
 
             scroll = GUI.BeginScrollView(view, scroll, new Rect(0f, 0f, width, total));
             float y = 0f;
             foreach (SpellInfo s in Spells)
             {
                 float hgt = SpellHeight(s, textW);
-                Texture2D rune = RuneIcons.Get(s.Rune, s.Colour, 64);
-                if (rune != null) GUI.DrawTexture(new Rect(0f, y + 4f, icon, icon), rune);
+                Rect card = new Rect(0f, y, width, hgt);
+                float hv = MenuArt.Hover(MenuArt.Key("spell" + s.Name, card), card.Contains(Event.current.mousePosition));
+                Color c = s.Colour;
+                if (Event.current.type == EventType.Repaint)
+                {
+                    MenuArt.RoundRect(card, CardFill(hv), 12f);
+                    MenuArt.RoundRect(card, new Color(c.r, c.g, c.b, 0.14f + 0.5f * hv), 12f, 1f + hv * 0.6f);
 
-                name.normal.textColor = s.Colour;
-                GUI.Label(new Rect(textX, y, textW, 24f), s.Name + "   <size=13><color=#aaaab4>" + s.Czech + "</color></size>",
-                          new GUIStyle(name) { richText = true });
-                float ty = y + 26f;
-                ty = Line(textX, ty, textW, s.Basics);
-                ty = Line(textX, ty, textW, "<b>I</b>   " + s.I);
-                ty = Line(textX, ty, textW, "<b>II</b>  " + s.II);
-                Line(textX, ty, textW, "<b>III</b> " + s.III);
-                y += hgt + 18f;
+                    // the rune, glowing in its colour
+                    Rect plate = new Rect(16f, y + 16f, icon, icon);
+                    MenuArt.Glow(plate.center, icon * (1.5f + 0.4f * hv), new Color(c.r, c.g, c.b, 0.12f + 0.15f * hv));
+                    MenuArt.RoundRect(plate, new Color(0.03f, 0.035f, 0.05f, 0.9f), 12f);
+                    MenuArt.RoundRect(plate, new Color(c.r, c.g, c.b, 0.45f + 0.4f * hv), 12f, 1.3f);
+                    // the drawn icon, not MenuArt.Rune: lines turned by GUI.matrix land in the wrong place
+                    // inside a scroll view
+                    Texture2D rune = RuneIcons.Get(s.Rune, c, 64);
+                    if (rune != null) GUI.DrawTexture(MenuArt.Grow(plate, -8f - 2f * (1f - hv)), rune);
+                }
+
+                name.normal.textColor = c;
+                GUI.Label(new Rect(textX, y + 12f, textW, 28f), s.Name + "   <size=13><color=#aaaab4>" + s.Czech + "</color></size>", name);
+                float ty = y + 42f;
+                ty = Line(textX, ty, textW, s.Basics) + 4f;
+                ty = Tier(textX, ty, textW, "I", s.I, c);
+                ty = Tier(textX, ty, textW, "II", s.II, c);
+                Tier(textX, ty, textW, "III", s.III, c);
+                y += hgt + 14f;
             }
             GUI.EndScrollView();
         }
 
+        const float BadgeWidth = 34f;
+
         static float SpellHeight(SpellInfo s, float width)
         {
-            float h = 26f;
-            foreach (string line in new[] { s.Basics, "I   " + s.I, "II  " + s.II, "III " + s.III })
-                h += small.CalcHeight(new GUIContent(line), width) + 2f;
-            return Mathf.Max(h, 72f);
+            float h = 42f + small.CalcHeight(new GUIContent(s.Basics), width) + 2f + 4f;
+            foreach (string line in new[] { s.I, s.II, s.III })
+                h += Mathf.Max(20f, small.CalcHeight(new GUIContent(line), width - BadgeWidth - 8f)) + 4f;
+            return Mathf.Max(h + 12f, 76f + 32f);
         }
 
         static float Line(float x, float y, float width, string text)
@@ -238,6 +406,23 @@ namespace MageCast
             float h = small.CalcHeight(new GUIContent(text), width);
             GUI.Label(new Rect(x, y, width, h), text, small);
             return y + h + 2f;
+        }
+
+        /// <summary>A tier: its numeral on a little badge in the spell's colour, and what it adds.</summary>
+        static float Tier(float x, float y, float width, string numeral, string text, Color c)
+        {
+            float tw = width - BadgeWidth - 8f;
+            float h = Mathf.Max(20f, small.CalcHeight(new GUIContent(text), tw));
+            if (Event.current.type == EventType.Repaint)
+            {
+                Rect b = new Rect(x, y + 1f, BadgeWidth, 18f);
+                MenuArt.RoundRect(b, new Color(c.r, c.g, c.b, 0.16f), 9f);
+                MenuArt.RoundRect(b, new Color(c.r, c.g, c.b, 0.6f), 9f, 1f);
+                badge.normal.textColor = c;
+                GUI.Label(b, numeral, badge);
+            }
+            GUI.Label(new Rect(x + BadgeWidth + 8f, y, tw, h), text, small);
+            return y + h + 4f;
         }
     }
 }

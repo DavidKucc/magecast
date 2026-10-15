@@ -125,7 +125,21 @@ namespace MageCast
             if (repaint) hoverMap = -1;
 
             // the help covers the menu and takes its clicks, so nothing underneath is drawn meanwhile
-            if (HelpScreen.Draw()) { MenuArt.EndFrame(); return; }
+            if (HelpScreen.Draw()) return;
+
+            // Connecting, then loading the map: the loading screen, over everything -- until this menu is
+            // gone with its scene, not only while the session says it is busy, or the menu would flash
+            // back for the moment between the connection and the next scene.
+            Unity.Netcode.NetworkManager nm = Unity.Netcode.NetworkManager.Singleton;
+            if (busy || (nm != null && nm.IsListening))
+            {
+                string said = session != null ? session.Status ?? "" : "";
+                MenuArt.Loading(said.StartsWith("join") ? "JOINING" : "LOADING",
+                                said.Length > 0 ? said.TrimEnd('.') : "loading " + NetSession.ArenaTitles[NetSession.SelectedArena],
+                                MapPicture(NetSession.SelectedArena));
+                MenuArt.EndFrame();
+                return;
+            }
             BuildInfo.DrawCorner();
 
             GUI.matrix = Matrix4x4.Scale(new Vector3(s, s, 1f));

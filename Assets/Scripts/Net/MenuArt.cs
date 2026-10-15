@@ -99,7 +99,10 @@ namespace MageCast
             GUI.color = keep;
         }
 
-        /// <summary>A soft line from <paramref name="a"/> to <paramref name="b"/>, round at the ends.</summary>
+        /// <summary>
+        /// A soft line from <paramref name="a"/> to <paramref name="b"/>, round at the ends. Not inside a
+        /// scroll view or a clip: the turn is applied after the clip's offset and lands elsewhere.
+        /// </summary>
         public static void Line(Vector2 a, Vector2 b, float width, Color c)
         {
             Vector2 d = b - a;
@@ -294,6 +297,97 @@ namespace MageCast
         public static int RuneIndex(string name)
         {
             return System.Array.IndexOf(RuneNames, name);
+        }
+
+        // ---------------------------------------------------------------- loading
+
+        static GUIStyle loadingTitle, loadingDetail, loadingRune;
+        static float loadingSince = -1f, loadingSeen = -1f;
+
+        /// <summary>
+        /// The screen while something loads -- a game being joined, a match starting: the map it is for
+        /// behind, darkened, and in the middle the runes drawing themselves in turn in their colours, as
+        /// on the web page's own loading screen, over <paramref name="headline"/> and <paramref name="detail"/>.
+        /// Fades in, so a quick load is not a flash.
+        /// </summary>
+        public static void Loading(string headline, string detail, Texture2D picture)
+        {
+            if (Event.current.type != EventType.Repaint) return;
+            if (loadingTitle == null)
+            {
+                loadingTitle = new GUIStyle(GUI.skin.label) { fontSize = 34, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+                loadingDetail = new GUIStyle(GUI.skin.label) { fontSize = 16, alignment = TextAnchor.UpperCenter, wordWrap = true };
+                loadingRune = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            }
+            float now = Time.unscaledTime;
+            if (loadingSeen < now - 0.5f) loadingSince = now;          // not drawn for a while: a new load
+            loadingSeen = now;
+            float a = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((now - loadingSince) / 0.35f));
+            float W = Screen.width, H = Screen.height;
+            Matrix4x4 keep = GUI.matrix;
+            GUI.matrix = Matrix4x4.identity;
+
+            GUI.color = new Color(0.03f, 0.035f, 0.05f, a);
+            GUI.DrawTexture(new Rect(0f, 0f, W, H), Texture2D.whiteTexture);
+            if (picture != null)
+            {
+                float m = Mathf.Max(W, H) * 0.06f, z = (now - loadingSince) * 6f;
+                GUI.color = new Color(1f, 1f, 1f, 0.5f * a);
+                GUI.DrawTexture(new Rect(-m - z, -m - z * 0.5f, W + 2f * m + 2f * z, H + 2f * m + z), picture, ScaleMode.ScaleAndCrop);
+                // blended in linear space: this much is needed for the map to sit well behind the text
+                GUI.color = new Color(0.02f, 0.025f, 0.04f, 0.9f * a);
+                GUI.DrawTexture(new Rect(0f, 0f, W, H), Texture2D.whiteTexture);
+            }
+            GUI.color = Color.white;
+
+            // a rune drawing itself, then the next, each in its element's colour
+            const float Each = 1.4f;
+            float t = (now - loadingSince) / Each;
+            int which = Mathf.FloorToInt(t) % RuneNames.Length;
+            float part = t - Mathf.Floor(t);
+            Color c = ElementColours[which];
+            float size = Mathf.Min(150f, H * 0.22f);
+            Vector2 centre = new Vector2(W * 0.5f, H * 0.42f);
+            Glow(centre, size * 2.6f, new Color(c.r, c.g, c.b, 0.12f * a));
+            float drawn = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(part / 0.6f));
+            float fade = part < 0.8f ? 1f : 1f - (part - 0.8f) / 0.2f;
+            PartialRune(RuneNames[which], new Rect(centre.x - size * 0.5f, centre.y - size * 0.5f, size, size), drawn,
+                        new Color(c.r, c.g, c.b, a * fade));
+            loadingRune.normal.textColor = new Color(c.r, c.g, c.b, a * fade * Mathf.Clamp01(part / 0.3f));
+            GUI.Label(new Rect(0f, centre.y + size * 0.5f + 8f, W, 20f), Elements[which], loadingRune);
+
+            float y = centre.y + size * 0.5f + 40f;
+            GlowText(new Rect(0f, y, W, 44f), headline, loadingTitle, new Color(Gold.r, Gold.g, Gold.b, a), 1f);
+            int dots = Mathf.FloorToInt(now * 2.5f) % 4;
+            loadingDetail.normal.textColor = new Color(1f, 1f, 1f, 0.7f * a);
+            GUI.Label(new Rect(W * 0.5f - 300f, y + 48f, 600f, 60f), detail + new string('.', dots), loadingDetail);
+
+            GUI.matrix = keep;
+        }
+
+        /// <summary>The first <paramref name="drawn"/> share of a rune's path, with a bright point where the pen is.</summary>
+        static void PartialRune(string name, Rect box, float drawn, Color colour)
+        {
+            Vector2[] corners = GestureTemplates.Corners(name);
+            if (corners == null || corners.Length < 2 || colour.a <= 0f) return;
+            Vector2 c = box.center;
+            float half = box.width * 0.5f;
+            float total = 0f;
+            for (int i = 1; i < corners.Length; i++) total += Vector2.Distance(corners[i - 1], corners[i]);
+            float left = total * drawn;
+            Vector2 pen = c + new Vector2(corners[0].x, -corners[0].y) * half;
+            for (int i = 1; i < corners.Length && left > 0f; i++)
+            {
+                float len = Vector2.Distance(corners[i - 1], corners[i]);
+                Vector2 a = c + new Vector2(corners[i - 1].x, -corners[i - 1].y) * half;
+                Vector2 b = c + new Vector2(corners[i].x, -corners[i].y) * half;
+                Vector2 to = len <= left ? b : Vector2.Lerp(a, b, left / len);
+                Line(a, to, 20f, new Color(colour.r, colour.g, colour.b, colour.a * 0.25f));
+                Line(a, to, 6f, new Color(Mathf.Lerp(colour.r, 1f, 0.35f), Mathf.Lerp(colour.g, 1f, 0.35f), Mathf.Lerp(colour.b, 1f, 0.35f), colour.a));
+                pen = to;
+                left -= len;
+            }
+            if (drawn < 1f) Glow(pen, 40f, new Color(colour.r, colour.g, colour.b, colour.a * 0.9f));
         }
 
         /// <summary>A rune in a box, straight lines the way it is meant to look, glowing.</summary>

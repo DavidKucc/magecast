@@ -96,6 +96,16 @@ namespace MageCast
                 return;
             }
 
+            // the host started it: the loading screen until the map is here
+            if (lobby.Playing.Value)
+            {
+                int map = Mathf.Clamp(lobby.Map.Value, 0, NetSession.ArenaTitles.Length - 1);
+                MenuArt.Loading("STARTING THE MATCH", "loading " + NetSession.ArenaTitles[map],
+                                previews != null && map < previews.Length ? previews[map] : null);
+                MenuArt.EndFrame();
+                return;
+            }
+
             WatchSettings(lobby, leader);
 
             float top = 86f;
