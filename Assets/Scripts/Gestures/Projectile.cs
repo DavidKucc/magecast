@@ -131,9 +131,10 @@ namespace MageCast.Gestures
         // their own aim (BotBrain.AimFor). Aim assist is for hands, as in any shooter.
         public static bool AimAssist = true;
         public const float AssistRange = 10f;
-        public const float AssistCone = 14f;
-        public const float AssistPerMetre = 0.7f;    // degrees of turn per metre flown, at most
-        public const float AssistBudget = 7f;
+        // (17 Oct: 14 deg / 0.7 deg/m / 7 deg bent too visibly for the player -- a third less)
+        public const float AssistCone = 10f;
+        public const float AssistPerMetre = 0.45f;   // degrees of turn per metre flown, at most
+        public const float AssistBudget = 4.5f;
         const float ArcStart = 0.2f;                 // the pull grows over the outer fifth of the range
         const float ArcEase = 12f;                   // how quickly what is left of the angle is taken, per second
         float assisted;

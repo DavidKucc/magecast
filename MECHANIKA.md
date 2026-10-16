@@ -246,15 +246,15 @@ schopnost uhýbat, takže kdo na něm kreslí, je terč; a je to plocha, na kter
 
 **Asistent míření (od 16. 10.) — jen pro hráče, ne pro boty.** Střela, která by o kousek minula
 nepřítele, se k němu jemně stočí. Bere jen cíl, který je od střely nejvýš **10 m**, skoro přímo před ní
-(do **14°** od směru letu), na volno (zeď, bariéra, ledová stěna nebo někdo jiný mezi = nic) a není
-spojenec ani sesílatel. Stáčí se **nejvýš o 0,7° na metr letu** a **nejvýš o 7° za celý let** — po
+(do **10°** od směru letu), na volno (zeď, bariéra, ledová stěna nebo někdo jiný mezi = nic) a není
+spojenec ani sesílatel. Stáčí se **nejvýš o 0,45° na metr letu** a **nejvýš o 4,5° za celý let** — po
 metrech, ne po sekundách, aby pomalý led nedostal víc pomoci než rychlý blesk (jinak by se mu nedalo
 uhnout). **Obloukem:** na okraji dosahu (10–8 m) se rozjíždí, pak zatáčí stálou mírou, a jak se střela
 k cíli stáčí, zatáčí čím dál míň — žádný zlom, žádná ostrá zatáčka. Míří na střed trupu.
 
-Změřeno (16. 10., cvičná figurína široká 1 m, tier II, přímý zásah — o kolik dál od středu ještě trefí),
-s obloukem: z 4 m skoro nic, z 6 m +0,1–0,2 m, z 8 m +0,3–0,4 m, z 10 m +0,35–0,45 m; stejně pro oheň,
-led i blesk.
+Změřeno (17. 10., figurína s tělem a hitboxem z kostí, tier II, přímý zásah — o kolik dál od středu ještě
+trefí): z 6 m +0,1 m, z 8 m +0,2 m, z 10 m +0,28 m; střela se stočí celkem nejvýš o 2,6–3,9°; stejně pro
+oheň, led i blesk. (16. 10. bylo 14° / 0,7° na metr / 7° — stáčelo se to moc viditelně, ubráno o třetinu.)
 
 **Proč ne boti:** boti střílejí zblízka a zhruba na cíl, takže jim asistent dával skoro všechno — šest
 botů na 60 % z 43 % zásahů na 61–66 % (při dvojnásobné síle) a ještě 57 % při poloviční, i s horší
