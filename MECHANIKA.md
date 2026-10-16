@@ -160,6 +160,11 @@ Změřeno (bot z boku, 8 m, tier II): oheň a led zasáhnou do 0,64–0,74 m od 
 od těla — zásah do ruky je zásah), blesk do 0,52–0,62 m, vzduch do 0,80–0,90 m. Dřív oheň 0,78 m, led
 0,95 m a vzduch 1,1 m od osy, ať tělo stálo jakkoli. V tréninku jde hitbox ukázat (`Hurtbox.Show`).
 
+**Cvičné figuríny** (jen v tréninku) jsou od 16. 10. **stejná postava jako hráči a boti** místo červených
+kapslí: stojí v klidu otočené k tobě, trefují se stejným hitboxem z kostí (zepředu do ~0,65 m od hrudi
+pro oheň — paže visí u těla), při zásahu krátce zbělají, po zabití padnou smrtelnou animací a za 3 s
+vstanou. Boti je ignorují (cílí jen na hráče). Bez balíku postav (klon z repozitáře) zůstanou kapslemi.
+
 ## Když kouzlo netrefí člověka
 
 Jedno gesto dává několik efektů — rozhoduje, **do čeho kouzlo dopadne**. Nic nového se neučí: oheň pálí,

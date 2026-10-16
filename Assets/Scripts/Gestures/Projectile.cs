@@ -278,8 +278,10 @@ namespace MageCast.Gestures
                     if (ignoreOnce != null && hits[i].collider == ignoreOnce) continue;
                     // through a teammate, as through yourself: they neither stop it nor feel it
                     if (MageCast.Teams.Spares(owner, hits[i].collider)) continue;
-                    // a person is hit by the body (Hurtbox, below), not the capsule they walk with
-                    if (hits[i].collider.GetComponentInParent<PlayerMotor>() != null) continue;
+                    // a person (or a dummy wearing a person's body) is hit by the body (Hurtbox, below),
+                    // not the capsule they walk with
+                    if (hits[i].collider.GetComponentInParent<Hurtbox>() != null
+                        || hits[i].collider.GetComponentInParent<PlayerMotor>() != null) continue;
 
                     // the caster's own dome lets the caster's spells out (and only theirs)
                     CastShield dome = hits[i].collider.GetComponentInParent<CastShield>();
