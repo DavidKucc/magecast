@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no">
+    <title>Mage Cast</title>
+    <!--
+      The game fills the browser window. Unity's default template draws a fixed 1280 x 720 canvas
+      with a footer under it, centred on the page -- in a 720-high window that pushed the top of the
+      game off the screen, and the room code lives at the top.
+
+      While it loads: the menu's look, before the menu exists -- the Temple map blurred and drifting
+      behind, embers rising, the title glowing in gold, and the five runes drawing themselves in their
+      elements' colours over a gold progress bar, with a tip under it. It fades away into the menu.
+    -->
+    <style>
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0d0e13; }
+      #unity-canvas { display: block; width: 100%; height: 100%; background: #0d0e13; outline: none; }
+
+      #stage {
+        position: fixed; inset: 0; overflow: hidden; background: #0d0e13;
+        font-family: Arial, Helvetica, sans-serif; color: #f2d27a;
+        transition: opacity 0.8s ease;
+      }
+      #stage.done { opacity: 0; pointer-events: none; }
+      #stage .backdrop {
+        position: absolute; inset: -8%;
+        background: url("TemplateData/backdrop.jpg") center / cover no-repeat;
+        filter: blur(6px) brightness(0.42) saturate(0.85);
+        animation: drift 36s ease-in-out infinite alternate;
+      }
+      @keyframes drift {
+        from { transform: scale(1.05) translate(-1.5%, -1%); }
+        to   { transform: scale(1.12) translate(1.5%, 1%); }
+      }
+      #stage .vignette {
+        position: absolute; inset: 0;
+        background: radial-gradient(ellipse at 50% 45%, rgba(10, 12, 20, 0.15) 0%, rgba(10, 12, 20, 0.6) 55%, rgba(5, 6, 10, 0.95) 100%);
+      }
+      #embers { position: absolute; inset: 0; pointer-events: none; }
+      .ember {
+        position: absolute; bottom: -20px; border-radius: 50%;
+        background: radial-gradient(circle, rgba(255, 226, 160, 1) 0%, rgba(255, 150, 60, 0.85) 40%, rgba(255, 120, 40, 0) 70%);
+        animation-name: rise; animation-timing-function: linear; animation-iteration-count: infinite;
+      }
+      @keyframes rise {
+        0%   { transform: translate(0, 0); opacity: 0; }
+        10%  { opacity: 0.9; }
+        50%  { transform: translate(var(--sway), -55vh); opacity: 0.7; }
+        90%  { opacity: 0.5; }
+        100% { transform: translate(calc(var(--sway) * -0.5), -110vh); opacity: 0; }
+      }
+
+      #panel {
+        position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+        width: min(440px, 88vw); padding: 34px 30px 28px; text-align: center;
+        background: rgba(9, 10, 16, 0.62); border: 1px solid rgba(242, 210, 122, 0.22); border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        backdrop-filter: blur(3px);
+      }
+      h1 {
+        margin: 0; font-size: clamp(40px, 9vw, 64px); font-weight: 800; letter-spacing: 1px; color: #f6dc92;
+        text-shadow: 0 0 18px rgba(242, 190, 90, 0.55), 0 0 42px rgba(242, 170, 70, 0.3), 0 3px 2px rgba(0, 0, 0, 0.7);
+        animation: breathe 3.6s ease-in-out infinite;
+      }
+      @keyframes breathe {
+        0%, 100% { text-shadow: 0 0 14px rgba(242, 190, 90, 0.45), 0 0 34px rgba(242, 170, 70, 0.22), 0 3px 2px rgba(0, 0, 0, 0.7); }
+        50%      { text-shadow: 0 0 24px rgba(242, 190, 90, 0.7), 0 0 56px rgba(242, 170, 70, 0.38), 0 3px 2px rgba(0, 0, 0, 0.7); }
+      }
+      .rule { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 6px 0 4px; }
+      .rule i { display: block; width: 130px; height: 2px; background: linear-gradient(90deg, rgba(242, 210, 122, 0), rgba(242, 210, 122, 0.7)); }
+      .rule i:last-child { transform: scaleX(-1); }
+      .rule b { width: 8px; height: 8px; border-radius: 50%; background: #f6dc92; box-shadow: 0 0 10px 3px rgba(246, 220, 146, 0.7); }
+      .tagline { margin: 4px 0 18px; font-size: 15px; color: rgba(255, 255, 255, 0.6); }
+
+      #rune { width: 132px; height: 132px; margin: 0 auto 6px; display: block; overflow: visible; }
+      #rune polyline {
+        fill: none; stroke-width: 5.5; stroke-linecap: round; stroke-linejoin: round;
+        transition: stroke-dashoffset 0.95s cubic-bezier(.55, .1, .35, 1), opacity 0.35s ease;
+      }
+      #rune .glow { stroke-width: 14; opacity: 0.28; filter: blur(4px); }
+      #element { height: 18px; font-size: 13px; font-weight: 700; letter-spacing: 3px; transition: color 0.3s, opacity 0.3s; }
+
+      #bar {
+        position: relative; height: 10px; margin: 18px 6px 8px; border-radius: 6px; overflow: hidden;
+        background: rgba(255, 255, 255, 0.07); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+      }
+      #fill {
+        position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 6px;
+        background: linear-gradient(90deg, #a8691f, #e0a93e 60%, #f8e3a3);
+        box-shadow: 0 0 12px rgba(242, 190, 90, 0.8);
+        transition: width 0.25s ease;
+      }
+      #fill::after {
+        content: ""; position: absolute; inset: 0;
+        background: linear-gradient(100deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0.55) 50%, rgba(255, 255, 255, 0) 70%);
+        background-size: 200% 100%; animation: shimmer 1.4s linear infinite;
+      }
+      @keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+      .status { display: flex; justify-content: space-between; margin: 0 8px; font-size: 13px; color: rgba(255, 255, 255, 0.55); }
+      .status span:last-child { color: #f2d27a; font-weight: 700; }
+      #tip {
+        min-height: 38px; margin: 16px 4px 0; padding-top: 12px; border-top: 1px solid rgba(242, 210, 122, 0.12);
+        font-size: 14px; line-height: 1.4; color: rgba(255, 255, 255, 0.72); transition: opacity 0.4s ease;
+      }
+      #tip b { color: #f2d27a; font-weight: 700; }
+
+      #error {
+        display: none; position: absolute; left: 50%; bottom: 8%; transform: translateX(-50%);
+        max-width: 560px; padding: 14px 18px; border-radius: 12px;
+        background: rgba(70, 16, 16, 0.92); border: 1px solid rgba(255, 140, 140, 0.4); color: #ffd6d6;
+        font: 15px Arial, Helvetica, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
+    <div id="stage">
+      <div class="backdrop"></div>
+      <div class="vignette"></div>
+      <div id="embers"></div>
+      <div id="panel">
+        <h1>MAGE CAST</h1>
+        <div class="rule"><i></i><b></b><i></i></div>
+        <div class="tagline">draw the rune, aim, send</div>
+        <svg id="rune" viewBox="0 0 100 100">
+          <polyline class="glow" points=""></polyline>
+          <polyline class="line" points=""></polyline>
+        </svg>
+        <div id="element"></div>
+        <div id="bar"><div id="fill"></div></div>
+        <div class="status"><span id="what">loading the game...</span><span id="percent">0 %</span></div>
+        <div id="tip"></div>
+      </div>
+      <div id="error"></div>
+    </div>
+    <script>
+      var canvas = document.querySelector("#unity-canvas");
+      var stage = document.querySelector("#stage");
+      var fill = document.querySelector("#fill");
+      var percent = document.querySelector("#percent");
+      var what = document.querySelector("#what");
+      var errorBox = document.querySelector("#error");
+
+      function showBanner(msg, type) {
+        if (type == "error") { errorBox.textContent = msg; errorBox.style.display = "block"; }
+        else console.warn(msg);
+      }
+
+      // ---- embers rising behind it all
+      (function () {
+        var box = document.querySelector("#embers");
+        for (var i = 0; i < 40; i++) {
+          var e = document.createElement("div");
+          var size = 3 + Math.random() * 7;
+          e.className = "ember";
+          e.style.left = (Math.random() * 100) + "%";
+          e.style.width = e.style.height = size + "px";
+          e.style.setProperty("--sway", ((Math.random() - 0.5) * 120) + "px");
+          var d = 9 + Math.random() * 12;
+          e.style.animationDuration = d + "s";
+          e.style.animationDelay = (-Math.random() * d) + "s";
+          box.appendChild(e);
+        }
+      })();
+
+      // ---- the five runes, drawing themselves in turn (the game's own shapes, -1..1 with y up)
+      (function () {
+        var runes = [
+          { name: "FIRE",      colour: "#ff7a2e", pts: [[0.8, 1], [-0.8, 0], [0.8, -1]] },
+          { name: "ICE",       colour: "#8cd9ff", pts: [[0.7, 0.35], [-0.2, 1], [-0.2, -1]] },
+          { name: "LIGHTNING", colour: "#ffe659", pts: [[0.7, 1], [-0.45, 0.3], [0.45, -0.3], [-0.7, -1]] },
+          { name: "AIR",       colour: "#bfffe6", pts: [[-0.8, -1], [-0.8, 1], [0, -0.1], [0.8, 1], [0.8, -1]] },
+          { name: "BARRIER",   colour: "#ffd966", pts: [[-0.6, -1], [-0.6, 1], [0.6, 0.4], [0.6, -1]] }
+        ];
+        var lines = document.querySelectorAll("#rune polyline");
+        var label = document.querySelector("#element");
+        var at = 0;
+        function draw() {
+          var r = runes[at % runes.length];
+          at++;
+          var points = r.pts.map(function (p) { return (50 + p[0] * 38).toFixed(1) + "," + (50 - p[1] * 38).toFixed(1); }).join(" ");
+          lines.forEach(function (l) {
+            l.style.transition = "none";
+            l.setAttribute("points", points);
+            l.style.stroke = r.colour;
+            var len = l.getTotalLength();
+            l.style.strokeDasharray = len;
+            l.style.strokeDashoffset = len;
+            l.style.opacity = l.classList.contains("glow") ? 0.28 : 1;
+            l.getBoundingClientRect();
+            l.style.transition = "";
+            l.style.strokeDashoffset = 0;
+          });
+          document.querySelector("#rune").style.filter = "drop-shadow(0 0 8px " + r.colour + ")";
+          label.style.opacity = 0;
+          setTimeout(function () { label.textContent = r.name; label.style.color = r.colour; label.style.opacity = 1; }, 450);
+          setTimeout(function () { lines.forEach(function (l) { l.style.opacity = 0; }); }, 1700);
+        }
+        draw();
+        setInterval(draw, 2100);
+      })();
+
+      // ---- a tip at a time
+      (function () {
+        var tips = [
+          "Runu můžeš kreslit z <b>kteréhokoli konce</b> - hra ji pozná i pozpátku.",
+          "<b>Led přes ohnivou čáru</b> vyletí jako voda. Blesk do mokrého dá <b>dvojnásobek</b>.",
+          "Mokrý na <b>ledové ploše</b> přimrzne na 1,5 s.",
+          "Oheň zamířený k nohám udělá <b>ohnivou čáru</b>, led <b>ledovou stěnu</b>.",
+          "<b>Pravým tlačítkem</b> kouzlo v ruce zahodíš.",
+          "Tier III v ruce vydrží <b>4 s</b>, pak spadne na II.",
+          "V menu si můžeš runu <b>nakreslit myší na pozadí</b>.",
+          "Zásah ti srazí tier kouzla v ruce o jeden - kresli z krytu."
+        ];
+        var tip = document.querySelector("#tip");
+        var at = Math.floor(Math.random() * tips.length);
+        function next() {
+          tip.style.opacity = 0;
+          setTimeout(function () { tip.innerHTML = "Tip: " + tips[at++ % tips.length]; tip.style.opacity = 1; }, 400);
+        }
+        next();
+        setInterval(next, 5200);
+      })();
+
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/5336a4b2c43054286fd70b1faa467eee.loader.js";
+      var config = {
+        dataUrl: buildUrl + "/2c47aec9e97f6a61689f9b6e5f07341a.data.unityweb",
+        frameworkUrl: buildUrl + "/2fcae1ca46dacaef2fa046eb8fac0d7d.framework.js.unityweb",
+        codeUrl: buildUrl + "/1b3bfad1bc3f9c172ac0feece1be6118.wasm.unityweb",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "Mage Cast",
+        productName: "Mage Cast",
+        productVersion: "0.1",
+        showBanner: showBanner,
+      };
+
+      // the right mouse button draws runes; the page menu must not open over the game
+      canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+      // Closing the tab (Ctrl+W) while the game holds the mouse left the browser's cursor hidden
+      // afterwards (16 Oct) -- a page that goes with the pointer still locked can take the cursor with it.
+      // So the lock is let go first, and mid-game (mouse held) the browser asks before leaving, which
+      // also saves a match from a stray Ctrl+W.
+      function releaseMouse() {
+        try { if (document.exitPointerLock) document.exitPointerLock(); } catch (e) {}
+        canvas.style.cursor = "auto";
+        document.documentElement.style.cursor = "auto";
+      }
+      window.addEventListener("beforeunload", function (e) {
+        var playing = document.pointerLockElement === canvas;
+        releaseMouse();
+        if (playing) { e.preventDefault(); e.returnValue = ""; return ""; }
+      });
+      window.addEventListener("pagehide", releaseMouse);
+
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = function () {
+        createUnityInstance(canvas, config, function (progress) {
+          var p = Math.round(100 * progress);
+          fill.style.width = p + "%";
+          percent.textContent = p + " %";
+          what.textContent = progress < 0.9 ? "loading the game..." : "lighting the torches...";
+        }).then(function (unityInstance) {
+          fill.style.width = "100%";
+          percent.textContent = "100 %";
+          stage.classList.add("done");
+          setTimeout(function () { stage.style.display = "none"; }, 900);
+          window.unityInstance = unityInstance;   // lets the page (or a test) talk to the game
+          canvas.focus();
+        }).catch(function (message) {
+          showBanner(message, "error");
+        });
+      };
+      document.body.appendChild(script);
+    </script>
+  </body>
+</html>
