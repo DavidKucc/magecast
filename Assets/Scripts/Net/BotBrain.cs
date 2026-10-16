@@ -719,7 +719,8 @@ namespace MageCast
             Vector3 line = (aim - from).normalized;
             float crossing = Vector3.Cross(line, velocity).magnitude;           // m/s across the line of fire
             float distance = Vector3.Distance(from, aim);
-            // tuned (13 Oct) so a 60 % bot lands about 40 % on players, as a person does
+            // tuned (13 Oct) so a 60 % bot lands about 40 % on players, as a person does (the aim assist
+            // bends people's shots, not bots' -- see Projectile.AimAssist)
             float error = (0.028f + 0.07f * Novice + 0.08f * Beginner) * distance
                         + crossing * (0.08f + 0.08f * Novice + 0.12f * Beginner);
             aim += new Vector3(Rand(-1f, 1f), Rand(-0.6f, 0.6f), Rand(-1f, 1f)) * error;

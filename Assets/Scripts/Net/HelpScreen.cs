@@ -119,6 +119,11 @@ namespace MageCast
             "ten prvek se ti zamkne na " + SpellTiers.SchoolLock + " s (LOCKED). Přerušení moc brzy nezamkne nic.\n" +
             "Tier III v ruce vydrží " + "4" + " s, pak spadne na II. Tier II vydrží napořád.\n" +
             "Když tě cokoli trefí přímým zásahem, tier kouzla v ruce klesne o jeden - a kouzlo s tierem I zmizí.\n\n" +
+            "<b>Asistent míření</b>\n" +
+            "Střela, která by o kousek minula nepřítele, se k němu jemně stočí: jen když je od ní do " + Projectile.AssistRange + " m " +
+            "a skoro přímo před ní, na volno (ne za zdí ani bariérou), nejvýš o " + Projectile.AssistPerMetre + "° na metr letu " +
+            "a " + Projectile.AssistBudget + "° za celý let. Z 10 m to vyrovná zhruba půl metru vedle, zblízka skoro nic, ostrou zatáčku nikdy. " +
+            "Jen pro hráče, boti míří sami.\n\n" +
             "<b>Soupeř tě čte</b>\n" +
             "Tvoje runa se kreslí nad tvou hlavou a jakmile kouzlo vznikne, objeví se nad tebou i jeho název s tierem " +
             "(FIRE III). Kreslení tě vystavuje - a soupeř to vidí.\n\n" +

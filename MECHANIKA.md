@@ -225,6 +225,21 @@ schopnost uhýbat, takže kdo na něm kreslí, je terč; a je to plocha, na kter
 - **Výbuch u stěny slábne se vzdáleností.** Kdo se o zeď opírá, dostane plnou sílu; kdo stojí dva metry
   opodál, jen štulec.
 
+**Asistent míření (od 16. 10.) — jen pro hráče, ne pro boty.** Střela, která by o kousek minula
+nepřítele, se k němu jemně stočí. Bere jen cíl, který je od střely nejvýš **10 m**, skoro přímo před ní
+(do **14°** od směru letu), na volno (zeď, bariéra, ledová stěna nebo někdo jiný mezi = nic) a není
+spojenec ani sesílatel. Stáčí se **nejvýš o 0,7° na metr letu** a **nejvýš o 7° za celý let** — po
+metrech, ne po sekundách, aby pomalý led nedostal víc pomoci než rychlý blesk (jinak by se mu nedalo
+uhnout). Ostrou zatáčku neudělá nikdy; zblízka skoro nic, pomáhá na střední vzdálenost.
+
+Změřeno (16. 10., cvičná figurína široká 1 m, tier II, přímý zásah — o kolik dál od středu ještě trefí):
+z 4 m skoro nic, z 6 m +0,1–0,2 m, z 10 m +0,5–0,65 m; stejně pro oheň, led i blesk.
+
+**Proč ne boti:** boti střílejí zblízka a zhruba na cíl, takže jim asistent dával skoro všechno — šest
+botů na 60 % z 43 % zásahů na 61–66 % (při dvojnásobné síle) a ještě 57 % při poloviční, i s horší
+mušku. Jejich obtížnost je vyladěná na jejich vlastním míření; asistent je pro ruku člověka, jako v
+každé střílečce. Mezi lidmi ho mají všichni stejně.
+
 **Značka při míření — jen v tréninku, a jen co kouzlo v ruce na svém tieru opravdu udělá.** Dokud držíš
 nakreslené kouzlo, ukazuje, co se stane tam, kam míříš (od 15. 10. podle tieru — tier I plochu nedělá,
 tak ji ani neukazuje):

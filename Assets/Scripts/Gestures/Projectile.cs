@@ -115,6 +115,28 @@ namespace MageCast.Gestures
         /// </summary>
         const float DraftLift = 70f;
 
+        // ---- aim assist
+        // A shot that is about to miss somebody by a little bends towards them -- gently. A target is
+        // taken only if it is close to the shot (AssistRange), nearly straight ahead of it (within
+        // AssistCone of where it is flying), in the open (nothing solid between) and not on the caster's
+        // side. The turn is slow and capped for the whole flight (AssistBudget), so a near miss becomes a
+        // hit while a shot aimed elsewhere stays aimed elsewhere. It turns by the metre flown, not by the
+        // second, so a slow ice is helped exactly as much as a fast lightning -- by time, the slow one
+        // had three times as long to bend and became hard to dodge. About 0.15 m of help over the last
+        // 6 m, about 0.45 m over the last 10 -- a nudge, never round a corner.
+        //
+        // People's shots only, every person's alike; not bots'. Bots fire from close range and roughly
+        // on target, so the assist landed nearly all of it: six 60 % bots went from 43 % to 61-66 % hits
+        // at twice this strength and still 57 % at this one (16 Oct), and their difficulty is tuned on
+        // their own aim (BotBrain.AimFor). Aim assist is for hands, as in any shooter.
+        public static bool AimAssist = true;
+        public const float AssistRange = 10f;
+        public const float AssistCone = 14f;
+        public const float AssistPerMetre = 0.7f;    // degrees of turn per metre flown, at most
+        public const float AssistBudget = 7f;
+        float assisted;
+        int assistFor = -1;          // -1 not yet known, 0 a bot's (or nobody's) shot, 1 a person's
+
         public static Projectile Spawn(Vector3 origin, Vector3 direction, float speed, float radius,
                                        float lifetime, Color colour, Transform owner, float power = 1f,
                                        float gravity = 0f, float areaRadius = 0f, float areaLifetime = 0f,
@@ -206,6 +228,8 @@ namespace MageCast.Gestures
             // Integrated as a velocity rather than a fixed heading so the same component covers both
             // a flat bolt and a lob, and so a bounce is just a change of velocity.
             if (gravity != 0f) velocity += Vector3.up * (gravity * dt);
+
+            Assist(dt);
 
             // Over an updraft the rising air bends the shot upwards and it sails over whoever stood
             // behind it -- a screen you can put down, not a mirror. Every shot, whoever cast it and
@@ -702,6 +726,66 @@ namespace MageCast.Gestures
         }
 
         static readonly Color WaterColour = new Color(0.2f, 0.45f, 0.95f);
+
+        /// <summary>Whether the first solid thing on the way to <paramref name="target"/> is the target itself.</summary>
+        bool InTheOpen(Vector3 from, Vector3 dir, float distance, Health target)
+        {
+            RaycastHit[] hits = Physics.RaycastAll(from, dir, distance, ~0, QueryTriggerInteraction.Ignore);
+            float nearest = float.MaxValue;
+            Collider first = null;
+            foreach (RaycastHit hit in hits)
+            {
+                Transform t = hit.transform;
+                if (t == transform || (owner != null && (t == owner || t.IsChildOf(owner)))) continue;
+                if (MageCast.Teams.Spares(owner, hit.collider)) continue;
+                if (hit.distance < nearest) { nearest = hit.distance; first = hit.collider; }
+            }
+            return first == null || first.GetComponentInParent<Health>() == target;
+        }
+
+        /// <summary>Bends the flight a little towards an enemy nearly in its path -- see AimAssist.</summary>
+        void Assist(float dt)
+        {
+            if (!AimAssist || assisted >= AssistBudget || dt <= 0f) return;
+            if (assistFor < 0)
+            {
+                PlayerNet by = owner != null ? owner.GetComponent<PlayerNet>() : null;
+                assistFor = by != null && !by.IsBot ? 1 : 0;
+            }
+            if (assistFor == 0) return;
+            float speed = velocity.magnitude;
+            if (speed < 1f) return;
+            Vector3 dir = velocity / speed;
+            Vector3 pos = transform.position;
+
+            float bestAngle = AssistCone;
+            Vector3 bestAim = Vector3.zero;
+            foreach (Collider c in Physics.OverlapSphere(pos, AssistRange, ~0, QueryTriggerInteraction.Ignore))
+            {
+                Health h = c.GetComponentInParent<Health>();
+                if (h == null || h.IsDead) continue;
+                if (owner != null && (h.transform == owner || h.transform.IsChildOf(owner))) continue;
+                if (MageCast.Teams.Spares(owner, c)) continue;
+
+                Vector3 aim = c.bounds.center;              // the middle of the body
+                Vector3 to = aim - pos;
+                float d = to.magnitude;
+                if (d < 0.5f) continue;
+                float angle = Vector3.Angle(dir, to);
+                if (angle >= bestAngle) continue;
+
+                // in the open: a wall, a barrier or somebody else in between and it flies on as aimed
+                if (!InTheOpen(pos, to / d, d, h)) continue;
+
+                bestAngle = angle;
+                bestAim = aim;
+            }
+            if (bestAngle >= AssistCone) return;
+
+            float turn = Mathf.Min(AssistPerMetre * speed * dt, AssistBudget - assisted, bestAngle);
+            velocity = Vector3.RotateTowards(velocity, (bestAim - pos).normalized * speed, turn * Mathf.Deg2Rad, 0f);
+            assisted += turn;
+        }
 
         /// <summary>
         /// Through the flames: it is water from here on. It looks it -- the water bolt from the same pack the
