@@ -250,6 +250,22 @@
       // the right mouse button draws runes; the page menu must not open over the game
       canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 
+      // Closing the tab (Ctrl+W) while the game holds the mouse left the browser's cursor hidden
+      // afterwards (16 Oct) -- a page that goes with the pointer still locked can take the cursor with it.
+      // So the lock is let go first, and mid-game (mouse held) the browser asks before leaving, which
+      // also saves a match from a stray Ctrl+W.
+      function releaseMouse() {
+        try { if (document.exitPointerLock) document.exitPointerLock(); } catch (e) {}
+        canvas.style.cursor = "auto";
+        document.documentElement.style.cursor = "auto";
+      }
+      window.addEventListener("beforeunload", function (e) {
+        var playing = document.pointerLockElement === canvas;
+        releaseMouse();
+        if (playing) { e.preventDefault(); e.returnValue = ""; return ""; }
+      });
+      window.addEventListener("pagehide", releaseMouse);
+
       var script = document.createElement("script");
       script.src = loaderUrl;
       script.onload = function () {

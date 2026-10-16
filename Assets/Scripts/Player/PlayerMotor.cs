@@ -414,6 +414,8 @@ namespace MageCast
         {
             net = GetComponent<PlayerNet>();
             cc = GetComponent<CharacterController>();
+            // where spells hit the body: its bones, not this controller (see Hurtbox)
+            if (GetComponent<Combat.Hurtbox>() == null) gameObject.AddComponent<Combat.Hurtbox>();
             SpeedMultiplier = 1f;
             Stamina = 1f;
             if (cam == null) cam = FindObjectOfType<ThirdPersonCamera>();

@@ -146,6 +146,20 @@ rohy šablon rozpoznávače, takže panel je zároveň tahák. Co ukazuje:
 
 ---
 
+## Kde se dá člověk trefit (od 16. 10.)
+
+**Kouzlo trefí tělo, ne kolizní kapsli.** Postava chodí s kapslí 0,4 m × 2 m (kvůli rohům a schodům) a
+kouzla dřív trefovala tu — i s poloměrem koule kouzla navrch: led, který proletěl 0,9 m od páteře, zasáhl,
+a na obrazovce bylo jasně vidět, že minul. Teď se zásah počítá proti **tělu z kostí postavy**, které se
+hýbe s animací: trup (0,17 m), hlava (0,12 m), paže, předloktí s dlaní, stehna, lýtka a chodidla —
+kapsle mezi klouby. Kouzlo proti člověku navíc počítá jen se svým **jádrem**: nejvýš 0,3 m (vzduch
+0,45 m), proti zdi, bariéře a ledové stěně dál celou koulí. Plochy, výbuchy a splash dál berou blízkost
+(kolizní kapsli) — u nich jde o to být poblíž.
+
+Změřeno (bot z boku, 8 m, tier II): oheň a led zasáhnou do 0,64–0,74 m od středu hrudi (ruka visí kousek
+od těla — zásah do ruky je zásah), blesk do 0,52–0,62 m, vzduch do 0,80–0,90 m. Dřív oheň 0,78 m, led
+0,95 m a vzduch 1,1 m od osy, ať tělo stálo jakkoli. V tréninku jde hitbox ukázat (`Hurtbox.Show`).
+
 ## Když kouzlo netrefí člověka
 
 Jedno gesto dává několik efektů — rozhoduje, **do čeho kouzlo dopadne**. Nic nového se neučí: oheň pálí,
@@ -230,10 +244,12 @@ nepřítele, se k němu jemně stočí. Bere jen cíl, který je od střely nejv
 (do **14°** od směru letu), na volno (zeď, bariéra, ledová stěna nebo někdo jiný mezi = nic) a není
 spojenec ani sesílatel. Stáčí se **nejvýš o 0,7° na metr letu** a **nejvýš o 7° za celý let** — po
 metrech, ne po sekundách, aby pomalý led nedostal víc pomoci než rychlý blesk (jinak by se mu nedalo
-uhnout). Ostrou zatáčku neudělá nikdy; zblízka skoro nic, pomáhá na střední vzdálenost.
+uhnout). **Obloukem:** na okraji dosahu (10–8 m) se rozjíždí, pak zatáčí stálou mírou, a jak se střela
+k cíli stáčí, zatáčí čím dál míň — žádný zlom, žádná ostrá zatáčka. Míří na střed trupu.
 
-Změřeno (16. 10., cvičná figurína široká 1 m, tier II, přímý zásah — o kolik dál od středu ještě trefí):
-z 4 m skoro nic, z 6 m +0,1–0,2 m, z 10 m +0,5–0,65 m; stejně pro oheň, led i blesk.
+Změřeno (16. 10., cvičná figurína široká 1 m, tier II, přímý zásah — o kolik dál od středu ještě trefí),
+s obloukem: z 4 m skoro nic, z 6 m +0,1–0,2 m, z 8 m +0,3–0,4 m, z 10 m +0,35–0,45 m; stejně pro oheň,
+led i blesk.
 
 **Proč ne boti:** boti střílejí zblízka a zhruba na cíl, takže jim asistent dával skoro všechno — šest
 botů na 60 % z 43 % zásahů na 61–66 % (při dvojnásobné síle) a ještě 57 % při poloviční, i s horší

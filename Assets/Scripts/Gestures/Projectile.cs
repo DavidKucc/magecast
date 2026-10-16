@@ -134,6 +134,8 @@ namespace MageCast.Gestures
         public const float AssistCone = 14f;
         public const float AssistPerMetre = 0.7f;    // degrees of turn per metre flown, at most
         public const float AssistBudget = 7f;
+        const float ArcStart = 0.2f;                 // the pull grows over the outer fifth of the range
+        const float ArcEase = 12f;                   // how quickly what is left of the angle is taken, per second
         float assisted;
         int assistFor = -1;          // -1 not yet known, 0 a bot's (or nobody's) shot, 1 a person's
 
@@ -276,6 +278,8 @@ namespace MageCast.Gestures
                     if (ignoreOnce != null && hits[i].collider == ignoreOnce) continue;
                     // through a teammate, as through yourself: they neither stop it nor feel it
                     if (MageCast.Teams.Spares(owner, hits[i].collider)) continue;
+                    // a person is hit by the body (Hurtbox, below), not the capsule they walk with
+                    if (hits[i].collider.GetComponentInParent<PlayerMotor>() != null) continue;
 
                     // the caster's own dome lets the caster's spells out (and only theirs)
                     CastShield dome = hits[i].collider.GetComponentInParent<CastShield>();
@@ -310,6 +314,36 @@ namespace MageCast.Gestures
                     nearest = ground.distance;
                     best = ground;
                     hitSomething = true;
+                }
+
+                // People: the ball against the body's own parts, trunk, head and limbs as they stand.
+                Hurtbox struckBody = null;
+                Vector3 bodyPoint = Vector3.zero, bodyNormal = Vector3.zero;
+                float bodyR = PersonRadius;
+                Vector3 to = transform.position + heading * distance;
+                foreach (Hurtbox body in Hurtbox.All)
+                {
+                    if (body == null || body.Health == null || body.Health.IsDead) continue;
+                    Transform bt = body.transform;
+                    if (owner != null && (bt == owner || bt.IsChildOf(owner))) continue;
+                    if (MageCast.Teams.Spares(owner, body)) continue;
+                    float share;
+                    Vector3 bp, bn;
+                    if (!body.Sweep(transform.position, to, bodyR, out share, out bp, out bn)) continue;
+                    if (share * distance < nearest)
+                    {
+                        nearest = share * distance;
+                        struckBody = body;
+                        bodyPoint = bp;
+                        bodyNormal = bn;
+                        hitSomething = true;
+                    }
+                }
+                if (struckBody != null)
+                {
+                    Impact(bodyPoint, bodyNormal, transform.position + heading * nearest, struckBody.transform,
+                           struckBody.GetComponent<Collider>(), heading);
+                    return;
                 }
 
                 if (hitSomething)
@@ -363,6 +397,13 @@ namespace MageCast.Gestures
         }
 
         /// <summary>Something a spell hits with its whole body: a person, a dummy, a barrier.</summary>
+        /// <summary>
+        /// How big the ball is against a body: its core, about what is seen of it -- a fat ice or a wide
+        /// gust still hits barriers and walls by the whole ball, but a person only where it visibly meets
+        /// them (16 Oct: ice passing 0.9 m from somebody's spine used to hit them).
+        /// </summary>
+        float PersonRadius { get { return Mathf.Min(radius, IsAir ? 0.45f : 0.3f); } }
+
         static bool IsTarget(Collider c)
         {
             return c.GetComponentInParent<Health>() != null || c.GetComponentInParent<PlayerMotor>() != null
@@ -758,7 +799,7 @@ namespace MageCast.Gestures
             Vector3 dir = velocity / speed;
             Vector3 pos = transform.position;
 
-            float bestAngle = AssistCone;
+            float bestAngle = AssistCone, bestDistance = AssistRange;
             Vector3 bestAim = Vector3.zero;
             foreach (Collider c in Physics.OverlapSphere(pos, AssistRange, ~0, QueryTriggerInteraction.Ignore))
             {
@@ -767,7 +808,8 @@ namespace MageCast.Gestures
                 if (owner != null && (h.transform == owner || h.transform.IsChildOf(owner))) continue;
                 if (MageCast.Teams.Spares(owner, c)) continue;
 
-                Vector3 aim = c.bounds.center;              // the middle of the body
+                Hurtbox body = c.GetComponentInParent<Hurtbox>();
+                Vector3 aim = body != null ? body.Centre : c.bounds.center;    // the middle of the body
                 Vector3 to = aim - pos;
                 float d = to.magnitude;
                 if (d < 0.5f) continue;
@@ -779,10 +821,18 @@ namespace MageCast.Gestures
 
                 bestAngle = angle;
                 bestAim = aim;
+                bestDistance = d;
             }
             if (bestAngle >= AssistCone) return;
 
-            float turn = Mathf.Min(AssistPerMetre * speed * dt, AssistBudget - assisted, bestAngle);
+            // An arc, not a kink: it eases in over the edge of the range (ArcStart) instead of starting at
+            // full pull the moment somebody comes within reach, bends at a steady rate, and eases out as it
+            // comes round -- a share of what is left each moment near the end, rather than full turn until
+            // it points at them and then dead straight. (The pull growing over half the range took most
+            // of the help away: +0.1-0.3 m from 10 m instead of +0.5-0.65.)
+            float pull = Mathf.SmoothStep(0f, 1f, (AssistRange - bestDistance) / (AssistRange * ArcStart));
+            float ease = bestAngle * (1f - Mathf.Exp(-ArcEase * dt));
+            float turn = Mathf.Min(AssistPerMetre * pull * speed * dt, ease, AssistBudget - assisted);
             velocity = Vector3.RotateTowards(velocity, (bestAim - pos).normalized * speed, turn * Mathf.Deg2Rad, 0f);
             assisted += turn;
         }
