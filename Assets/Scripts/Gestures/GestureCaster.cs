@@ -27,7 +27,10 @@ namespace MageCast.Gestures
         // Appended, never inserted: Unity stores these as numbers in every serialized spell, and a new
         // value slipped in ahead of Updraft turned every air spell into water.
         Water,     // fire and ice together: harmless to walk in, but it carries lightning like ice does
-        Shock      // lightning's: stings, and nobody standing in it can draw -- the glyph falls apart
+        Shock,     // lightning's: stings, and nobody standing in it can draw -- the glyph falls apart
+        Rubble,    // earth's: broken ground, slow going -- you walk at a share of your speed
+        Mud,       // earth into water: slower still
+        Magma      // earth into fire: burns harder and longer than the fire did
     }
 
     [System.Serializable]
@@ -258,6 +261,21 @@ namespace MageCast.Gestures
             // 9.4 m/s against the -22 gravity the motor uses peaks at 2.0 m
             groundEffect = GroundEffect.Updraft, zoneRadius = 2f, zoneLifetime = 5f, zoneStrength = 9.4f };
 
+        // Thurisaz. Up and over: a boulder thrown in a high arc (SpellTiers.LobRise above the line to
+        // where you aim) that comes down where the crosshair is, cover or not -- the answer to somebody
+        // dug in behind a wall, which nothing else had. Slow to arrive (about a second at 10 m) and
+        // everybody sees where it will fall: a ring on the floor from the moment it is thrown. It lands
+        // with a blast round it (SpellTiers.Quake*); from tier II the ground is left broken (Rubble,
+        // slow going), at III the blast knocks the people in it off their feet. Into fire it makes
+        // magma, into water mud, into ice it breaks the ice up.
+        [SerializeField] Spell earth = new Spell {
+            gesture = GestureTemplates.Thurisaz, displayName = "EARTH", kind = SpellKind.Projectile,
+            colour = new Color(0.78f, 0.56f, 0.32f), speed = 16f, radius = 0.45f, lifetime = 5f,
+            gravity = -SpellTiers.LobGravity,
+            damage = 20f,
+            barrierWear = 1.3f,
+            groundEffect = GroundEffect.Rubble, zoneRadius = 2.2f, zoneLifetime = 6f, zoneStrength = SpellTiers.RubbleSlow };
+
         [Header("Misfire (retired)")]
         // Kept only as the fallback for an unknown spell id on the wire. A botched gesture used to fire
         // this off in a random direction; it now simply fizzles -- see EndDraw.
@@ -386,6 +404,7 @@ namespace MageCast.Gestures
             if (Input.GetKeyDown(KeyCode.F3)) practiceTarget = GestureTemplates.Laguz;
             if (Input.GetKeyDown(KeyCode.F4)) practiceTarget = GestureTemplates.Sowulo;
             if (Input.GetKeyDown(KeyCode.F5)) practiceTarget = GestureTemplates.Ehwaz;
+            if (Input.GetKeyDown(KeyCode.F8)) practiceTarget = GestureTemplates.Thurisaz;
         }
 
         // ---------------------------------------------------------------- drawing
@@ -659,6 +678,14 @@ namespace MageCast.Gestures
             // ice aimed at the floor close in front of you comes up as a wall instead of flying; fire lays a line
             if (Placed(spell) && WallSpot(aimPoint, aimNormal, aimCollider, out spot))
                 CastWall(spell, spot, heldPrecision, heldQuality);
+            else if (spell == earth)
+            {
+                // thrown up and over, to come down on what the crosshair is on
+                Vector3 throwDir;
+                float throwSpeed;
+                Lob(from, aimCollider != null ? aimPoint : from + aim * SpellTiers.LobReach, out throwDir, out throwSpeed);
+                Cast(spell, throwDir, heldPrecision, heldQuality, heldMetrics, from, throwSpeed);
+            }
             else
                 Cast(spell, aim, heldPrecision, heldQuality, heldMetrics, from);
             Headline(spell.displayName + "  SENT", spell.colour, 1.2f);
@@ -833,6 +860,14 @@ namespace MageCast.Gestures
                 return true;
             }
             Vector3 from = Muzzle();
+            if (spell == earth)
+            {
+                Vector3 throwDir;
+                float throwSpeed;
+                Lob(from, aimPoint, out throwDir, out throwSpeed);
+                Cast(spell, throwDir, heldPrecision, heldQuality, heldMetrics, from, throwSpeed);
+                return true;
+            }
             Vector3 dir = aimPoint - from;
             Cast(spell, dir.sqrMagnitude < 0.01f ? transform.forward : dir.normalized, heldPrecision, heldQuality, heldMetrics, from);
             return true;
@@ -1024,6 +1059,7 @@ namespace MageCast.Gestures
             if (gestureId == GestureTemplates.Laguz) return ice;
             if (gestureId == GestureTemplates.Sowulo) return lightning;
             if (gestureId == GestureTemplates.Ehwaz) return air;
+            if (gestureId == GestureTemplates.Thurisaz) return earth;
             return misfire;
         }
 
@@ -1052,7 +1088,7 @@ namespace MageCast.Gestures
         {
             var list = new List<VocabularyEntry>();
             string[] ids = { GestureTemplates.Kenaz, GestureTemplates.Laguz, GestureTemplates.Sowulo,
-                             GestureTemplates.Ehwaz, GestureTemplates.Uruz };
+                             GestureTemplates.Ehwaz, GestureTemplates.Thurisaz, GestureTemplates.Uruz };
             foreach (string id in ids)
             {
                 Spell s = SpellFor(id);
@@ -1093,7 +1129,7 @@ namespace MageCast.Gestures
 
         // ---------------------------------------------------------------- spell ids, for the wire
 
-        public const byte BarrierId = 0, FireId = 1, IceId = 2, LightningId = 3, AirId = 4, MisfireId = 5;
+        public const byte BarrierId = 0, FireId = 1, IceId = 2, LightningId = 3, AirId = 4, MisfireId = 5, EarthId = 6;
 
         public Spell SpellByIndex(byte index)
         {
@@ -1104,6 +1140,7 @@ namespace MageCast.Gestures
                 case IceId: return ice;
                 case LightningId: return lightning;
                 case AirId: return air;
+                case EarthId: return earth;
                 default: return misfire;
             }
         }
@@ -1163,6 +1200,7 @@ namespace MageCast.Gestures
             if (spell == ice) return IceId;
             if (spell == lightning) return LightningId;
             if (spell == air) return AirId;
+            if (spell == earth) return EarthId;
             return MisfireId;
         }
 
@@ -1191,10 +1229,11 @@ namespace MageCast.Gestures
         /// packed up so every machine can produce the same one.
         /// </summary>
         void Cast(Spell spell, Vector3 direction, float precision, CastQuality quality, StrokeMetrics metrics,
-                  Vector3? from = null)
+                  Vector3? from = null, float speed = 0f)
         {
             CastData data = new CastData
             {
+                Speed = speed,
                 Spell = IndexOf(spell),
                 Quality = (byte)quality,
                 Precision = precision,
@@ -1300,7 +1339,7 @@ namespace MageCast.Gestures
             bool ballistic = spell.kind == SpellKind.Ballistic;
             bool firstTier = SpellTiers.Of(quality) <= 1;
             Projectile shot = Projectile.Spawn(data.Muzzle, direction,
-                             firstTier && spell.speedTierI > 0f ? spell.speedTierI : spell.speed,
+                             data.Speed > 0f ? data.Speed : firstTier && spell.speedTierI > 0f ? spell.speedTierI : spell.speed,
                              spell.radius * sizeScale,
                              spell.lifetime, colour, transform, power,
                              spell.gravity,
@@ -1322,6 +1361,33 @@ namespace MageCast.Gestures
                 float late = (float)(Unity.Netcode.NetworkManager.Singleton.ServerTime.Time - data.SentAt);
                 if (late > 0.005f) shot.CatchUp(late);
             }
+            // a lob shows everyone where it will come down
+            if (shot != null) shot.MarkLanding();
+        }
+
+        /// <summary>
+        /// The throw that brings a lobbed spell down on <paramref name="target"/>: launched SpellTiers.LobRise
+        /// above the straight line to it, at whatever speed carries it there under SpellTiers.LobGravity.
+        /// Too far for the fastest throw, it goes as far as that throw can.
+        /// </summary>
+        public static void Lob(Vector3 from, Vector3 target, out Vector3 direction, out float speed)
+        {
+            Vector3 d = target - from;
+            Vector3 flat = new Vector3(d.x, 0f, d.z);
+            float x = Mathf.Max(0.5f, flat.magnitude);
+            float y = d.y;
+            Vector3 along = flat.sqrMagnitude > 1e-4f ? flat / flat.magnitude : Vector3.forward;
+            float angle = Mathf.Clamp(Mathf.Atan2(y, x) * Mathf.Rad2Deg + SpellTiers.LobRise, 25f, 80f) * Mathf.Deg2Rad;
+            float g = SpellTiers.LobGravity;
+            float cos = Mathf.Cos(angle), denom = 2f * cos * cos * (x * Mathf.Tan(angle) - y);
+            speed = denom > 1e-3f ? Mathf.Sqrt(g * x * x / denom) : SpellTiers.LobMaxSpeed;
+            if (speed > SpellTiers.LobMaxSpeed)
+            {
+                speed = SpellTiers.LobMaxSpeed;
+                angle = 45f * Mathf.Deg2Rad;
+            }
+            speed = Mathf.Max(speed, 1.5f);
+            direction = (along * Mathf.Cos(angle) + Vector3.up * Mathf.Sin(angle)).normalized;
         }
 
         /// <summary>What the last aim ray met: the point, the surface's normal and its collider (null: nothing).</summary>
@@ -1765,9 +1831,9 @@ namespace MageCast.Gestures
             cardSmall.normal.textColor = new Color(MenuArt.Gold.r, MenuArt.Gold.g, MenuArt.Gold.b, 0.85f);
             GUI.Label(new Rect(kx, y, 80f, 18f), "PRACTICE", cardSmall);
             kx += 66f;
-            string[] keys = { "F1", "F2", "F3", "F4", "F5" };
-            string[] runes = { GestureTemplates.Uruz, GestureTemplates.Kenaz, GestureTemplates.Laguz, GestureTemplates.Sowulo, GestureTemplates.Ehwaz };
-            string[] names = { "barrier", "fire", "ice", "lightning", "air" };
+            string[] keys = { "F1", "F2", "F3", "F4", "F5", "F8" };
+            string[] runes = { GestureTemplates.Uruz, GestureTemplates.Kenaz, GestureTemplates.Laguz, GestureTemplates.Sowulo, GestureTemplates.Ehwaz, GestureTemplates.Thurisaz };
+            string[] names = { "barrier", "fire", "ice", "lightning", "air", "earth" };
             for (int i = 0; i < keys.Length; i++)
             {
                 bool lit = practiceTarget == runes[i];

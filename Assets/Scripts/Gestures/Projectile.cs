@@ -103,6 +103,10 @@ namespace MageCast.Gestures
         public bool IsWater { get { return watery; } }
         bool IsAir { get { return spell != null && spell.groundEffect == GroundEffect.Updraft; } }
         bool IsLightning { get { return spell != null && spell.chargeDamage > 0f; } }
+        bool IsEarth { get { return spell != null && spell.groundEffect == GroundEffect.Rubble; } }
+
+        /// <summary>A lobbed earth's ring on the floor where it will land (LandingMark), gone when it lands.</summary>
+        LandingMark landing;
 
         SpellFx.Entry fxEntry;     // this spell's real effects, or null for the placeholder look
         GameObject fx;             // the flying effect, riding on this object
@@ -433,6 +437,7 @@ namespace MageCast.Gestures
                 if (authoritative) shield.Wear(BarrierWear());
                 Flash(at, 1.1f, 2.2f);
                 if (IsFire && tier >= 3) Explode(at, null);
+                if (IsEarth) Quake(at - heading * 0.3f, null);
                 Splash(at, -heading);
                 End();
                 return true;
@@ -447,6 +452,7 @@ namespace MageCast.Gestures
                 Flash(at, 1.1f, 2.2f);
                 if (authoritative)
                     iceWall.Hit(IsFire, owner != null ? owner.GetComponent<PlayerNet>() : null, attacker);
+                if (IsEarth) Quake(at - heading * 0.3f, null);
                 End();
                 return true;
             }
@@ -471,6 +477,7 @@ namespace MageCast.Gestures
                 if (watery && hp != null) Wet.Apply(hp, SpellTiers.WetSeconds);
                 Flash(at, 1.4f, 2.5f);
                 TierHit(hp, at);
+                if (IsEarth) Quake(at, hp);
                 End();
                 return true;
             }
@@ -735,6 +742,7 @@ namespace MageCast.Gestures
             if (spell != null && spell.wallBurstRadius > 0f)
                 WallBurst(at, normal, spell.wallBurstRadius * sizeScale);
             if (IsFire && tier >= 3) Explode(at, null);
+            if (IsEarth) Quake(at + normal * 0.3f, null);
             Splash(at, normal);
 
             if (areaRadius > 0f && authoritative)
@@ -796,7 +804,7 @@ namespace MageCast.Gestures
                 PlayerNet by = owner != null ? owner.GetComponent<PlayerNet>() : null;
                 assistFor = by != null && !by.IsBot ? 1 : 0;
             }
-            if (assistFor == 0) return;
+            if (assistFor == 0 || gravity != 0f) return;     // a lob lands where it was thrown; nothing to bend
             float speed = velocity.magnitude;
             if (speed < 1f) return;
             Vector3 dir = velocity / speed;
@@ -874,6 +882,9 @@ namespace MageCast.Gestures
         ///   ice into water                 freezes back to ice
         ///   air into fire                  fanned: the fire grows and moves the way the wind blew, once
         ///   air into ice                   whoever stands on the ice is blown across it
+        ///   earth into fire                magma: burns harder and longer than the fire did
+        ///   earth into water               mud: slower going than the rubble
+        ///   earth into ice or a shock      broken up (grounded): rubble where it was
         ///
         /// Server only: the server decides and tells everyone what the ground now looks like. Returns
         /// whether something combined, in which case the spell's own effect does not happen.
@@ -939,8 +950,137 @@ namespace MageCast.Gestures
                     }
                     return false;
                 }
+
+                case GroundEffect.Rubble:
+                {
+                    SpellZone fire = SpellZone.At(at, GroundEffect.Burn, radius);
+                    if (fire != null)
+                    {
+                        ReplaceZone(caster, fire, GroundEffect.Magma, fire.transform.position, fire.Radius, SpellTiers.MagmaSeconds,
+                                    fire.Strength * SpellTiers.MagmaBurn, MagmaColour, attacker, false);
+                        return true;
+                    }
+
+                    SpellZone water = SpellZone.At(at, GroundEffect.Water, radius);
+                    if (water != null)
+                    {
+                        ReplaceZone(caster, water, GroundEffect.Mud, water.transform.position, water.Radius, SpellTiers.MudSeconds,
+                                    SpellTiers.MudSlow, MudColour, attacker, false);
+                        return true;
+                    }
+
+                    SpellZone broken = SpellZone.At(at, GroundEffect.Ice, radius);
+                    if (broken == null) broken = SpellZone.At(at, GroundEffect.Shock, radius);
+                    if (broken != null)
+                    {
+                        ReplaceZone(caster, broken, GroundEffect.Rubble, broken.transform.position, broken.Radius, spell.zoneLifetime,
+                                    spell.zoneStrength, spell.colour, attacker, false);
+                        return true;
+                    }
+                    return false;
+                }
             }
             return false;
+        }
+
+        static readonly Color MagmaColour = new Color(1f, 0.32f, 0.08f);
+        /// <summary>A warning, not the stone's own dusty brown, which is lost on a pale floor.</summary>
+        static readonly Color LandingColour = new Color(1f, 0.5f, 0.12f);
+        static readonly Color MudColour = new Color(0.42f, 0.3f, 0.18f);
+
+        /// <summary>
+        /// Earth coming down: a blast round where it landed (SpellTiers.Quake*). Everyone within reach but
+        /// whoever it struck directly takes a share of the hit, less towards the edge -- the caster too,
+        /// if they are that close; a wall or a barrier between them and the blast shields them. Everyone
+        /// in it, the one struck as well, is thrown a little off the ground, out of their stride; at tier
+        /// III knocked off their feet for a moment and out of whatever they were drawing. Teammates are
+        /// spared. Shown on every machine, dealt by the deciding copy.
+        /// </summary>
+        void Quake(Vector3 at, Health direct)
+        {
+            if (landing != null) { Destroy(landing.gameObject); landing = null; }
+            float reach = (tier >= 3 ? SpellTiers.QuakeRadiusIII : SpellTiers.QuakeRadius) * sizeScale;
+            if (fxEntry != null && fxEntry.special != null)
+            {
+                SpellFx.PlayBurst(fxEntry.special, at, fxEntry.specialScale * reach / SpellTiers.QuakeRadius, fxEntry.specialLeadIn);
+                SpellFx.OneShot(fxEntry.specialSound, at);
+            }
+            else FlashAt(at, colour, reach * 2f, 1.4f);
+            ThirdPersonCamera.Shake(at, 1f, reach + 4f);
+
+            if (!authoritative) return;
+            Vector3 origin = at + Vector3.up * 0.3f;
+            var done = new System.Collections.Generic.HashSet<Transform>();
+            foreach (Collider c in Physics.OverlapSphere(origin, reach, ~0, QueryTriggerInteraction.Ignore))
+            {
+                Health hp = c.GetComponentInParent<Health>();
+                PlayerMotor motor = c.GetComponentInParent<PlayerMotor>();
+                if (hp == null && motor == null) continue;
+                Transform root = motor != null ? motor.transform : hp.transform;
+                if (!done.Add(root)) continue;
+                if (hp != null && hp.IsDead) continue;
+                if (MageCast.Teams.Spares(owner, c)) continue;
+                float d = Vector3.Distance(origin, c.ClosestPoint(origin));
+                if (d >= reach) continue;
+                if (Shielded(origin, c.bounds.center, root)) continue;
+
+                float near = 1f - d / reach;
+                if (hp != null && hp != direct && damage > 0f)
+                    hp.TakeDamage(damage * SpellTiers.QuakeShare * (0.4f + 0.6f * near), attacker);
+                if (motor == null) continue;
+
+                Vector3 away = root.position - at;
+                away.y = 0f;
+                away = away.sqrMagnitude > 0.01f ? away.normalized : Vector3.zero;
+                motor.Toss(away * (SpellTiers.QuakePush * near), SpellTiers.QuakeLift * (0.6f + 0.4f * near));
+                if (tier >= 3)
+                {
+                    motor.ApplySlow(0f, SpellTiers.QuakeStagger);
+                    GestureCaster hands = motor.GetComponent<GestureCaster>();
+                    if (hands != null) hands.Interrupt(true);
+                }
+            }
+        }
+
+        /// <summary>
+        /// A lob's landing, marked on the floor for everyone (LandingMark): where it will come down if
+        /// nothing is in the way, worked out by flying the same arc ahead of it. Called once it has set off.
+        /// </summary>
+        public void MarkLanding()
+        {
+            if (!IsEarth || ended || gravity == 0f) return;
+            Vector3 p = transform.position, v = velocity;
+            const float Dt = 1f / 30f;
+            for (float t = 0f; t < remaining; t += Dt)
+            {
+                Vector3 next = p + v * Dt + Vector3.up * (0.5f * gravity * Dt * Dt);
+                Vector3 d = next - p;
+                float length = d.magnitude;
+                RaycastHit hit;
+                if (length > 1e-4f && LandingRay(p, d / length, length, out hit))
+                {
+                    float reach = (tier >= 3 ? SpellTiers.QuakeRadiusIII : SpellTiers.QuakeRadius) * sizeScale;
+                    landing = LandingMark.Spawn(hit.point, hit.normal, reach, LandingColour, t + hit.distance / length * Dt);
+                    return;
+                }
+                p = next;
+                v += Vector3.up * (gravity * Dt);
+            }
+        }
+
+        /// <summary>The first piece of the map on the way -- people move, the map does not.</summary>
+        bool LandingRay(Vector3 from, Vector3 dir, float length, out RaycastHit first)
+        {
+            first = new RaycastHit();
+            float nearest = float.MaxValue;
+            foreach (RaycastHit h in Physics.RaycastAll(from, dir, length, ~0, QueryTriggerInteraction.Ignore))
+            {
+                if (h.transform == transform || (owner != null && h.transform.IsChildOf(owner))) continue;
+                Collider c = h.collider;
+                if (c.GetComponentInParent<Health>() != null || c.GetComponentInParent<PlayerMotor>() != null) continue;
+                if (h.distance < nearest) { nearest = h.distance; first = h; }
+            }
+            return nearest < float.MaxValue;
         }
 
         /// <summary>How hard air throws people along ice, m/s. With the ice's grip that is about ten metres.</summary>
@@ -980,6 +1120,9 @@ namespace MageCast.Gestures
                 End();
                 return true;
             }
+
+            // earth: the blast where it came down, whatever else follows
+            if (IsEarth) Quake(at, null);
 
             // air III into a patch: the air bomb, instead of whatever air would do to it
             if (IsAir && tier >= 3)
@@ -1110,6 +1253,7 @@ namespace MageCast.Gestures
         void OnDestroy()
         {
             Live.Remove(this);
+            if (landing != null) Destroy(landing.gameObject);
             // the flying effect fades where it is rather than blinking out with the projectile
             SpellFx.Release(fx);
         }

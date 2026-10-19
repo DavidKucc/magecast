@@ -138,6 +138,31 @@ namespace MageCast.Gestures
         /// <summary>Wet feet on an ice patch -- walked onto, or laid under them -- freeze to it for this long.</summary>
         public const float WetFreezeSeconds = 1.5f;
 
+        // earth: a boulder thrown up and over (GestureCaster.Lob), landing where you aim with a blast round
+        // it. LobRise above the straight line to the target: at 10 m on the flat that is about a second in
+        // the air and 2 m over the floor at the top -- over cover, and slow enough to be seen coming.
+        public const float LobRise = 40f;
+        public const float LobGravity = 18f;
+        public const float LobMaxSpeed = 28f;
+        /// <summary>Thrown at nothing (the sky), it comes down this far along the aim.</summary>
+        public const float LobReach = 24f;
+        /// <summary>The blast where it lands: reach, and the share of the hit for everyone in it but whoever it struck.</summary>
+        public const float QuakeRadius = 1.8f;
+        public const float QuakeRadiusIII = 2.4f;
+        public const float QuakeShare = 0.55f;
+        /// <summary>Everyone in the blast is thrown up a little, this fast; at tier III they are knocked off their feet this long.</summary>
+        public const float QuakeLift = 3.5f;
+        /// <summary>...and pushed out from the middle this fast (at the middle; nothing at the edge).</summary>
+        public const float QuakePush = 2.5f;
+        public const float QuakeStagger = 0.5f;
+        /// <summary>Broken ground (tier II): walking at this share of your speed. Mud (earth into water): this.</summary>
+        public const float RubbleSlow = 0.65f;
+        public const float MudSlow = 0.45f;
+        public const float MudSeconds = 8f;
+        /// <summary>Earth into fire: magma burns this much harder than the fire did, and for MagmaSeconds.</summary>
+        public const float MagmaBurn = 1.6f;
+        public const float MagmaSeconds = 7f;
+
         // barrier -- since 14 Oct the strong, lasting cover (the ice wall is the quick, fragile one):
         // 50 % more durability and 8 s instead of 6, the dome 6 s instead of 4.5
         public const float WallSeconds = 8f;

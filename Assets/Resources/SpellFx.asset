@@ -229,3 +229,111 @@ MonoBehaviour:
     wallRaiseSound: {fileID: 0}
     wallBreakSound: {fileID: 0}
     linePiece: {fileID: 0}
+  - spell: EARTH
+    cast: {fileID: 3694638195841348778, guid: 453e0d708ae97c34ebb2e515e06aa2e0, type: 3}
+    projectile: {fileID: 2667953230636978558, guid: ba93ee84dc24e6647a1d872516882dac, type: 3}
+    impact: {fileID: 5532065281474512021, guid: ff581ff340848324bb92911ebd201341, type: 3}
+    projectileScale: 1
+    castScale: 0.22
+    impactScale: 0.6
+    castTurn: {x: 0, y: -90, z: 0}
+    launch: {fileID: 0}
+    status: {fileID: 0}
+    statusScale: 1
+    special: {fileID: 4748681987041982144, guid: 11c14bf29c849ff47badb6e9947fe68e, type: 3}
+    specialScale: 0.6
+    specialLeadIn: 0.5
+    specialSound: {fileID: 8300000, guid: 89de9e879d455dc40b3e0999813a09ad, type: 3}
+    statusSound: {fileID: 0}
+    zone: {fileID: 4748681987041982144, guid: 8abd2534334de4b47b6426b5056e2c8a, type: 3}
+    zoneAuthoredRadius: 3
+    zoneLeadIn: 2
+    zoneStart: {fileID: 0}
+    zoneLoop: {fileID: 8300000, guid: 8f11417d4af01374d97a550ab3b43793, type: 3}
+    zoneEnd: {fileID: 8300000, guid: 65a47174bb647d74488a03b6e266433b, type: 3}
+    raise: {fileID: 0}
+    hum: {fileID: 0}
+    struck: {fileID: 0}
+    shatter: {fileID: 0}
+    wallPiece: {fileID: 0}
+    wallPieceMaterial: {fileID: 0}
+    wallRaise: {fileID: 0}
+    wallRaiseScale: 1
+    wallRaiseLeadIn: 0
+    wallBreak: {fileID: 0}
+    wallBreakScale: 1
+    wallRaiseSound: {fileID: 0}
+    wallBreakSound: {fileID: 0}
+    linePiece: {fileID: 0}
+  - spell: MAGMA
+    cast: {fileID: 0}
+    projectile: {fileID: 0}
+    impact: {fileID: 0}
+    projectileScale: 1
+    castScale: 1
+    impactScale: 1
+    castTurn: {x: 0, y: 0, z: 0}
+    launch: {fileID: 0}
+    status: {fileID: 0}
+    statusScale: 1
+    special: {fileID: 0}
+    specialScale: 1
+    specialLeadIn: 0
+    specialSound: {fileID: 0}
+    statusSound: {fileID: 0}
+    zone: {fileID: 4748681987041982144, guid: d13ec5cd0119c5d4d90258adb7f1750c, type: 3}
+    zoneAuthoredRadius: 3
+    zoneLeadIn: 2
+    zoneStart: {fileID: 0}
+    zoneLoop: {fileID: 8300000, guid: 272d8b2d64369674ba36e671c1ae9300, type: 3}
+    zoneEnd: {fileID: 8300000, guid: b381b7f31dbbe71428f6ec42f2db496e, type: 3}
+    raise: {fileID: 0}
+    hum: {fileID: 0}
+    struck: {fileID: 0}
+    shatter: {fileID: 0}
+    wallPiece: {fileID: 0}
+    wallPieceMaterial: {fileID: 0}
+    wallRaise: {fileID: 0}
+    wallRaiseScale: 1
+    wallRaiseLeadIn: 0
+    wallBreak: {fileID: 0}
+    wallBreakScale: 1
+    wallRaiseSound: {fileID: 0}
+    wallBreakSound: {fileID: 0}
+    linePiece: {fileID: 0}
+  - spell: MUD
+    cast: {fileID: 0}
+    projectile: {fileID: 0}
+    impact: {fileID: 0}
+    projectileScale: 1
+    castScale: 1
+    impactScale: 1
+    castTurn: {x: 0, y: 0, z: 0}
+    launch: {fileID: 0}
+    status: {fileID: 0}
+    statusScale: 1
+    special: {fileID: 0}
+    specialScale: 1
+    specialLeadIn: 0
+    specialSound: {fileID: 0}
+    statusSound: {fileID: 0}
+    zone: {fileID: 4748681987041982144, guid: 5c8028a9be75255478231b08af614022, type: 3}
+    zoneAuthoredRadius: 3
+    zoneLeadIn: 2
+    zoneStart: {fileID: 0}
+    zoneLoop: {fileID: 8300000, guid: d9c81018e52984c4f8ec267078b85c1c, type: 3}
+    zoneEnd: {fileID: 8300000, guid: c09446d2f91871047805c56084dc52d6, type: 3}
+    raise: {fileID: 0}
+    hum: {fileID: 0}
+    struck: {fileID: 0}
+    shatter: {fileID: 0}
+    wallPiece: {fileID: 0}
+    wallPieceMaterial: {fileID: 0}
+    wallRaise: {fileID: 0}
+    wallRaiseScale: 1
+    wallRaiseLeadIn: 0
+    wallBreak: {fileID: 0}
+    wallBreakScale: 1
+    wallRaiseSound: {fileID: 0}
+    wallBreakSound: {fileID: 0}
+    linePiece: {fileID: 0}

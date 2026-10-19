@@ -61,6 +61,18 @@ namespace MageCast
                 II = "+ updraft plocha (vyhodí toho, kdo na ni vstoupí, tebe až na 4 m - na střechu nebo most - a odkloní střely nahoru); do ohně: sfoukne ho jako ohnivou vlnu, " +
                      "která se 8 m převalí ve směru větru, zapálí a odhodí každého v cestě; na ledu rozklouže lidi",
                 III = "+ dopadne-li do jakékoli plochy: vzduchová bomba - všechny v ní a do " + SpellTiers.BombReachBeyondPatch + " m od ní hodí do jejího středu (i tebe), po " + SpellTiers.BombDelay + " s" },
+            new SpellInfo { Rune = GestureTemplates.Thurisaz, Name = "EARTH", Czech = "Thurisaz (trn) - země",
+                Colour = new Color(0.85f, 0.62f, 0.38f),
+                Basics = "20 poškození. Hozený vysokým obloukem přes krytí: dopadne tam, kam míříš (na 10 m asi za sekundu). " +
+                         "Od hodu je na zemi vidět kruh, kam spadne - vidí ho všichni a dá se mu utéct. " +
+                         "Při dopadu otřes do " + SpellTiers.QuakeRadius + " m: kdo v něm stojí, dostane až " +
+                         Mathf.RoundToInt(SpellTiers.QuakeShare * 100f) + " % zásahu (i ty) a vyhodí ho to kousek do vzduchu. " +
+                         "Zeď nebo bariéra mezi ním a dopadem ho kryje.",
+                I = "kámen s otřesem",
+                II = "+ rozbitá zem na 6 s: kdo v ní stojí, jde na " + Mathf.RoundToInt(SpellTiers.RubbleSlow * 100f) + " % rychlosti; " +
+                     "do ohně: magma (pálí víc a " + SpellTiers.MagmaSeconds + " s); do vody: bahno (" + Mathf.RoundToInt(SpellTiers.MudSlow * 100f) +
+                     " % rychlosti); led a elektrickou plochu rozbije na rozbitou zem",
+                III = "+ větší otřes (" + SpellTiers.QuakeRadiusIII + " m): srazí každého v něm na " + SpellTiers.QuakeStagger + " s na zem a přeruší kreslení" },
             new SpellInfo { Rune = GestureTemplates.Uruz, Name = "BARRIER", Czech = "Uruz (síla) - bariéra",
                 Colour = new Color(1f, 0.85f, 0.4f),
                 Basics = "Zastaví kouzla z obou stran, dokud ji zásahy neprorazí. Jedna na hráče. Silný, vytrvalý kryt - " +
@@ -87,7 +99,7 @@ namespace MageCast
             "<b>Ostatní</b>\n" +
             "Esc - menu (nastavení, nápověda, odchod)\n" +
             "F6 - schová / ukáže panel kouzel dole\n" +
-            "V tréninku: F1-F5 cvičný cíl pro záznam, F7 přepne rozpoznávání run (čáry a úhly / starý $P)";
+            "V tréninku: F1-F5 a F8 cvičný cíl pro záznam, F7 přepne rozpoznávání run (čáry a úhly / starý $P)";
 
         static readonly string Rules =
             "<b>Lobby</b>\n" +

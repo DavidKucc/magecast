@@ -36,6 +36,9 @@ namespace MageCast.Gestures
         /// <summary>For a wall: the spot on the floor it stands on.</summary>
         public Vector3 Target;
 
+        /// <summary>How fast it leaves, when the caster chose (a lobbed earth: the throw that lands it on the aim). 0: the spell's own.</summary>
+        public float Speed;
+
         public const byte Thrown = 0, Wall = 1;
 
         public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
@@ -51,6 +54,7 @@ namespace MageCast.Gestures
             s.SerializeValue(ref LeftHand);
             s.SerializeValue(ref Form);
             s.SerializeValue(ref Target);
+            s.SerializeValue(ref Speed);
         }
     }
 

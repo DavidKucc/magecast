@@ -41,6 +41,10 @@ namespace MageCast.Gestures
         // vocabulary is runes, and it reads as what it makes: a gate, up, over and down.
         public const string Uruz = "uruz";
 
+        // Thurisaz (thorn, the giant) -> earth. A stem with a thorn on its side, drawn in one stroke from
+        // the top: down to the thorn, out to its point, back to the stem, on down to the foot.
+        public const string Thurisaz = "thurisaz";
+
         /// <summary>
         /// The corner points of each rune, in a -1..1 box, as one continuous stroke.
         ///
@@ -68,15 +72,19 @@ namespace MageCast.Gestures
                 return new[] { new Vector2(-0.6f, -1f), new Vector2(-0.6f, 1f), new Vector2(0.6f, 0.4f),
                                new Vector2(0.6f, -1f) };
 
+            if (name == Thurisaz)                     // stem with a thorn: down, out to the point, back, down
+                return new[] { new Vector2(-0.4f, 1f), new Vector2(-0.4f, 0.45f), new Vector2(0.55f, 0f),
+                               new Vector2(-0.4f, -0.45f), new Vector2(-0.4f, -1f) };
+
             return null;
         }
 
         public static bool IsRune(string name)
         {
-            return name == Kenaz || name == Laguz || name == Sowulo || name == Ehwaz || name == Uruz;
+            return name == Kenaz || name == Laguz || name == Sowulo || name == Ehwaz || name == Uruz || name == Thurisaz;
         }
 
-        static readonly string[] RuneNames = { Kenaz, Laguz, Sowulo, Ehwaz, Uruz };
+        static readonly string[] RuneNames = { Kenaz, Laguz, Sowulo, Ehwaz, Uruz, Thurisaz };
 
         /// <summary>Every rune in the vocabulary.</summary>
         public static IList<string> Runes { get { return RuneNames; } }

@@ -537,7 +537,16 @@ namespace MageCast.Gestures
                 switch (effect)
                 {
                     case GroundEffect.Burn:
+                    case GroundEffect.Magma:
                         if (authoritative && t.Health != null) t.Health.TakeDamage(strength * TickInterval, attacker);
+                        break;
+
+                    case GroundEffect.Rubble:
+                    case GroundEffect.Mud:
+                        // Slow going, while your feet are in it -- whoever's it is: broken ground is ground.
+                        // Re-applied a little longer than a tick, so it lets go almost as you step out.
+                        if (t.Motor != null && t.Motor.IsLocallyControlled && t.Touching)
+                            t.Motor.ApplySlow(strength, TickInterval + 0.15f);
                         break;
 
                     case GroundEffect.Ice:

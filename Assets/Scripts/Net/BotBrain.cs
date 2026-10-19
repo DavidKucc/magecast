@@ -612,6 +612,7 @@ namespace MageCast
             Spell fire = hands.SpellByIndex(GestureCaster.FireId), ice = hands.SpellByIndex(GestureCaster.IceId);
             Spell bolt = hands.SpellByIndex(GestureCaster.LightningId), air = hands.SpellByIndex(GestureCaster.AirId);
             Spell ward = hands.SpellByIndex(GestureCaster.BarrierId);
+            Spell earth = hands.SpellByIndex(GestureCaster.EarthId);
 
             bool onConductor = SpellZone.ConductorAt(target.transform.position) != null;
             // the rune over their head reads only from fighting distance, for a bot as for you
@@ -622,6 +623,9 @@ namespace MageCast
             // less often the less skilled the bot
             Add(options, bolt, onConductor ? Mathf.Lerp(3f, 12f, Skill) : distance > 18f ? 3f : 2f);
             Add(options, air, distance < 6f ? 6f : drawing ? Mathf.Lerp(1.2f, 4f, Skill) : 0.8f);
+            // a lob: for somebody keeping still or behind cover, from where it can be thrown
+            bool still = PerceivedVelocity.sqrMagnitude < 1f;
+            Add(options, earth, distance < 4f || distance > 22f ? 0.3f : still ? Mathf.Lerp(2f, 4f, Skill) : 1.5f);
             bool beingShot = known.ContainsKey(target) && Time.time - known[target].HurtMeAt < 2f;
             Add(options, ward, CastShield.Of(self.AttackerId) != null ? 0f
                              : health.Fraction < 0.4f ? 3f : beingShot ? 0.8f : 0.15f);
@@ -706,6 +710,27 @@ namespace MageCast
             Vector3 from = hands.MuzzlePoint;
             // a beginner hardly leads at all: shoots where you are, not where you are going
             Vector3 velocity = PerceivedVelocity * (1f - 0.7f * Beginner);
+
+            // earth is thrown up and over to land on the feet, led by the time the throw is in the air
+            if (spell == hands.SpellByIndex(GestureCaster.EarthId))
+            {
+                Vector3 spot = feet;
+                float flight = 0f;
+                for (int i = 0; i < 2; i++)
+                {
+                    Vector3 dir;
+                    float v;
+                    GestureCaster.Lob(from, spot, out dir, out v);
+                    Vector3 across = spot - from;
+                    across.y = 0f;
+                    float level = new Vector2(dir.x, dir.z).magnitude * v;
+                    flight = across.magnitude / Mathf.Max(0.5f, level) + Reaction;
+                    spot = feet + velocity * flight;
+                }
+                float off = (0.03f + 0.06f * Novice + 0.08f * Beginner) * Vector3.Distance(from, spot)
+                          + velocity.magnitude * flight * (0.15f + 0.15f * Novice + 0.2f * Beginner);
+                return spot + new Vector3(Rand(-1f, 1f), 0f, Rand(-1f, 1f)) * off;
+            }
             // the lead is judged from what it saw, over the time the shot will take -- reaction included
             Vector3 aim = feet + Vector3.up * 1.1f;
             for (int i = 0; i < 2; i++)

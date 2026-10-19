@@ -298,12 +298,13 @@ namespace MageCast
 
         /// <summary>The runes the game knows, with the element each one is and its colour.</summary>
         public static readonly string[] RuneNames =
-            { GestureTemplates.Kenaz, GestureTemplates.Laguz, GestureTemplates.Sowulo, GestureTemplates.Ehwaz, GestureTemplates.Uruz };
-        public static readonly string[] Elements = { "FIRE", "ICE", "LIGHTNING", "AIR", "BARRIER" };
+            { GestureTemplates.Kenaz, GestureTemplates.Laguz, GestureTemplates.Sowulo, GestureTemplates.Ehwaz,
+              GestureTemplates.Thurisaz, GestureTemplates.Uruz };
+        public static readonly string[] Elements = { "FIRE", "ICE", "LIGHTNING", "AIR", "EARTH", "BARRIER" };
         public static readonly Color[] ElementColours =
         {
             new Color(1f, 0.45f, 0.15f), new Color(0.55f, 0.85f, 1f), new Color(1f, 0.9f, 0.35f),
-            new Color(0.75f, 1f, 0.9f), new Color(1f, 0.85f, 0.4f)
+            new Color(0.75f, 1f, 0.9f), new Color(0.85f, 0.62f, 0.38f), new Color(1f, 0.85f, 0.4f)
         };
 
         public static int RuneIndex(string name)

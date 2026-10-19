@@ -48,10 +48,31 @@ namespace MageCast
 
         public float Yaw { get; private set; }
         public float Pitch { get; private set; }
-        public Vector3 AimOrigin { get { return transform.position; } }
+        public Vector3 AimOrigin { get { return Time.time < shakeUntil ? aimFrom : transform.position; } }
         public Vector3 AimDirection { get { return transform.forward; } }
 
         float currentDistance;
+
+        // ---- a jolt when the ground is hit close by (an earth landing)
+        static ThirdPersonCamera active;
+        float shakeUntil, shakeStrength;
+        const float ShakeSeconds = 0.35f;
+        const float ShakeMetres = 0.09f;
+
+        /// <summary>
+        /// Shakes the view a little, as hard as <paramref name="strength"/> (0..1) where it happened and
+        /// fading to nothing <paramref name="reach"/> metres off. The view only -- the aim stays where it was.
+        /// </summary>
+        public static void Shake(Vector3 at, float strength, float reach)
+        {
+            if (active == null || active.target == null || reach <= 0f) return;
+            float s = strength * (1f - Vector3.Distance(active.target.position, at) / reach);
+            if (s <= 0f) return;
+            if (Time.time >= active.shakeUntil || s > active.shakeStrength) active.shakeStrength = s;
+            active.shakeUntil = Time.time + ShakeSeconds;
+        }
+
+        void OnEnable() { active = this; }
 
         void Start()
         {
@@ -130,7 +151,17 @@ namespace MageCast
 
             transform.position = pivot + back * currentDistance;
             transform.rotation = rot;
+            aimFrom = transform.position;
+            float left = shakeUntil - Time.time;
+            if (left > 0f)
+            {
+                float t = Time.time * 43f, k = shakeStrength * ShakeMetres * (left / ShakeSeconds);
+                transform.position += (transform.right * Mathf.Sin(t) + transform.up * Mathf.Cos(t * 1.3f)) * k;
+            }
         }
+
+        /// <summary>Where the camera is, unshaken -- what the aim is taken from.</summary>
+        Vector3 aimFrom;
 
         static void LockCursor(bool locked)
         {

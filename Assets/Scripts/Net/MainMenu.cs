@@ -214,7 +214,7 @@ namespace MageCast
             return y + 14f;
         }
 
-        /// <summary>The five runes, in their colours: under the mouse they light up, clicked they draw themselves.</summary>
+        /// <summary>The six runes, in their colours: under the mouse they light up, clicked they draw themselves.</summary>
         float Runes(float x, float y, float w, float s)
         {
             int n = MenuArt.RuneNames.Length;

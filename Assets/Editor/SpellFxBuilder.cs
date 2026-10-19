@@ -136,6 +136,7 @@ namespace MageCast.EditorTools
             AssignIceWall(fx);
             AssignWater(fx);
             AssignFireLine(fx);
+            AssignEarth(fx);
 
             EditorUtility.SetDirty(fx);
             AssetDatabase.SaveAssets();
@@ -163,6 +164,53 @@ namespace MageCast.EditorTools
             EditorUtility.SetDirty(fx);
             AssetDatabase.SaveAssets();
         }
+
+        /// <summary>Only earth's pieces (and magma's and mud's) -- without making the other recoloured effects again.</summary>
+        [MenuItem("Tools/Arena/Assign Earth Effects")]
+        public static void AssignEarthOnly()
+        {
+            SpellFx fx = AssetDatabase.LoadAssetAtPath<SpellFx>(AssetPath);
+            if (fx == null) { Debug.LogWarning("[SpellFx] no " + AssetPath + " - run Assign Spell Effects first"); return; }
+            AssignEarth(fx);
+            EditorUtility.SetDirty(fx);
+            AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>
+        /// Earth: the magic set's own earth pieces (a ring of rock in the hands, a boulder trailing dust, a
+        /// burst of stones), and for the quake where it lands the AoE pack's earth burst -- which swells for
+        /// half a second before its bang, so it is played from the bang and its sound trimmed to start
+        /// there (measured: the peak is at 0.50 s). Its patch is the pack's earth area; magma its magma
+        /// area; mud the water's area turned the brown of mud.
+        /// </summary>
+        static void AssignEarth(SpellFx fx)
+        {
+            Set(fx, "EARTH", Magic + "Earth/VFX_Earth_Magic_Cast.prefab", Magic + "Earth/VFX_Earth_Magic_Projectile.prefab",
+                Magic + "Earth/VFX_Earth_Magic_Hit.prefab", projectileScale: 1f, castScale: 0.22f, impactScale: 0.6f,
+                castTurn: new Vector3(0f, -90f, 0f));
+            SpellFx.Entry earth = fx.entries.Find(x => x.spell == "EARTH");
+            earth.special = AssetDatabase.LoadAssetAtPath<GameObject>(Area + "VFX/Earth/Particles/VFX_Earth_Burst_01.prefab");
+            earth.specialScale = 0.6f;                                                                  // ~1.8 m quake
+            earth.specialLeadIn = 0.5f;
+            earth.specialSound = Trim(AreaSound("Earth", "Burst_01"), 0.47f, "Earth_Quake_Impact");
+            SetZone(fx, "EARTH", "Earth");
+            SetZone(fx, "MAGMA", "Magma");
+
+            SetZone(fx, "MUD", "Water");
+            SpellFx.Entry mud = fx.entries.Find(x => x.spell == "MUD");
+            darken = MudDarken;
+            string brown;
+            try { brown = Recolour(Area + "VFX/Water/Particles/VFX_Water_Area_01.prefab", MudHue, MudSaturation, null); }
+            finally { darken = 1f; }
+            if (mud != null && brown != null) mud.zone = AssetDatabase.LoadAssetAtPath<GameObject>(brown);
+            Debug.Log("[SpellFx] earth: " + (earth.projectile != null) + ", quake " + (earth.special != null) + ", magma zone "
+                      + (fx.entries.Find(x => x.spell == "MAGMA").zone != null) + ", mud zone " + (mud != null && mud.zone != null));
+        }
+
+        /// <summary>Mud: water turned a dark, muddy brown.</summary>
+        const float MudHue = 0.075f;
+        const float MudSaturation = 0.75f;
+        const float MudDarken = 0.42f;
 
         static void AssignFireLine(SpellFx fx)
         {
@@ -553,7 +601,8 @@ namespace MageCast.EditorTools
         static Texture2D RecolourTexture(Texture2D tex, float hue, float saturation)
         {
             if (tex == null) return null;
-            string path = Recoloured + "/Textures/" + tex.name + "_Hue" + Mathf.RoundToInt(hue * 100f) + "_Sat" + Mathf.RoundToInt(saturation * 100f) + ".png";
+            string path = Recoloured + "/Textures/" + tex.name + "_Hue" + Mathf.RoundToInt(hue * 100f) + "_Sat" + Mathf.RoundToInt(saturation * 100f)
+                          + (darken < 1f ? "_Dim" + Mathf.RoundToInt(darken * 100f) : "") + ".png";
             Texture2D existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
             if (existing != null) return existing;
 
@@ -604,10 +653,22 @@ namespace MageCast.EditorTools
             return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
         }
 
+        /// <summary>
+        /// Below 1 while recolouring something that must also come out darker -- mud from water: every
+        /// colour's brightness times this, white and grey included (they become the hue, dimmed).
+        /// </summary>
+        static float darken = 1f;
+
         static Color Shift(Color c, float hue, float saturation)
         {
             float h, s, v;
             Color.RGBToHSV(c, out h, out s, out v);
+            if (darken < 1f)
+            {
+                Color dim = Color.HSVToRGB(hue, Mathf.Max(Mathf.Clamp01(s * saturation), 0.55f), v * darken, true);
+                dim.a = c.a;
+                return dim;
+            }
             if (s < 0.05f) return c;                    // white and grey stay as they are
             Color shifted = Color.HSVToRGB(hue, Mathf.Clamp01(s * saturation), v, true);
             shifted.a = c.a;

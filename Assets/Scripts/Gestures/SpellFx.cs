@@ -103,6 +103,9 @@ namespace MageCast.Gestures
                 case GroundEffect.Updraft: return ByName("AIR");
                 case GroundEffect.Water: return ByName("WATER");
                 case GroundEffect.Shock: return ByName("LIGHTNING");
+                case GroundEffect.Rubble: return ByName("EARTH");
+                case GroundEffect.Mud: return ByName("MUD");
+                case GroundEffect.Magma: return ByName("MAGMA");
             }
             return null;
         }

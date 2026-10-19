@@ -171,6 +171,16 @@ namespace MageCast.Gestures
             bool air = spell.groundEffect == GroundEffect.Updraft, lightning = spell.chargeDamage > 0f;
             Color blast = new Color(spell.colour.r, spell.colour.g, spell.colour.b, 0.55f);
 
+            // earth comes down on the aim, whatever is in front: the quake's reach, and the rubble it leaves
+            if (spell.groundEffect == GroundEffect.Rubble)
+            {
+                float quake = (tier >= 3 ? SpellTiers.QuakeRadiusIII : SpellTiers.QuakeRadius) * scale;
+                bool rubble = floor && tier >= 2;
+                if (rubble) DrawReach(hit.point, spell.zoneRadius * scale, spell.colour);
+                DrawRing(rubble ? ring2 : ring, hit.point, hit.normal, quake, rubble ? blast : spell.colour);
+                return;
+            }
+
             if (floor)
             {
                 if ((fire || ice) && tier >= 2)
