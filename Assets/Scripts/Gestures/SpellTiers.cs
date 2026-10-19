@@ -112,6 +112,8 @@ namespace MageCast.Gestures
         public const float IceWallReach = 4.5f;
         /// <summary>Never closer than this, or it would come up through its caster.</summary>
         public const float IceWallMinDistance = 1.6f;
+        /// <summary>How far below your feet the floor may be -- off a wall top, onto the ground under it.</summary>
+        public const float IceWallDrop = 8f;
         public const float IceWallSeconds = 6f;
         public const float IceWallThickness = 0.7f;
         /// <summary>By tier (index 1-3): a tier I wall covers you crouched, a III a little more than standing.</summary>

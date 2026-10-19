@@ -1345,8 +1345,12 @@ namespace MageCast.Gestures
             Vector3 flat = point - feet;
             flat.y = 0f;
             float d = flat.magnitude;
-            if (d > SpellTiers.IceWallReach || Mathf.Abs(point.y - feet.y) > 1.5f) return false;
-            if (d >= SpellTiers.IceWallMinDistance) return true;
+            // Reach is across the floor; the floor may be well below you -- off a wall top or a ledge
+            // onto the ground under it (19 Oct) -- but not more than a little above.
+            float drop = feet.y - point.y;
+            if (d > SpellTiers.IceWallReach || drop < -1.5f || drop > SpellTiers.IceWallDrop) return false;
+            // so far below that it cannot come up through you: right where you aimed
+            if (d >= SpellTiers.IceWallMinDistance || drop > 2f) return true;
 
             Vector3 dir = d > 0.01f ? flat / d : new Vector3(transform.forward.x, 0f, transform.forward.z).normalized;
             Vector3 ground, n;
@@ -1406,6 +1410,8 @@ namespace MageCast.Gestures
                 length = SpellTiers.IceWallWidth[tier];
                 depth = SpellTiers.IceWallThickness;
             }
+            // fitted to the floor exactly as the wall or line itself will be (Placement)
+            Placement.Fit(spot, facing, length, out spot, out length);
             return true;
         }
 

@@ -298,8 +298,16 @@ pryč. **Jedna na hráče**: nová zruší starou.
 ## Ledová stěna
 
 **Led zamířený na zem blízko před sebe nevyletí, ale vyrazí ze země jako stěna ledových hrotů.**
-Spouštěč: zaměřovač na zemi (ne na člověku, zdi ani římse) do **4,5 m** od tvých nohou a zhruba v jejich
-výšce; blíž než 1,6 m se stěna posune na 1,6 m, aby nevyrostla skrz tebe. Když to platí, u drženého ledu
+Spouštěč: zaměřovač na zemi (ne na člověku, zdi ani římse) do **4,5 m** od tvých nohou (vodorovně); ta
+zem smí být nejvýš 1,5 m nad tebou a **až 8 m pod tebou** (od 19. 10.: ze zdi nebo římsy dolů na zem pod
+ní); blíž než 1,6 m se stěna posune na 1,6 m, aby nevyrostla skrz tebe — kromě místa víc než 2 m pod
+tebou, to skrz tebe vyrůst nemůže.
+
+**Jen tak široká, jak je podlaha (od 19. 10.).** Stěna (i ohnivá čára) se před postavením „ohmatá“ po své
+délce na obě strany: skončí, kde podlaha končí, kde je schod nebo hrana (víc než ~12 cm na 10 cm) a kde
+stojí něco pevného. Na hřebeni zdi 1 m širokém je stěna 1 m široká, na 5 m dlouhém hřebeni přes něj nejvýš
+5 m a posune se, aby na něm celá stála. Nejkratší 0,5 m. Stejně to spočítá každý počítač i obrys na zemi
+v náhledu. Když to platí, u drženého ledu
 svítí **„WALL“** a na zemi leží **2D obrys plochy**, kterou stěna zabere (jen půdorys po terénu, žádný
 rám do výšky — ten nešel poznat a stěna tak vysoko pokaždé nevyroste) — ve všech hrách, ne jen v tréninku,
 aby stěna nikdy nebyla nechtěná.
@@ -325,7 +333,8 @@ balíku (klon z repozitáře) vlastní jednoduché krystaly.
 ## Ohnivá čára
 
 **Oheň zamířený na zem blízko před sebe nevyletí, ale zapálí na zemi čáru napříč** — ohnivá obdoba ledové
-stěny, jenže **nic nezastaví**. Spouštěč je stejný jako u stěny (do 4,5 m od nohou, ne blíž než 1,6 m);
+stěny, jenže **nic nezastaví**. Spouštěč je stejný jako u stěny (do 4,5 m od nohou, i dolů ze zdi, ne blíž
+než 1,6 m) a stejně se ořízne na šířku podlahy;
 u drženého ohně svítí **„LINE“** a na zemi leží 2D obrys čáry.
 
 - **kdo jí projde, hoří** jako po zásahu tierem II (3/s na 2 s) — a znovu každou **1 s**, co v ní stojí;

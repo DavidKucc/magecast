@@ -61,10 +61,14 @@ namespace MageCast.Gestures
             Vector3 flat = new Vector3(facing.x, 0f, facing.z);
             if (flat.sqrMagnitude < 0.0001f) flat = Vector3.forward;
 
+            // only as long as the floor it lies on: a narrow wall top gets a short line
+            float length;
+            Placement.Fit(spot, flat, SpellTiers.FireLineLength[tier], out spot, out length);
+
             var go = new GameObject("FireLine");
             go.transform.SetPositionAndRotation(spot, Quaternion.LookRotation(flat.normalized, Vector3.up));
             FireLine f = go.AddComponent<FireLine>();
-            f.length = SpellTiers.FireLineLength[tier];
+            f.length = length;
             f.width = SpellTiers.FireLineWidth;
             f.remaining = SpellTiers.FireLineSeconds;
             f.attacker = attacker;

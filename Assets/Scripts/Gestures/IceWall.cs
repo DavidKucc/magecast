@@ -65,13 +65,17 @@ namespace MageCast.Gestures
             Vector3 flat = new Vector3(facing.x, 0f, facing.z);
             if (flat.sqrMagnitude < 0.0001f) flat = Vector3.forward;
 
+            // only as wide as the floor it stands on: a narrow wall top gets a narrow wall
+            float width;
+            Placement.Fit(ground, flat, SpellTiers.IceWallWidth[tier], out ground, out width);
+
             var go = new GameObject("IceWall");
             go.transform.SetPositionAndRotation(ground, Quaternion.LookRotation(flat.normalized, Vector3.up));
 
             IceWall w = go.AddComponent<IceWall>();
             w.owner = owner;
             w.authoritative = authoritative;
-            w.width = SpellTiers.IceWallWidth[tier];
+            w.width = width;
             w.height = SpellTiers.IceWallHeight[tier];
             w.remaining = SpellTiers.IceWallSeconds;
 
