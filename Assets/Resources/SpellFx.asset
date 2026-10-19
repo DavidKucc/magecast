@@ -241,12 +241,12 @@ MonoBehaviour:
     status: {fileID: 0}
     statusScale: 1
     special: {fileID: 4748681987041982144, guid: 11c14bf29c849ff47badb6e9947fe68e, type: 3}
-    specialScale: 0.6
+    specialScale: 0.75
     specialLeadIn: 0.5
     specialSound: {fileID: 8300000, guid: 89de9e879d455dc40b3e0999813a09ad, type: 3}
     statusSound: {fileID: 0}
     zone: {fileID: 4748681987041982144, guid: 8abd2534334de4b47b6426b5056e2c8a, type: 3}
-    zoneAuthoredRadius: 3
+    zoneAuthoredRadius: 2.5
     zoneLeadIn: 2
     zoneStart: {fileID: 0}
     zoneLoop: {fileID: 8300000, guid: 8f11417d4af01374d97a550ab3b43793, type: 3}
@@ -317,7 +317,7 @@ MonoBehaviour:
     specialLeadIn: 0
     specialSound: {fileID: 0}
     statusSound: {fileID: 0}
-    zone: {fileID: 4748681987041982144, guid: 5c8028a9be75255478231b08af614022, type: 3}
+    zone: {fileID: 4748681987041982144, guid: fe8daf904669bd64c8254d7c6495a89d, type: 3}
     zoneAuthoredRadius: 3
     zoneLeadIn: 2
     zoneStart: {fileID: 0}

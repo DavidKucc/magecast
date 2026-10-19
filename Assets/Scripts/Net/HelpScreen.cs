@@ -67,11 +67,12 @@ namespace MageCast
                          "Od hodu je na zemi vidět kruh, kam spadne - vidí ho všichni a dá se mu utéct. " +
                          "Při dopadu otřes do " + SpellTiers.QuakeRadius + " m: kdo v něm stojí, dostane až " +
                          Mathf.RoundToInt(SpellTiers.QuakeShare * 100f) + " % zásahu (i ty) a vyhodí ho to kousek do vzduchu. " +
-                         "Zeď nebo bariéra mezi ním a dopadem ho kryje.",
+                         "Zeď nebo bariéra ho kryje, jen když za ní je celý - hlava nad krytem stačí, aby to schytal.",
                 I = "kámen s otřesem",
-                II = "+ rozbitá zem na 6 s: kdo v ní stojí, jde na " + Mathf.RoundToInt(SpellTiers.RubbleSlow * 100f) + " % rychlosti; " +
+                II = "+ kamenné ostny na 6 s, velké jako otřes (jen na zemi, ne na kamenech a zdech): kdo v nich stojí, " +
+                     "dostává " + SpellTiers.RubblePerSecond + "/s a jde na " + Mathf.RoundToInt(SpellTiers.RubbleSlow * 100f) + " % rychlosti; " +
                      "do ohně: magma (pálí víc a " + SpellTiers.MagmaSeconds + " s); do vody: bahno (" + Mathf.RoundToInt(SpellTiers.MudSlow * 100f) +
-                     " % rychlosti); led a elektrickou plochu rozbije na rozbitou zem",
+                     " % rychlosti); led a elektrickou plochu rozbije na ostny",
                 III = "+ větší otřes (" + SpellTiers.QuakeRadiusIII + " m): srazí každého v něm na " + SpellTiers.QuakeStagger + " s na zem a přeruší kreslení" },
             new SpellInfo { Rune = GestureTemplates.Uruz, Name = "BARRIER", Czech = "Uruz (síla) - bariéra",
                 Colour = new Color(1f, 0.85f, 0.4f),

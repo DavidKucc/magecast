@@ -637,15 +637,41 @@ namespace MageCast.Gestures
             Vector3 origin = at + outward.normalized * 0.25f;
             float reach = SpellTiers.SplashRadius;
             var done = new System.Collections.Generic.HashSet<Health>();
-            foreach (Collider c in Physics.OverlapSphere(origin, reach, ~0, QueryTriggerInteraction.Ignore))
+            foreach (Collider c in Physics.OverlapSphere(origin, reach + 0.5f, ~0, QueryTriggerInteraction.Ignore))
             {
                 Health hp = c.GetComponentInParent<Health>();
                 if (hp == null || hp.IsDead || !done.Add(hp)) continue;
-                float d = Vector3.Distance(origin, c.ClosestPoint(origin));
-                if (d >= reach) continue;
-                if (Shielded(origin, c.bounds.center, hp.transform)) continue;
+                float d;
+                if (!Exposed(origin, hp.transform, c, out d) || d >= reach) continue;
                 hp.TakeDamage(damage * SpellTiers.SplashShare * (1f - d / reach), attacker);
             }
+        }
+
+        /// <summary>
+        /// Whether a blast at <paramref name="origin"/> reaches somebody: how near it comes to their body
+        /// (<paramref name="distance"/>), and whether any of it is in the open to the blast -- the nearest
+        /// part of them, their chest or their head. Cover in front of the chest no longer shields a head
+        /// showing over it (19 Oct: an earth landing on a wall right by somebody's head did nothing, the
+        /// line to the middle of their body ran through the wall).
+        /// </summary>
+        static bool Exposed(Vector3 origin, Transform root, Collider c, out float distance)
+        {
+            Hurtbox body = root.GetComponentInParent<Hurtbox>();
+            Vector3 nearest, chest, head;
+            if (body != null)
+            {
+                nearest = body.Nearest(origin);
+                chest = body.Centre;
+                head = body.Head;
+            }
+            else
+            {
+                nearest = c.ClosestPoint(origin);
+                chest = c.bounds.center;
+                head = new Vector3(chest.x, c.bounds.max.y - 0.15f, chest.z);
+            }
+            distance = Vector3.Distance(origin, nearest);
+            return !Shielded(origin, nearest, root) || !Shielded(origin, chest, root) || !Shielded(origin, head, root);
         }
 
         /// <summary>Whether something solid that is not <paramref name="target"/> lies between two points.</summary>
@@ -974,13 +1000,29 @@ namespace MageCast.Gestures
                     if (broken != null)
                     {
                         ReplaceZone(caster, broken, GroundEffect.Rubble, broken.transform.position, broken.Radius, spell.zoneLifetime,
-                                    spell.zoneStrength, spell.colour, attacker, false);
+                                    SpellTiers.RubblePerSecond * power, spell.colour, attacker, false);
                         return true;
                     }
                     return false;
                 }
             }
             return false;
+        }
+
+        /// <summary>
+        /// Earth's patch: the ground broken into spikes, as far as the blast reached. Laid only where it can
+        /// lie -- on ground people walk on (SpellZone.Lays), not on a rock, a wall top or a pillar, where
+        /// it would mostly hang in the air. Server only; sent to all.
+        /// </summary>
+        void LaySpikes(Vector3 at)
+        {
+            float r = QuakeReach;
+            if (!SpellZone.Lays(at, r)) return;
+            float strength = SpellTiers.RubblePerSecond * power;
+            SpellZone zone = SpellZone.Spawn(at, GroundEffect.Rubble, r, spell.zoneLifetime, strength, colour, true, attacker, attacker);
+            PlayerNet caster = owner != null ? owner.GetComponent<PlayerNet>() : null;
+            if (caster != null && caster.IsSpawned)
+                caster.BroadcastZone(zone.transform.position, GroundEffect.Rubble, r, spell.zoneLifetime, strength, colour);
         }
 
         static readonly Color MagmaColour = new Color(1f, 0.32f, 0.08f);
@@ -996,10 +1038,13 @@ namespace MageCast.Gestures
         /// III knocked off their feet for a moment and out of whatever they were drawing. Teammates are
         /// spared. Shown on every machine, dealt by the deciding copy.
         /// </summary>
+        /// <summary>How far earth's blast reaches -- and its spikes, and the ring warning of it.</summary>
+        float QuakeReach { get { return (tier >= 3 ? SpellTiers.QuakeRadiusIII : SpellTiers.QuakeRadius) * sizeScale; } }
+
         void Quake(Vector3 at, Health direct)
         {
             if (landing != null) { Destroy(landing.gameObject); landing = null; }
-            float reach = (tier >= 3 ? SpellTiers.QuakeRadiusIII : SpellTiers.QuakeRadius) * sizeScale;
+            float reach = QuakeReach;
             if (fxEntry != null && fxEntry.special != null)
             {
                 SpellFx.PlayBurst(fxEntry.special, at, fxEntry.specialScale * reach / SpellTiers.QuakeRadius, fxEntry.specialLeadIn);
@@ -1011,7 +1056,7 @@ namespace MageCast.Gestures
             if (!authoritative) return;
             Vector3 origin = at + Vector3.up * 0.3f;
             var done = new System.Collections.Generic.HashSet<Transform>();
-            foreach (Collider c in Physics.OverlapSphere(origin, reach, ~0, QueryTriggerInteraction.Ignore))
+            foreach (Collider c in Physics.OverlapSphere(origin, reach + 0.5f, ~0, QueryTriggerInteraction.Ignore))
             {
                 Health hp = c.GetComponentInParent<Health>();
                 PlayerMotor motor = c.GetComponentInParent<PlayerMotor>();
@@ -1020,9 +1065,8 @@ namespace MageCast.Gestures
                 if (!done.Add(root)) continue;
                 if (hp != null && hp.IsDead) continue;
                 if (MageCast.Teams.Spares(owner, c)) continue;
-                float d = Vector3.Distance(origin, c.ClosestPoint(origin));
-                if (d >= reach) continue;
-                if (Shielded(origin, c.bounds.center, root)) continue;
+                float d;
+                if (!Exposed(origin, root, c, out d) || d >= reach) continue;
 
                 float near = 1f - d / reach;
                 if (hp != null && hp != direct && damage > 0f)
@@ -1059,8 +1103,7 @@ namespace MageCast.Gestures
                 RaycastHit hit;
                 if (length > 1e-4f && LandingRay(p, d / length, length, out hit))
                 {
-                    float reach = (tier >= 3 ? SpellTiers.QuakeRadiusIII : SpellTiers.QuakeRadius) * sizeScale;
-                    landing = LandingMark.Spawn(hit.point, hit.normal, reach, LandingColour, t + hit.distance / length * Dt);
+                    landing = LandingMark.Spawn(hit.point, hit.normal, QuakeReach, LandingColour, t + hit.distance / length * Dt);
                     return;
                 }
                 p = next;
@@ -1138,6 +1181,15 @@ namespace MageCast.Gestures
 
             if (Combine(at))
             {
+                End();
+                return true;
+            }
+
+            // earth: its spikes from tier II, as wide as the blast -- on the ground, not on top of a rock
+            if (IsEarth)
+            {
+                ShowImpact(at);
+                if (tier >= 2 && authoritative) LaySpikes(at);
                 End();
                 return true;
             }

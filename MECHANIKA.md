@@ -97,7 +97,7 @@ Tier mění, **co kouzlo dělá**, ne jen kolik ubere — poškození samo se s 
 | **led** | zásah se zpomalením, rychlejší let, splash | + kluzká plocha | + zamrznutí na 0,6 s: nehýbe se ani neskočí, kreslit může |
 | **blesk** | zásah, rychlejší let | + přeskočí na nejbližší jiný cíl do 6 m za polovinu; do země nechá **elektrickou plochu** (2,2 m, 4 s, 3/s, kdo v ní stojí, nemůže kreslit) | + elektrická plocha se objeví přímo pod zasaženým |
 | **vzduch** | odhoz, rychlejší let; **náraz do zdi** po odhozu (do ~2 m od ní) = 8 dmg a 0,4 s na místě | + updraft plocha (vlastní tě vyhodí až na 4 m: střecha, most); do ohně **ohnivá vlna** (oheň zmizí a 8 m po větru se převalí stěna plamenů, zapálí a odhodí každého v cestě, zastaví ji zeď); na ledu rozklouže lidi | + v jakékoli ploše **vzduchová bomba**: všechny v ploše a do 1,5 m od ní jednou hodí do jejího středu (i autora) — **po 0,4 s**, aby se dalo uhnout |
-| **země** | kámen s **otřesem** (1,8 m: až 55 % zásahu, vyhodí kousek do vzduchu, i autora) | + **rozbitá zem** (2,2 m, 6 s, chůze na 65 %); do ohně **magma**, do vody **bahno**, led a elektrickou plochu rozbije | + větší otřes (2,4 m), **srazí** každého v něm na 0,5 s a **přeruší kreslení** |
+| **země** | kámen s **otřesem** (2 m: až 55 % zásahu, vyhodí kousek do vzduchu, i autora) | + **kamenné ostny** velké jako otřes (6 s, 2,5/s, chůze na 65 %, jen na zemi); do ohně **magma**, do vody **bahno**, led a elektrickou plochu rozbije | + větší otřes (2,8 m), **srazí** každého v něm na 0,5 s a **přeruší kreslení** |
 | **bariéra** | stěna (8 s) | větší stěna (1,35× šířka), víc výdrže | **kopule** kolem tebe na 6 s, chodí s tebou, tvoje kouzla propouští, cizí zastaví |
 
 - **Tier I je rychlá střela**: letí rychleji (oheň 34, led 24, blesk 52, vzduch 38 m/s), ale nezanechá
@@ -178,7 +178,7 @@ led klouže, blesk se uzemní, vzduch zvedá.
 | **led** | 22 + zpomalení na 50 % na 1,2 s (každý tier) | nic | **kluzká plocha** — 3 m, 6 s |
 | **blesk** | 12 | nic | nic, uzemní se — **kromě ledu** |
 | **vzduch** | odhoz + **shodí rozkreslené kouzlo** | výbuch 3 m, odfoukne od stěny | vzdušný proud — 2 m, 5 s, vyhodí ~2 m |
-| **země** | 20 + otřes kolem | otřes u stěny | otřes + rozbitá zem (od II) |
+| **země** | 20 + otřes kolem | otřes u stěny | otřes + ostny (od II, ne na kamenech a zdech) |
 
 **Led je kluzký, ne pomalý.** Rychlost zůstává, mizí přilnavost: rozběhnout se, zabrzdit i zatočit jde na
 12 % obvyklého. Kdo na led vběhne, klouže dál tím směrem, kterým šel — z plného běhu zastaví za 0,9 s
@@ -208,8 +208,8 @@ Ostatní kombinace — vždy jedno kouzlo leží, druhé do něj přiletí:
 | oheň | vzduch | **ohnivá vlna**: plocha zmizí a 8 m po větru se převalí stěna plamenů — zapálí a odhodí každého v cestě, zastaví ji zeď |
 | led | vzduch | kdo stojí na ledu, **odletí po něm** ve směru větru, až za jeho kraj |
 | oheň | země | **magma**: pálí 1,6× víc a 7 s |
-| voda | země | **bahno**: chůze na 45 % (rozbitá zem 65 %), 8 s |
-| led, elektrická plocha | země | rozbije je (uzemní) na **rozbitou zem** |
+| voda | země | **bahno**: chůze na 45 % (ostny 65 %), 8 s |
+| led, elektrická plocha | země | rozbije je (uzemní) na **ostny** |
 
 Voda vzniká jen takhle, žádná runa ji nedělá. Kombinace spočítá hostitel a ostatním pošle, jak teď
 vypadá zem.
@@ -276,7 +276,7 @@ tak ji ani neukazuje):
   tier I nic (ani splash — kruh na zemi se četl jako plocha),
 - **stěna:** oheň od II čára odrazu; vzduch kruh výbuchu u stěny (každý tier, leží na zdi, proto je
   svislý); jinak nic,
-- **země** kamkoli: kruh otřesu, od II k tomu rozbitá zem.
+- **země** kamkoli: kruh otřesu; od II, kde se ostny položí, místo něj jejich oříznutý obrys (stejně velký).
 
 Slouží k naučení. **Ve hře s jinými hráči se neukazuje** — odhadnout odraz a dosah z geometrie je
 součást dovednosti. Ve všech hrách zůstává jen 2D obrys ledové stěny a ohnivé čáry u nohou — to je o tom,
@@ -401,23 +401,36 @@ jak kámen padá; v poslední třetině bliká. Vidí ho **všichni**, ve hře s
 čitelná schválně, dá se jí utéct. Asistent míření ji neohýbá (dopadá, kam byla hozená). Updraft ji
 odkloní nahoru jako každou střelu.
 
-**Otřes kolem dopadu** — na zem, do zdi, do bariéry, do ledové stěny i do člověka. Kdo je do **1,8 m**
-(× velikost glyfu), dostane **až 55 % zásahu** (u kraje 40 % z toho), kdo byl trefen přímo, dostane jen
-přímý zásah. Zeď nebo bariéra mezi ním a dopadem ho kryje. Každého v otřesu to **vyhodí** (3,5 m/s nahoru,
+**Otřes kolem dopadu** — na zem, do zdi, do bariéry, do ledové stěny i do člověka. Kdo je do **2 m**
+(tier III **2,8 m**, × velikost glyfu), dostane **až 55 % zásahu** (u kraje 40 % z toho), kdo byl trefen
+přímo, dostane jen přímý zásah. Vzdálenost se měří k tělu (hitbox z kostí). **Kryt kryje jen celého:**
+stačí, aby k místu dopadu byla volně vidět nejbližší část těla, hrudník **nebo hlava** — hlava nad krytem
+to schytá (19. 10.: kámen na hraně krytu vedle hlavy dřív nedal nic, čára ke středu těla vedla zdí;
+stejně se teď počítá splash ohně a ledu tieru I). Každého v otřesu to **vyhodí** (3,5 m/s nahoru,
 2,5 m/s od středu) — na chvilku ztratí krok a nemůže zatáčet. **I autora.** Spoluhráče ne. Kamera se otřese.
 
-Změřeno (figurína, tier II, glyf 0,7×): přímý zásah 22,4; dopad 1 m vedle 9,1; 1,3 m vedle 7,5; 1,6 m
-nic (dosah 1,8 × 0,7 = 1,26 m). Autor 1 m od dopadu tieru III: 10,4, vyhozen, 0,5 s na místě.
+**Jeden kruh pro všechno:** oranžový kruh dopadu, efekt otřesu, dosah poškození i ostny jsou stejně velké
+(19. 10.: plocha měla 2,2 m a otřes 1,8/2,4 m, na tieru III vypadaly ostny menší než kruh). Efekt otřesu
+je nastavený podle změřené rázové vlny (2,66 m při 1:1), ostny podle změřených krajních bodců (2 m z 3).
 
-**Tier II: rozbitá zem** (2,2 m, 6 s) — chůze na 65 %, dokud v ní stojíš, komukoli. **Tier III:** otřes
-2,4 m a každého v něm **srazí na 0,5 s** (nehne se) a **přeruší kreslení** (se zámkem školy, jako vzduch).
+Změřeno (figurína, tier II, glyf 0,7×, ještě s 1,8 m): přímý zásah 22,4; dopad 1 m vedle 9,1; 1,3 m vedle
+7,5. Autor 1 m od dopadu tieru III: 10,4, vyhozen, 0,5 s na místě. Figurína za krytem 1,6 m (hlava těsně
+nad ním): kámen na horní hraně krytu 8,9 (dřív 0); do přední stěny krytu nic — je za ním celá.
+
+**Tier II: kamenné ostny** velké jako otřes, 6 s — kdo v nich stojí (ne kdo je přeskočí), dostává
+**2,5/s × síla tahu** (celkem 15, míň než přímý zásah) a jde na 65 %; komukoli, i autorovi. Ověřeno: 11,9
+za 5 s. **Jen na zemi:** na kámen, vršek zdi, krytu nebo sloupu se ostny nepoloží (otřes ano). Zem je
+terén vždy, cokoli jiného jen když aspoň 60 % kruhu o poloměru aspoň 2 m má pod sebou podlahu. Ve Valley
+to splní 1 vršek kamene ze 45 a všechen terén; v Temple podlaha ano, vršek krytu (0,31) ne.
+**Tier III:** otřes 2,8 m a každého v něm **srazí na 0,5 s** (nehne se) a **přeruší kreslení** (se zámkem
+školy, jako vzduch).
 
 **Kombinace** (od II): do ohně **magma** (pálí 1,6× víc, 7 s), do vody **bahno** (45 %, 8 s), led a
-elektrickou plochu **rozbije** na rozbitou zem — země uzemní blesk. Ověřeno: oheň 3/s → magma 4,8/s na 7 s;
-voda → bahno, hráč v něm na 0,45; led → rozbitá zem.
+elektrickou plochu **rozbije** na ostny — země uzemní blesk. Ověřeno: oheň 3/s → magma 4,8/s na 7 s;
+voda → bahno, hráč v něm na 0,45; led → ostny.
 
 Efekty: kámen, dopad a kruh v rukou z balíku magických útoků (Earth), otřes z AoE balíku (Earth Burst,
-hraje se od rány, zvuk oříznutý na 0,47 s — změřený vrchol 0,50 s), rozbitá zem z jeho Earth Area, magma
+hraje se od rány, zvuk oříznutý na 0,47 s — změřený vrchol 0,50 s), ostny z jeho Earth Area, magma
 z Magma Area, bahno je vodní plocha přebarvená do tmavě hnědé.
 
 **Boti** zemi házejí hlavně na toho, kdo stojí (za krytem, při kreslení), z 4–22 m, na nohy s předstihem o

@@ -146,16 +146,26 @@ namespace MageCast.Gestures
         public const float LobMaxSpeed = 28f;
         /// <summary>Thrown at nothing (the sky), it comes down this far along the aim.</summary>
         public const float LobReach = 24f;
-        /// <summary>The blast where it lands: reach, and the share of the hit for everyone in it but whoever it struck.</summary>
-        public const float QuakeRadius = 1.8f;
-        public const float QuakeRadiusIII = 2.4f;
+        /// <summary>
+        /// The blast where it lands: reach, and the share of the hit for everyone in it but whoever it
+        /// struck. The spikes it leaves (tier II on) cover the same ground, and the ring that warns of it
+        /// is drawn that size -- one circle for all three (19 Oct: the patch and the blast were different
+        /// sizes, and at III the spikes looked smaller than the ring).
+        /// </summary>
+        public const float QuakeRadius = 2f;
+        public const float QuakeRadiusIII = 2.8f;
         public const float QuakeShare = 0.55f;
         /// <summary>Everyone in the blast is thrown up a little, this fast; at tier III they are knocked off their feet this long.</summary>
         public const float QuakeLift = 3.5f;
         /// <summary>...and pushed out from the middle this fast (at the middle; nothing at the edge).</summary>
         public const float QuakePush = 2.5f;
         public const float QuakeStagger = 0.5f;
-        /// <summary>Broken ground (tier II): walking at this share of your speed. Mud (earth into water): this.</summary>
+        /// <summary>
+        /// The spikes (tier II on): hurt this much a second while you stand in them, times how well it was
+        /// drawn -- 15 over the whole 6 s, under the direct hit -- and you walk through them at RubbleSlow.
+        /// Mud (earth into water): slower still, no spikes.
+        /// </summary>
+        public const float RubblePerSecond = 2.5f;
         public const float RubbleSlow = 0.65f;
         public const float MudSlow = 0.45f;
         public const float MudSeconds = 8f;

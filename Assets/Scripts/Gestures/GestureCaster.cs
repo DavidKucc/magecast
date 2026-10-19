@@ -265,16 +265,16 @@ namespace MageCast.Gestures
         // where you aim) that comes down where the crosshair is, cover or not -- the answer to somebody
         // dug in behind a wall, which nothing else had. Slow to arrive (about a second at 10 m) and
         // everybody sees where it will fall: a ring on the floor from the moment it is thrown. It lands
-        // with a blast round it (SpellTiers.Quake*); from tier II the ground is left broken (Rubble,
-        // slow going), at III the blast knocks the people in it off their feet. Into fire it makes
-        // magma, into water mud, into ice it breaks the ice up.
+        // with a blast round it (SpellTiers.Quake*); from tier II the ground there breaks into spikes
+        // (Rubble: they cut and slow whoever stands in them), at III the blast knocks the people in it off
+        // their feet. Into fire it makes magma, into water mud, into ice it breaks the ice up.
         [SerializeField] Spell earth = new Spell {
             gesture = GestureTemplates.Thurisaz, displayName = "EARTH", kind = SpellKind.Projectile,
             colour = new Color(0.78f, 0.56f, 0.32f), speed = 16f, radius = 0.45f, lifetime = 5f,
             gravity = -SpellTiers.LobGravity,
             damage = 20f,
             barrierWear = 1.3f,
-            groundEffect = GroundEffect.Rubble, zoneRadius = 2.2f, zoneLifetime = 6f, zoneStrength = SpellTiers.RubbleSlow };
+            groundEffect = GroundEffect.Rubble, zoneRadius = SpellTiers.QuakeRadius, zoneLifetime = 6f, zoneStrength = SpellTiers.RubblePerSecond };
 
         [Header("Misfire (retired)")]
         // Kept only as the fallback for an unknown spell id on the wire. A botched gesture used to fire

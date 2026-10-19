@@ -190,10 +190,14 @@ namespace MageCast.EditorTools
                 castTurn: new Vector3(0f, -90f, 0f));
             SpellFx.Entry earth = fx.entries.Find(x => x.spell == "EARTH");
             earth.special = AssetDatabase.LoadAssetAtPath<GameObject>(Area + "VFX/Earth/Particles/VFX_Earth_Burst_01.prefab");
-            earth.specialScale = 0.6f;                                                                  // ~1.8 m quake
+            // its floor shockwave is 2.66 m across at 1:1 (measured), so this puts its edge on the 2 m ring
+            earth.specialScale = 0.75f;
             earth.specialLeadIn = 0.5f;
             earth.specialSound = Trim(AreaSound("Earth", "Burst_01"), 0.47f, "Earth_Quake_Impact");
             SetZone(fx, "EARTH", "Earth");
+            // its outer spikes stand 2 m out (measured), not at the 3 m the other areas are drawn for:
+            // drawn for 2.5, they reach the patch's edge
+            earth.zoneAuthoredRadius = 2.5f;
             SetZone(fx, "MAGMA", "Magma");
 
             SetZone(fx, "MUD", "Water");

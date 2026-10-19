@@ -84,6 +84,49 @@ namespace MageCast.Combat
             }
         }
 
+        /// <summary>The top of the head -- what shows over cover.</summary>
+        public Vector3 Head
+        {
+            get
+            {
+                if (!built) Build();
+                if (parts.Count > 1)
+                {
+                    Part head = parts[1];
+                    return head.To.position + head.To.rotation * head.Beyond * 0.6f;
+                }
+                return transform.position + Vector3.up * 1.6f;
+            }
+        }
+
+        /// <summary>The point of the body nearest to <paramref name="p"/>, on its surface.</summary>
+        public Vector3 Nearest(Vector3 p)
+        {
+            if (!built) Build();
+            if (parts.Count == 0)
+            {
+                Vector3 axis = ClosestOnSegment(p, transform.position + Vector3.up * 0.25f, transform.position + Vector3.up * 1.5f);
+                Vector3 out0 = p - axis;
+                return out0.magnitude > 0.25f ? axis + out0.normalized * 0.25f : p;
+            }
+            float best = float.MaxValue;
+            Vector3 found = p;
+            foreach (Part part in parts)
+            {
+                Vector3 from = part.From.position;
+                Vector3 to = part.To.position + (part.Beyond != Vector3.zero ? part.To.rotation * part.Beyond : Vector3.zero);
+                Vector3 c = ClosestOnSegment(p, from, to);
+                Vector3 away = p - c;
+                float gap = away.magnitude - part.Radius;
+                if (gap < best)
+                {
+                    best = gap;
+                    found = gap > 0f ? c + away.normalized * part.Radius : p;
+                }
+            }
+            return found;
+        }
+
         /// <summary>
         /// Where a ball of <paramref name="radius"/> moving from <paramref name="a"/> to <paramref name="b"/>
         /// first touches the body: the share of the way (<paramref name="t"/>, 0..1), the point on the body

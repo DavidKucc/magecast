@@ -172,12 +172,14 @@ namespace MageCast.Gestures
             Color blast = new Color(spell.colour.r, spell.colour.g, spell.colour.b, 0.55f);
 
             // earth comes down on the aim, whatever is in front: the quake's reach, and the rubble it leaves
+            // (one size: the blast, and the spikes it leaves on the ground from II -- cut to the ground they lie on)
             if (spell.groundEffect == GroundEffect.Rubble)
             {
                 float quake = (tier >= 3 ? SpellTiers.QuakeRadiusIII : SpellTiers.QuakeRadius) * scale;
-                bool rubble = floor && tier >= 2;
-                if (rubble) DrawReach(hit.point, spell.zoneRadius * scale, spell.colour);
-                DrawRing(rubble ? ring2 : ring, hit.point, hit.normal, quake, rubble ? blast : spell.colour);
+                if (floor && tier >= 2 && LaysAt(hit.point, quake))
+                    DrawReach(hit.point, quake, spell.colour);
+                else
+                    DrawRing(ring, hit.point, hit.normal, quake, spell.colour);
                 return;
             }
 
@@ -244,12 +246,7 @@ namespace MageCast.Gestures
         /// </summary>
         void DrawReach(Vector3 centre, float radius, Color colour)
         {
-            if (reach == null || (centre - reachAt).sqrMagnitude > 0.0025f || Mathf.Abs(radius - reachRadius) > 0.01f)
-            {
-                reach = SpellZone.SupportedReach(centre, radius);
-                reachAt = centre;
-                reachRadius = radius;
-            }
+            ReachAt(centre, radius);
 
             Vector3 lifted = centre + Vector3.up * 0.04f;
             int n = reach.Length;
@@ -262,6 +259,34 @@ namespace MageCast.Gestures
             ring.startColor = colour;
             ring.endColor = colour;
             ring.enabled = true;
+        }
+
+        // whether a patch would be laid there (SpellZone.Lays), kept like the outline
+        Vector3 laysAt = new Vector3(float.NaN, 0f, 0f);
+        float laysRadius = -1f;
+        bool lays;
+
+        bool LaysAt(Vector3 centre, float radius)
+        {
+            if ((centre - laysAt).sqrMagnitude > 0.0025f || Mathf.Abs(radius - laysRadius) > 0.01f)
+            {
+                lays = SpellZone.Lays(centre, radius, ReachAt(centre, radius));
+                laysAt = centre;
+                laysRadius = radius;
+            }
+            return lays;
+        }
+
+        /// <summary>The patch's cut outline at a point, worked out again only when the point or size moved.</summary>
+        float[] ReachAt(Vector3 centre, float radius)
+        {
+            if (reach == null || (centre - reachAt).sqrMagnitude > 0.0025f || Mathf.Abs(radius - reachRadius) > 0.01f)
+            {
+                reach = SpellZone.SupportedReach(centre, radius);
+                reachAt = centre;
+                reachRadius = radius;
+            }
+            return reach;
         }
 
         /// <summary>A circle lying flat on a surface, lifted a hair off it so it does not z-fight.</summary>

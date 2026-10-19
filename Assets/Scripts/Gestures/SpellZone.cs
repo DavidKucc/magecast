@@ -177,6 +177,34 @@ namespace MageCast.Gestures
             return across / Mathf.Sqrt(across * across * c * c + s2);
         }
 
+        /// <summary>
+        /// Whether a patch of <paramref name="radius"/> at <paramref name="ground"/> has ground to lie on:
+        /// the terrain always; anything else only if most of the patch (MinCover of its area) has floor
+        /// under it. A rock, the top of a wall or a pillar is something standing ON the ground -- a patch
+        /// there is mostly cut away and what is left hangs in the air (19 Oct: earth's spikes on the
+        /// Valley's rocks). Asked of a patch at least MinGround across, whatever its own size: a small one
+        /// fits on a big rock, and a rock is still a rock. Measured on the Valley: rock tops carry 0.1-0.6
+        /// of a 2 m patch (one in 45 passes), tower and ruin tops 0.15-0.35, the terrain 1.0 (0.45
+        /// against a rock); in the Temple a low cover's top 0.31, open floor 1.0.
+        /// <paramref name="reach"/>: the patch's outline at <paramref name="radius"/>, if already known.
+        /// </summary>
+        public static bool Lays(Vector3 ground, float radius, float[] reach = null)
+        {
+            RaycastHit below;
+            if (Physics.Raycast(ground + Vector3.up * 0.3f, Vector3.down, out below, 0.8f, ~0, QueryTriggerInteraction.Ignore)
+                && below.collider is TerrainCollider) return true;
+            float probe = Mathf.Max(radius, MinGround);
+            if (reach == null || probe > radius) reach = SupportedReach(ground, probe);
+            float area = 0f;
+            foreach (float r in reach) area += r * r;
+            return area / reach.Length >= MinCover * probe * probe;
+        }
+
+        /// <summary>The share of a patch that must have floor under it, off the terrain -- see Lays.</summary>
+        public const float MinCover = 0.6f;
+        /// <summary>The smallest patch Lays asks about (radius, m).</summary>
+        public const float MinGround = 2f;
+
         /// <summary>How far the patch reaches along each spoke -- for the aim marker, which shows the patch ahead.</summary>
         public static float[] SupportedReach(Vector3 ground, float radius)
         {
@@ -542,9 +570,16 @@ namespace MageCast.Gestures
                         break;
 
                     case GroundEffect.Rubble:
+                        // Spikes: they cut whoever stands in them -- feet on it, not jumping over -- and
+                        // you pick your way through at RubbleSlow. Whoever's they are: broken ground is ground.
+                        if (authoritative && t.Health != null && t.Touching) t.Health.TakeDamage(strength * TickInterval, attacker);
+                        if (t.Motor != null && t.Motor.IsLocallyControlled && t.Touching)
+                            t.Motor.ApplySlow(SpellTiers.RubbleSlow, TickInterval + 0.15f);
+                        break;
+
                     case GroundEffect.Mud:
-                        // Slow going, while your feet are in it -- whoever's it is: broken ground is ground.
-                        // Re-applied a little longer than a tick, so it lets go almost as you step out.
+                        // Slow going, while your feet are in it. Re-applied a little longer than a tick, so it
+                        // lets go almost as you step out.
                         if (t.Motor != null && t.Motor.IsLocallyControlled && t.Touching)
                             t.Motor.ApplySlow(strength, TickInterval + 0.15f);
                         break;
