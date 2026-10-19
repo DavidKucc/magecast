@@ -194,10 +194,16 @@ namespace MageCast.EditorTools
             earth.specialScale = 0.75f;
             earth.specialLeadIn = 0.5f;
             earth.specialSound = Trim(AreaSound("Earth", "Burst_01"), 0.47f, "Earth_Quake_Impact");
+            // The patch is a ring of stone (StoneFence), built from the pack's own spike in its earth
+            // material; the area effect under it keeps its dust, rocks and floor decal but not its spikes,
+            // which would stand inside the ring looking like a patch that hurts.
             SetZone(fx, "EARTH", "Earth");
-            // its outer spikes stand 2 m out (measured), not at the 3 m the other areas are drawn for:
-            // drawn for 2.5, they reach the patch's edge
-            earth.zoneAuthoredRadius = 2.5f;
+            string bare = Stripped(Area + "VFX/Earth/Particles/VFX_Earth_Area_01.prefab",
+                                   "Spikes Outer LOOP", "Spikes Outer OUT", "Spikes Center LOOP", "Spikes Center OUT");
+            if (bare != null) earth.zone = AssetDatabase.LoadAssetAtPath<GameObject>(bare);
+            foreach (Object o in AssetDatabase.LoadAllAssetsAtPath(Area + "VFX/Earth/Meshes/SM_VFX_Pointy_Rock_01.FBX"))
+                if (o is Mesh) earth.wallPiece = (Mesh)o;
+            earth.wallPieceMaterial = AssetDatabase.LoadAssetAtPath<Material>(Area + "VFX/Earth/Materials/M_VFX_Pointy_Rock_01_Earth.mat");
             SetZone(fx, "MAGMA", "Magma");
 
             SetZone(fx, "MUD", "Water");
@@ -209,6 +215,30 @@ namespace MageCast.EditorTools
             if (mud != null && brown != null) mud.zone = AssetDatabase.LoadAssetAtPath<GameObject>(brown);
             Debug.Log("[SpellFx] earth: " + (earth.projectile != null) + ", quake " + (earth.special != null) + ", magma zone "
                       + (fx.entries.Find(x => x.spell == "MAGMA").zone != null) + ", mud zone " + (mud != null && mud.zone != null));
+        }
+
+        /// <summary>A copy of an effect without some of its parts (by name), next to the recoloured ones. Null if it is missing.</summary>
+        static string Stripped(string sourcePath, params string[] drop)
+        {
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(sourcePath) == null) return null;
+            string folder = Recoloured + "/" + System.IO.Path.GetFileNameWithoutExtension(sourcePath).Replace("VFX_", "") + "_Bare";
+            EnsureFolder(folder);
+            string target = folder + "/" + System.IO.Path.GetFileName(sourcePath);
+            AssetDatabase.DeleteAsset(target);
+            AssetDatabase.CopyAsset(sourcePath, target);
+            GameObject root = PrefabUtility.LoadPrefabContents(target);
+            try
+            {
+                foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+                    if (t != null && t != root.transform && System.Array.IndexOf(drop, t.name) >= 0)
+                        Object.DestroyImmediate(t.gameObject);
+                PrefabUtility.SaveAsPrefabAsset(root, target);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+            return target;
         }
 
         /// <summary>Mud: water turned a dark, muddy brown.</summary>

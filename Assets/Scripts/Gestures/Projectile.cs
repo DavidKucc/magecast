@@ -482,7 +482,8 @@ namespace MageCast.Gestures
                 return true;
             }
 
-            bool floor = normal.y > FloorNormal;
+            // the top of a stone fence is no floor: whatever lands there would be left lying on stones that sink
+            bool floor = normal.y > FloorNormal && !StoneFence.Is(collider);
             return floor ? HitFloor(at) : HitWall(at, normal, centreAtContact, collider);
         }
 
@@ -587,17 +588,19 @@ namespace MageCast.Gestures
 
         static readonly Color ShockColour = new Color(1f, 0.9f, 0.35f);
 
-        /// <summary>Lightning's patch: stings, and nobody standing in it can draw. Server only; sent to all.</summary>
+        /// <summary>
+        /// Lightning's patch: nobody standing in it can draw, and a spell in hand runs down in it (SpellZone).
+        /// It does not hurt. Server only; sent to all.
+        /// </summary>
         void LayShock(Vector3 at)
         {
             if (!authoritative) return;
-            float strength = SpellTiers.ShockPerSecond * power;
             float r = SpellTiers.ShockRadius * sizeScale;
-            SpellZone zone = SpellZone.Spawn(at, GroundEffect.Shock, r, SpellTiers.ShockSeconds, strength, ShockColour,
+            SpellZone zone = SpellZone.Spawn(at, GroundEffect.Shock, r, SpellTiers.ShockSeconds, 0f, ShockColour,
                                              true, attacker, attacker);
             PlayerNet caster = owner != null ? owner.GetComponent<PlayerNet>() : null;
             if (caster != null && caster.IsSpawned)
-                caster.BroadcastZone(zone.transform.position, GroundEffect.Shock, r, SpellTiers.ShockSeconds, strength, ShockColour);
+                caster.BroadcastZone(zone.transform.position, GroundEffect.Shock, r, SpellTiers.ShockSeconds, 0f, ShockColour);
         }
 
         Health NearestOther(Health from, Vector3 at, float reach)
@@ -910,7 +913,7 @@ namespace MageCast.Gestures
         ///   air into ice                   whoever stands on the ice is blown across it
         ///   earth into fire                magma: burns harder and longer than the fire did
         ///   earth into water               mud: slower going than the rubble
-        ///   earth into ice or a shock      broken up (grounded): rubble where it was
+        ///   earth into ice or a shock      broken up (grounded): a stone fence round where it was
         ///
         /// Server only: the server decides and tells everyone what the ground now looks like. Returns
         /// whether something combined, in which case the spell's own effect does not happen.
@@ -1000,7 +1003,7 @@ namespace MageCast.Gestures
                     if (broken != null)
                     {
                         ReplaceZone(caster, broken, GroundEffect.Rubble, broken.transform.position, broken.Radius, spell.zoneLifetime,
-                                    SpellTiers.RubblePerSecond * power, spell.colour, attacker, false);
+                                    0f, spell.colour, attacker, false);
                         return true;
                     }
                     return false;
@@ -1010,19 +1013,18 @@ namespace MageCast.Gestures
         }
 
         /// <summary>
-        /// Earth's patch: the ground broken into spikes, as far as the blast reached. Laid only where it can
-        /// lie -- on ground people walk on (SpellZone.Lays), not on a rock, a wall top or a pillar, where
-        /// it would mostly hang in the air. Server only; sent to all.
+        /// Earth's patch: a ring of stone round where it landed, along the edge of the blast (StoneFence).
+        /// Laid only where it can stand -- on ground people walk on (SpellZone.Lays), not on a rock, a wall
+        /// top or a pillar, where it would mostly hang in the air. Server only; sent to all.
         /// </summary>
-        void LaySpikes(Vector3 at)
+        void LayFence(Vector3 at)
         {
             float r = QuakeReach;
             if (!SpellZone.Lays(at, r)) return;
-            float strength = SpellTiers.RubblePerSecond * power;
-            SpellZone zone = SpellZone.Spawn(at, GroundEffect.Rubble, r, spell.zoneLifetime, strength, colour, true, attacker, attacker);
+            SpellZone zone = SpellZone.Spawn(at, GroundEffect.Rubble, r, spell.zoneLifetime, 0f, colour, true, attacker, attacker);
             PlayerNet caster = owner != null ? owner.GetComponent<PlayerNet>() : null;
             if (caster != null && caster.IsSpawned)
-                caster.BroadcastZone(zone.transform.position, GroundEffect.Rubble, r, spell.zoneLifetime, strength, colour);
+                caster.BroadcastZone(zone.transform.position, GroundEffect.Rubble, r, spell.zoneLifetime, 0f, colour);
         }
 
         static readonly Color MagmaColour = new Color(1f, 0.32f, 0.08f);
@@ -1185,11 +1187,11 @@ namespace MageCast.Gestures
                 return true;
             }
 
-            // earth: its spikes from tier II, as wide as the blast -- on the ground, not on top of a rock
+            // earth: its fence from tier II, round the blast -- on the ground, not on top of a rock
             if (IsEarth)
             {
                 ShowImpact(at);
-                if (tier >= 2 && authoritative) LaySpikes(at);
+                if (tier >= 2 && authoritative) LayFence(at);
                 End();
                 return true;
             }

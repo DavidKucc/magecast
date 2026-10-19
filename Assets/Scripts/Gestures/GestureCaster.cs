@@ -265,16 +265,16 @@ namespace MageCast.Gestures
         // where you aim) that comes down where the crosshair is, cover or not -- the answer to somebody
         // dug in behind a wall, which nothing else had. Slow to arrive (about a second at 10 m) and
         // everybody sees where it will fall: a ring on the floor from the moment it is thrown. It lands
-        // with a blast round it (SpellTiers.Quake*); from tier II the ground there breaks into spikes
-        // (Rubble: they cut and slow whoever stands in them), at III the blast knocks the people in it off
-        // their feet. Into fire it makes magma, into water mud, into ice it breaks the ice up.
+        // with a blast round it (SpellTiers.Quake*); from tier II a ring of stone spikes comes up round it
+        // (Rubble, StoneFence: nobody walks through, low shots stop), at III the blast knocks the people in
+        // it off their feet. Into fire it makes magma, into water mud, into ice it breaks the ice up.
         [SerializeField] Spell earth = new Spell {
             gesture = GestureTemplates.Thurisaz, displayName = "EARTH", kind = SpellKind.Projectile,
             colour = new Color(0.78f, 0.56f, 0.32f), speed = 16f, radius = 0.45f, lifetime = 5f,
             gravity = -SpellTiers.LobGravity,
             damage = 20f,
             barrierWear = 1.3f,
-            groundEffect = GroundEffect.Rubble, zoneRadius = SpellTiers.QuakeRadius, zoneLifetime = 6f, zoneStrength = SpellTiers.RubblePerSecond };
+            groundEffect = GroundEffect.Rubble, zoneRadius = SpellTiers.QuakeRadius, zoneLifetime = 6f, zoneStrength = 0f };
 
         [Header("Misfire (retired)")]
         // Kept only as the fallback for an unknown spell id on the wire. A botched gesture used to fire
@@ -732,6 +732,31 @@ namespace MageCast.Gestures
             if (!IsBot) AnnounceCreated(index, tier - 1);
             if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Held, index, (byte)(tier - 1));
             Announce(heldSpell.displayName + " knocked down to tier " + SpellTiers.Roman(tier - 1));
+        }
+
+        /// <summary>
+        /// Standing in a shock patch: the charge runs out of the spell in hand, a tier at a time (SpellZone).
+        /// Not a hit -- no stagger, no letting go of a ledge.
+        /// </summary>
+        public void Drained()
+        {
+            if (Networked && !net.IsOwner) return;      // only ever asked of a body moved here
+            if (!holding || heldSpell == null) return;
+            int tier = SpellTiers.Of(heldQuality);
+            byte index = IndexOf(heldSpell);
+            if (tier <= 1)
+            {
+                ClearHeld();
+                Headline("DRAINED", FailColour, 1.2f);
+                if (!IsBot) WorldPopups.Word(transform, "DRAINED", FailColour);
+                if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Interrupted, index);
+                return;
+            }
+            heldQuality = tier >= 3 ? CastQuality.Clean : CastQuality.Weak;
+            heldPrecision = Mathf.Min(heldPrecision, tier >= 3 ? SpellTiers.FallenPrecision : SpellTiers.KnockedPrecision);
+            if (!IsBot) AnnounceCreated(index, tier - 1);
+            if (Networked) net.OwnerStrokeEnd(StrokeOutcome.Held, index, (byte)(tier - 1));
+            Announce(heldSpell.displayName + " drained to tier " + SpellTiers.Roman(tier - 1));
         }
 
         /// <summary>

@@ -90,7 +90,8 @@ namespace MageCast.Gestures
         public const float ChainShare = 0.5f;
         public const float ShockRadius = 2.2f;
         public const float ShockSeconds = 4f;
-        public const float ShockPerSecond = 3f;          // 4 s of it is 12: never more than the bolt itself
+        /// <summary>Standing in a shock patch, the spell in hand drops a tier every this many seconds (SpellZone).</summary>
+        public const float DrainEvery = 1f;
 
         // air
         // Shoved into a wall: air does no damage itself, but the wall does. Only an air shove counts,
@@ -160,13 +161,7 @@ namespace MageCast.Gestures
         /// <summary>...and pushed out from the middle this fast (at the middle; nothing at the edge).</summary>
         public const float QuakePush = 2.5f;
         public const float QuakeStagger = 0.5f;
-        /// <summary>
-        /// The spikes (tier II on): hurt this much a second while you stand in them, times how well it was
-        /// drawn -- 15 over the whole 6 s, under the direct hit -- and you walk through them at RubbleSlow.
-        /// Mud (earth into water): slower still, no spikes.
-        /// </summary>
-        public const float RubblePerSecond = 2.5f;
-        public const float RubbleSlow = 0.65f;
+        /// <summary>Mud (earth into water): walking at this share of your speed while in it. (Earth's own patch is a fence: StoneFence.)</summary>
         public const float MudSlow = 0.45f;
         public const float MudSeconds = 8f;
         /// <summary>Earth into fire: magma burns this much harder than the fire did, and for MagmaSeconds.</summary>

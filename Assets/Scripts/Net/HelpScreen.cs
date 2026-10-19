@@ -52,7 +52,7 @@ namespace MageCast
                          "Do mokrého " + SpellTiers.WetShockMultiplier + "x poškození (a vysuší ho).",
                 I = "zásah, rychlejší let",
                 II = "+ přeskočí na nejbližší jiný cíl do " + SpellTiers.ChainRange + " m za polovinu; do země nechá elektrickou plochu " +
-                     "(" + SpellTiers.ShockPerSecond + "/s, kdo v ní stojí, nemůže kreslit)",
+                     "(nebere životy: kdo v ní stojí, nemůže kreslit a kouzlo v ruce mu každou sekundu spadne o tier)",
                 III = "+ elektrická plocha se objeví přímo pod zasaženým" },
             new SpellInfo { Rune = GestureTemplates.Ehwaz, Name = "AIR", Czech = "Ehwaz (pohyb) - vzduch",
                 Colour = new Color(0.8f, 0.95f, 0.9f),
@@ -69,10 +69,10 @@ namespace MageCast
                          Mathf.RoundToInt(SpellTiers.QuakeShare * 100f) + " % zásahu (i ty) a vyhodí ho to kousek do vzduchu. " +
                          "Zeď nebo bariéra ho kryje, jen když za ní je celý - hlava nad krytem stačí, aby to schytal.",
                 I = "kámen s otřesem",
-                II = "+ kamenné ostny na 6 s, velké jako otřes (jen na zemi, ne na kamenech a zdech): kdo v nich stojí, " +
-                     "dostává " + SpellTiers.RubblePerSecond + "/s a jde na " + Mathf.RoundToInt(SpellTiers.RubbleSlow * 100f) + " % rychlosti; " +
+                II = "+ kamenná ohrada na 6 s po okraji otřesu (jen na zemi, ne na kamenech a zdech): nedá se jí projít, jen přeskočit " +
+                     "(při kreslení ne), a zastaví kouzla letící nízko - kdo je uvnitř, je zavřený, kdo venku, nedostane se dovnitř; " +
                      "do ohně: magma (pálí víc a " + SpellTiers.MagmaSeconds + " s); do vody: bahno (" + Mathf.RoundToInt(SpellTiers.MudSlow * 100f) +
-                     " % rychlosti); led a elektrickou plochu rozbije na ostny",
+                     " % rychlosti); kolem ledu a elektrické plochy postaví ohradu (rozbije je)",
                 III = "+ větší otřes (" + SpellTiers.QuakeRadiusIII + " m): srazí každého v něm na " + SpellTiers.QuakeStagger + " s na zem a přeruší kreslení" },
             new SpellInfo { Rune = GestureTemplates.Uruz, Name = "BARRIER", Czech = "Uruz (síla) - bariéra",
                 Colour = new Color(1f, 0.85f, 0.4f),

@@ -393,6 +393,15 @@ namespace MageCast
         /// Puts the body somewhere else outright -- a respawn. The controller has to be off while the
         /// transform moves, or it snaps straight back to where it was on its next Move.
         /// </summary>
+        /// <summary>
+        /// Moved by <paramref name="offset"/> at once, as by a step -- out of the way of something about to
+        /// stand where the body is (a stone fence coming up). Only on the machine that moves this body.
+        /// </summary>
+        public void Nudge(Vector3 offset)
+        {
+            if (cc != null && cc.enabled && IsLocallyControlled) cc.Move(offset);
+        }
+
         public void TeleportTo(Vector3 position, float yaw)
         {
             bool was = cc.enabled;

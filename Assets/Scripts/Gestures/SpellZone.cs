@@ -387,6 +387,8 @@ namespace MageCast.Gestures
             // Under a real effect the plain outline would only wash it out; it stays for the flash.
             z.outline = renderer;
             if (z.fx != null) renderer.enabled = false;
+            // earth's: the stones round it (and only the stones -- nothing happens standing inside)
+            if (effect == GroundEffect.Rubble) StoneFence.Build(z, go.transform.position, reach, shape.Heights, Rings);
             all.Add(z);
             return z;
         }
@@ -465,6 +467,9 @@ namespace MageCast.Gestures
 
         /// <summary>How high the updraft rises -- high enough to catch a shot aimed at somebody's head.</summary>
         public const float DraftHeight = 4f;
+
+        /// <summary>How far the patch reaches towards a point, from its centre (its cut outline).</summary>
+        public float EdgeTowards(Vector3 offset) { return ReachTowards(reach, offset); }
 
         public ulong Owner { get { return owner; } }
         public ulong Attacker { get { return attacker; } }
@@ -559,7 +564,14 @@ namespace MageCast.Gestures
 
             if (Time.time < nextTick) return;
             nextTick = Time.time + TickInterval;
+            if (effect == GroundEffect.Shock && chargedSince.Count > 0 && charged.Count < chargedSince.Count)
+            {
+                var gone = new List<PlayerMotor>();
+                foreach (PlayerMotor m in chargedSince.Keys) if (m == null || !charged.Contains(m)) gone.Add(m);
+                foreach (PlayerMotor m in gone) chargedSince.Remove(m);
+            }
 
+            charged.Clear();
             foreach (Target t in Occupants())
             {
                 switch (effect)
@@ -567,14 +579,6 @@ namespace MageCast.Gestures
                     case GroundEffect.Burn:
                     case GroundEffect.Magma:
                         if (authoritative && t.Health != null) t.Health.TakeDamage(strength * TickInterval, attacker);
-                        break;
-
-                    case GroundEffect.Rubble:
-                        // Spikes: they cut whoever stands in them -- feet on it, not jumping over -- and
-                        // you pick your way through at RubbleSlow. Whoever's they are: broken ground is ground.
-                        if (authoritative && t.Health != null && t.Touching) t.Health.TakeDamage(strength * TickInterval, attacker);
-                        if (t.Motor != null && t.Motor.IsLocallyControlled && t.Touching)
-                            t.Motor.ApplySlow(SpellTiers.RubbleSlow, TickInterval + 0.15f);
                         break;
 
                     case GroundEffect.Mud:
@@ -599,14 +603,26 @@ namespace MageCast.Gestures
                         break;
 
                     case GroundEffect.Shock:
-                        // Stings, and takes the glyph out of the hand of anyone drawing in it: to cast,
-                        // step out first. Standing in it, not jumping over it.
-                        if (authoritative && t.Health != null && t.Touching) t.Health.TakeDamage(strength * TickInterval, attacker);
+                        // Takes casting, not life (19 Oct: it stung 3/s as well, and fire, earth and lightning
+                        // all came down to a number a second). Anyone drawing in it loses the glyph, and the
+                        // spell already in hand runs down a tier for every second spent in it -- to cast,
+                        // step out. Standing in it, not jumping over it.
                         if (t.Motor != null && t.Motor.IsLocallyControlled && t.Touching
                             && !MageCast.Teams.Spares(Laid, t.Motor))
                         {
                             GestureCaster hands = t.Motor.GetComponent<GestureCaster>();
-                            if (hands != null) hands.Interrupt(true);
+                            if (hands != null)
+                            {
+                                hands.Interrupt(true);
+                                charged.Add(t.Motor);
+                                float since;
+                                if (!chargedSince.TryGetValue(t.Motor, out since)) chargedSince[t.Motor] = Time.time;
+                                else if (Time.time - since >= SpellTiers.DrainEvery)
+                                {
+                                    hands.Drained();
+                                    chargedSince[t.Motor] = Time.time;
+                                }
+                            }
                         }
                         break;
 
@@ -630,6 +646,10 @@ namespace MageCast.Gestures
                 }
             }
         }
+
+        // a shock patch: who stood in it this tick, and since when without a break
+        readonly HashSet<PlayerMotor> charged = new HashSet<PlayerMotor>();
+        readonly Dictionary<PlayerMotor, float> chargedSince = new Dictionary<PlayerMotor, float>();
 
         struct Target
         {
