@@ -69,11 +69,12 @@ namespace MageCast
                          Mathf.RoundToInt(SpellTiers.QuakeShare * 100f) + " % zásahu (i ty) a vyhodí ho to kousek do vzduchu. " +
                          "Zeď nebo bariéra ho kryje, jen když za ní je celý - hlava nad krytem stačí, aby to schytal.",
                 I = "kámen s otřesem",
-                II = "+ kamenná ohrada na 6 s po okraji otřesu (jen na zemi, ne na kamenech a zdech): nedá se jí projít, jen přeskočit " +
+                II = "+ kamenná ohrada na 6 s po okraji otřesu, když kámen dopadne na zem (ne na kamenech a zdech): nedá se jí projít, jen přeskočit " +
                      "(při kreslení ne), a zastaví kouzla letící nízko - kdo je uvnitř, je zavřený, kdo venku, nedostane se dovnitř; " +
                      "do ohně: magma (pálí víc a " + SpellTiers.MagmaSeconds + " s); do vody: bahno (" + Mathf.RoundToInt(SpellTiers.MudSlow * 100f) +
                      " % rychlosti); kolem ledu a elektrické plochy postaví ohradu (rozbije je)",
-                III = "+ větší otřes (" + SpellTiers.QuakeRadiusIII + " m): srazí každého v něm na " + SpellTiers.QuakeStagger + " s na zem a přeruší kreslení" },
+                III = "+ větší otřes (" + SpellTiers.QuakeRadiusIII + " m): srazí každého v něm na " + SpellTiers.QuakeStagger + " s na zem a přeruší kreslení; " +
+                      "přímý zásah postaví ohradu kolem nohou zasaženého" },
             new SpellInfo { Rune = GestureTemplates.Uruz, Name = "BARRIER", Czech = "Uruz (síla) - bariéra",
                 Colour = new Color(1f, 0.85f, 0.4f),
                 Basics = "Zastaví kouzla z obou stran, dokud ji zásahy neprorazí. Jedna na hráče. Silný, vytrvalý kryt - " +

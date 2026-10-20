@@ -478,6 +478,10 @@ namespace MageCast.Gestures
                 Flash(at, 1.4f, 2.5f);
                 TierHit(hp, at);
                 if (IsEarth) Quake(at, hp);
+                // earth III on somebody: the fence comes up round their feet -- the hit shuts them in (as
+                // lightning III lays its patch under whoever it hit). Below III only a stone on the ground
+                // raises it, so a II is a choice: hit them, or land beside them and fence them in.
+                if (IsEarth && tier >= 3 && authoritative) FenceIn(hp, motor);
                 End();
                 return true;
             }
@@ -1025,6 +1029,35 @@ namespace MageCast.Gestures
             PlayerNet caster = owner != null ? owner.GetComponent<PlayerNet>() : null;
             if (caster != null && caster.IsSpawned)
                 caster.BroadcastZone(zone.transform.position, GroundEffect.Rubble, r, spell.zoneLifetime, 0f, colour);
+        }
+
+        /// <summary>
+        /// The fence round somebody struck directly: on the floor under their feet, if there is floor within
+        /// reach of them (not in the middle of a jump off a ledge). Server only, like LayFence.
+        /// </summary>
+        void FenceIn(Health hp, PlayerMotor motor)
+        {
+            Vector3 feet;
+            if (motor != null) feet = motor.transform.position;
+            else if (hp != null)
+            {
+                Collider body = hp.GetComponentInChildren<Collider>();
+                feet = body != null ? new Vector3(hp.transform.position.x, body.bounds.min.y, hp.transform.position.z)
+                                    : hp.transform.position;
+            }
+            else return;
+
+            // the floor under them, looking through bodies
+            float nearest = float.MaxValue;
+            Vector3 floor = feet;
+            foreach (RaycastHit h in Physics.RaycastAll(feet + Vector3.up * 0.3f, Vector3.down, 3f, ~0, QueryTriggerInteraction.Ignore))
+            {
+                if (h.collider.GetComponentInParent<Health>() != null || h.collider.GetComponentInParent<PlayerMotor>() != null) continue;
+                if (h.normal.y <= FloorNormal || StoneFence.Is(h.collider) || h.distance >= nearest) continue;
+                nearest = h.distance;
+                floor = h.point;
+            }
+            if (nearest < float.MaxValue) LayFence(floor);
         }
 
         static readonly Color MagmaColour = new Color(1f, 0.32f, 0.08f);

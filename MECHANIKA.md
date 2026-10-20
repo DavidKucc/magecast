@@ -97,7 +97,7 @@ Tier mění, **co kouzlo dělá**, ne jen kolik ubere — poškození samo se s 
 | **led** | zásah se zpomalením, rychlejší let, splash | + kluzká plocha | + zamrznutí na 0,6 s: nehýbe se ani neskočí, kreslit může |
 | **blesk** | zásah, rychlejší let | + přeskočí na nejbližší jiný cíl do 6 m za polovinu; do země nechá **elektrickou plochu** (2,2 m, 4 s, nebere životy: kdo v ní stojí, nemůže kreslit a kouzlo v ruce mu každou sekundu spadne o tier) | + elektrická plocha se objeví přímo pod zasaženým |
 | **vzduch** | odhoz, rychlejší let; **náraz do zdi** po odhozu (do ~2 m od ní) = 8 dmg a 0,4 s na místě | + updraft plocha (vlastní tě vyhodí až na 4 m: střecha, most); do ohně **ohnivá vlna** (oheň zmizí a 8 m po větru se převalí stěna plamenů, zapálí a odhodí každého v cestě, zastaví ji zeď); na ledu rozklouže lidi | + v jakékoli ploše **vzduchová bomba**: všechny v ploše a do 1,5 m od ní jednou hodí do jejího středu (i autora) — **po 0,4 s**, aby se dalo uhnout |
-| **země** | kámen s **otřesem** (2 m: až 55 % zásahu, vyhodí kousek do vzduchu, i autora) | + **kamenná ohrada** po okraji otřesu (6 s, jen na zemi): nedá se projít, jen přeskočit, zastaví nízké střely; do ohně **magma**, do vody **bahno**, led a elektrickou plochu rozbije | + větší otřes (2,8 m), **srazí** každého v něm na 0,5 s a **přeruší kreslení** |
+| **země** | kámen s **otřesem** (2 m: až 55 % zásahu, vyhodí kousek do vzduchu, i autora) | + **kamenná ohrada** po okraji otřesu (6 s, jen na zemi): nedá se projít, jen přeskočit, zastaví nízké střely; do ohně **magma**, do vody **bahno**, led a elektrickou plochu rozbije | + větší otřes (2,8 m), **srazí** každého v něm na 0,5 s a **přeruší kreslení**; přímý zásah postaví ohradu **kolem zasaženého** |
 | **bariéra** | stěna (8 s) | větší stěna (1,35× šířka), víc výdrže | **kopule** kolem tebe na 6 s, chodí s tebou, tvoje kouzla propouští, cizí zastaví |
 
 - **Tier I je rychlá střela**: letí rychleji (oheň 34, led 24, blesk 52, vzduch 38 m/s), ale nezanechá
@@ -442,8 +442,14 @@ Ověřeno: z prostředku ohrady (1,6 m) se dojde na 1,04 m od středu, zvenku na
 **Jen na zemi:** na kámen, vršek zdi, krytu nebo sloupu se ohrada nepostaví (otřes ano). Zem je
 terén vždy, cokoli jiného jen když aspoň 60 % kruhu o poloměru aspoň 2 m má pod sebou podlahu. Ve Valley
 to splní 1 vršek kamene ze 45 a všechen terén; v Temple podlaha ano, vršek krytu (0,31) ne.
+**Ohrada vznikne tam, kde kámen dopadne na zem** — ne při přímém zásahu (do tieru II). Kámen padá shora,
+takže mířený někomu pod nohy ho cestou dolů trefí do těla a je to přímý zásah: na tieru II je to volba —
+trefit ho kvůli poškození, nebo hodit vedle něj (do dosahu otřesu) a zavřít ho.
+
 **Tier III:** otřes 2,8 m a každého v něm **srazí na 0,5 s** (nehne se) a **přeruší kreslení** (se zámkem
-školy, jako vzduch) — tier III má mít váhu.
+školy, jako vzduch) — tier III má mít váhu. A **přímý zásah postaví ohradu kolem nohou zasaženého** (jako
+blesk III dá plochu pod zasaženého): zásah ho rovnou zavře. Jen když má pod sebou do 3 m podlahu (ne ve
+skoku z římsy) a ta je zem (stejné pravidlo jako u dopadu).
 
 **Kombinace** (od II): do ohně **magma** (pálí 1,6× víc, 7 s), do vody **bahno** (45 %, 8 s), led a
 elektrickou plochu **rozbije** a postaví kolem ní ohradu — země uzemní blesk. Ověřeno: oheň 3/s → magma
