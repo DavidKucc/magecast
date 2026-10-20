@@ -571,17 +571,37 @@ snímku):
 - **paměť:** kde někoho naposledy viděl, si pamatuje 7 s — dojde tam, rozhlédne se, a když nikdo není,
   zapomene,
 - **zásah:** ví, kdo ho trefil a odkud (jako ty podle směru střely), a otočí se tam,
-- **reakce:** všechno vidí se zpožděním 0,38–0,17 s (podle dovednosti), takže předsazení míří tam, kam
+- **reakce:** všechno vidí se zpožděním 0,6–0,15 s (podle dovednosti), takže předsazení míří tam, kam
   jsi *šel* — změna směru ho nechá minout. Chyba mušky roste se vzdáleností a s tím, jak rychle mu
   přebíháš před očima,
 - **otáčení:** jen rychlostí ruky na myši (380–760 °/s) a kouzlo pošle, až má cíl před sebou.
 
-**Dovednost (posuvník 0–100 %):** ovlivňuje mušku, předsazení, reakci (0,6–0,17 s), otáčení, rychlost a
-jistotu kreslení (na 0 % fizzlne čtvrtina run a kreslí skoro o půl sekundy déle), pauzy mezi kouzly,
-úhyby, jestli v boji stojí na místě a jestli vidí chytré kouzlo (blesk do ledu, vzduch na kreslícího).
-Nejvíc se to projeví dole — kolem 60 % se bot skoro nezměnil, 0 % je začátečník. Naměřeno proti hráči,
-který náhodně uhýbá do stran a nestřílí: 0 % ~15–30 poškození za minutu (dřív 99, tedy smrt každou
-minutu), 50 % ~77, 100 % ~150.
+**Dovednost (posuvník 0–100 %):** ovlivňuje mušku, předsazení, reakci (0,6–0,15 s), otáčení, rychlost a
+jistotu kreslení (na 0 % fizzlne čtvrtina run a kreslí skoro o půl sekundy déle), tier run, pauzy mezi
+kouzly, úhyby, jestli v boji stojí na místě a jestli vidí chytré kouzlo (blesk do ledu, vzduch na kreslícího).
+
+**Od 20. 10. je to znát po celé délce posuvníku.** Dřív se většina projevila až úplně dole: boti proti sobě
+trefovali na 20 % 40 % střel, na 60 % 43–50 %, na 100 % 50 % — a 60% bot kreslil tier III každou pátou runu.
+Teď roste muška, předsazení i kvalita run se sliderem rovnoměrně:
+
+- **muška:** chyba napříč směrem střely (do strany a nahoru/dolů — dřív i podél střely, kde nic neměnila)
+  0,25 m × (1 − dovednost) na jakoukoli vzdálenost + (0,02 + 0,2 × (1 − dovednost)) m na metr + podle
+  toho, jak rychle cíl přebíhá: na 7 m je to ±0,14 m na 100 %, ±0,8 m na 60 %, ±1,5 m na 20 %,
+- **předsazení:** 100 % předsadí celé, 0 % jen ze 40 %,
+- **tier runy:**
+
+| dovednost | fizzle | I | II | III |
+|---|---|---|---|---|
+| 0 % | 25 % | 50 % | 24 % | 0 % |
+| 20 % | 18 % | 44 % | 38 % | 0 % |
+| 40 % | 12 % | 36 % | 51 % | 2 % |
+| 60 % | 8 % | 29 % | 58 % | 5 % (dřív 19 %) |
+| 80 % | 5 % | 23 % | 60 % | 13 % |
+| 100 % | 4 % | 16 % | 55 % | 25 % |
+
+Naměřeno (6 botů proti sobě, ~100 s, Temple): zásahy **24 % na 20 %, 33 % na 60 %, 53 % na 100 %**
+(dřív 40 / 43–50 / 50 %). Starší měření proti hráči, který jen uhýbá (před touto změnou): 0 % ~15–30
+poškození za minutu, 50 % ~77, 100 % ~150.
 
 **Chová se jako člověk:** nejdřív odpovídá tomu, kdo na něj střílí; po spatření soupeře chvíli počká, než
 začne kreslit; střele, kterou vidí letět na sebe, uhne úkrokem, když to stihne (ne vždy, podle dovednosti);

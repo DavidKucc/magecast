@@ -106,16 +106,17 @@ namespace MageCast
         float drawStarted, drawLength, holdUntil, nextCastAt;
         int pointsSent;
 
-        // What skill does. Novice = 1 - skill; most of it is felt only low down (novice squared), so
-        // the middle of the slider, where the aim was tuned to land like a person, barely moves, and 0 %
-        // is a real beginner: slow to react and to turn, slow and unsure drawing (a quarter of the runes
-        // fizzle), pauses between spells, a poor lead, rarely a dodge, and no feel for the clever spell.
-        // (Until 14 Oct a 0 % bot drew almost as well as a 60 % one, and killed a strafing player who
-        // never fired back about once a minute.)
+        // What skill does. Novice = 1 - skill. The aim, the lead and the runes move with the slider all
+        // the way along it (20 Oct): until then most of it was felt only near 0 % (novice squared), and
+        // bots fighting each other hit 40 % of their shots at 20 % skill, 43-50 % at 60 % and 50 % at
+        // 100 % -- the percentage changed almost nothing a player could feel, and a 60 % bot drew tier III
+        // one rune in five. Beginner (novice squared) is still what makes 0 % a real beginner on top: slow
+        // to react and to turn, slow and unsure drawing, pauses between spells, rarely a dodge, and no feel
+        // for the clever spell. (Until 14 Oct a 0 % bot drew almost as well as a 60 % one.)
         static float Novice { get { return 1f - Mathf.Clamp01(Skill); } }
         static float Beginner { get { return Novice * Novice; } }
 
-        float Reaction { get { return 0.17f + 0.43f * Beginner; } }
+        float Reaction { get { return 0.15f + 0.15f * Novice + 0.3f * Beginner; } }
         float TurnRate { get { return 760f - 520f * Novice; } }
 
         void Start()
@@ -658,11 +659,17 @@ namespace MageCast
         /// </summary>
         const float ReadyWithin = 0.8f;
 
-        /// <summary>How the rune came out: fizzle, tier I, II or III, by skill.</summary>
+        /// <summary>
+        /// How the rune came out: fizzle, tier I, II or III, by skill. Tier III is a sharp bot's -- a quarter
+        /// of its runes at 100 %, one in eight at 80 %, one in twenty at 60 %, next to none below (skill
+        /// cubed); until 20 Oct it was 30 % less a little per step down, so a 60 % bot drew III one rune in
+        /// five. Tier I goes from one rune in six at 100 % to half of them at 0 %.
+        /// </summary>
         void RollQuality()
         {
             float r = (float)rnd.NextDouble();
-            float fizzle = 0.04f + 0.22f * Beginner, weak = 0.17f + 0.28f * Novice, perfect = 0.30f - 0.28f * Novice;
+            float s = Mathf.Clamp01(Skill);
+            float fizzle = 0.04f + 0.21f * Beginner, weak = 0.16f + 0.34f * Novice, perfect = 0.25f * s * s * s;
             if (r < fizzle) { chosenQuality = CastQuality.Fizzle; chosenPrecision = 0f; }
             else if (r < fizzle + weak) { chosenQuality = CastQuality.Weak; chosenPrecision = Rand(0.45f, 0.64f); }
             else if (r > 1f - perfect) { chosenQuality = CastQuality.Perfect; chosenPrecision = Rand(0.86f, 0.98f); }
@@ -708,8 +715,8 @@ namespace MageCast
             int tier = hands.BotHeldTier;
             float speed = tier <= 1 && spell.speedTierI > 0f ? spell.speedTierI : spell.speed;
             Vector3 from = hands.MuzzlePoint;
-            // a beginner hardly leads at all: shoots where you are, not where you are going
-            Vector3 velocity = PerceivedVelocity * (1f - 0.7f * Beginner);
+            // leads less the less skilled: a beginner shoots where you are, not where you are going
+            Vector3 velocity = PerceivedVelocity * (1f - 0.6f * Novice);
 
             // earth is thrown up and over to land on the feet, led by the time the throw is in the air
             if (spell == hands.SpellByIndex(GestureCaster.EarthId))
@@ -727,8 +734,8 @@ namespace MageCast
                     flight = across.magnitude / Mathf.Max(0.5f, level) + Reaction;
                     spot = feet + velocity * flight;
                 }
-                float off = (0.03f + 0.06f * Novice + 0.08f * Beginner) * Vector3.Distance(from, spot)
-                          + velocity.magnitude * flight * (0.15f + 0.15f * Novice + 0.2f * Beginner);
+                float off = AimBase + AimPerMetre * Vector3.Distance(from, spot)
+                          + velocity.magnitude * flight * (0.15f + 0.35f * Novice);
                 return spot + new Vector3(Rand(-1f, 1f), 0f, Rand(-1f, 1f)) * off;
             }
             // the lead is judged from what it saw, over the time the shot will take -- reaction included
@@ -744,12 +751,20 @@ namespace MageCast
             Vector3 line = (aim - from).normalized;
             float crossing = Vector3.Cross(line, velocity).magnitude;           // m/s across the line of fire
             float distance = Vector3.Distance(from, aim);
-            // tuned (13 Oct) so a 60 % bot lands about 40 % on players, as a person does (the aim assist
-            // bends people's shots, not bots' -- see Projectile.AimAssist)
-            float error = (0.028f + 0.07f * Novice + 0.08f * Beginner) * distance
-                        + crossing * (0.08f + 0.08f * Novice + 0.12f * Beginner);
-            aim += new Vector3(Rand(-1f, 1f), Rand(-0.6f, 0.6f), Rand(-1f, 1f)) * error;
+            // The error is across the line of fire -- sideways and up and down, the ways a shot misses;
+            // one along the line only moved the aim nearer or further and missed nothing. It grows with
+            // distance and with how fast the target crosses the view, and with every step down the slider.
+            // (The aim assist bends people's shots, not bots' -- see Projectile.AimAssist.)
+            float error = AimBase + AimPerMetre * distance + crossing * (0.06f + 0.25f * Novice);
+            Vector3 side = Vector3.Cross(Vector3.up, line);
+            side = side.sqrMagnitude > 1e-4f ? side.normalized : Vector3.right;
+            Vector3 up = Vector3.Cross(line, side).normalized;
+            aim += (side * Rand(-1f, 1f) + up * Rand(-0.6f, 0.6f)) * error;
             return aim;
         }
+
+        /// <summary>How far off a shot goes, at any range (a hand that is not steady) and per metre, by skill.</summary>
+        static float AimBase { get { return 0.25f * Novice; } }
+        static float AimPerMetre { get { return 0.02f + 0.2f * Novice; } }
     }
 }
