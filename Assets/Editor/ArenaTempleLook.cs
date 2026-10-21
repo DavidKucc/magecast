@@ -339,7 +339,7 @@ namespace MageCast.EditorTools
             }
             // Seen from the floor, the battlements hide everything under a line rising 0.3 m a metre: things out
             // here are as tall as they are far, over that.
-            Ridge("Ridge", t, 150f, 36f, 42f, 80f, 7, 11, far);
+            Ridge("Ridge", t, 165f, 36f, 28f, 54f, 7, 11, far, false);
 
             // a sister temple out in the jungle, a crystal burning on its top
             Transform p = Group("Pyramid", t);

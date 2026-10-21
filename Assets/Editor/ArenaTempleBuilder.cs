@@ -456,20 +456,25 @@ namespace MageCast.EditorTools
                 if (i % 2 != 0 || j % 2 != 0 || !withClimb[k]) continue;     // only where somebody can stand
                 measured++;
                 Vector3 p = spots[k].p;
-                Vector3 chest = p + Vector3.up * 1.2f;
-                float best = 999f;
-                foreach (Collider c in covers)
-                {
-                    if (c.bounds.max.y < p.y + 1f) continue;
-                    Vector3 cp = c.ClosestPoint(chest);
-                    float d = Vector2.Distance(new Vector2(cp.x, cp.z), new Vector2(p.x, p.z));
-                    if (d < best) best = d;
-                }
                 // Up high, cover is not the rule: a roof or a bridge is exposed on purpose, and the way to
                 // safety from it is down. Gated on the ground and in the pit, reported for the rest.
                 // "High" against the lowest thing standable in the same spot, not against y = 0: on a
                 // terrain the floor itself goes up and down, and the top of a boulder is high ground.
                 float floorHere = cellFloor[spots[k].cell];
+                // On something low you jumped onto (a boulder a metre up), safety is a hop down, behind the
+                // very thing you stand on: cover is measured from the floor you land on. From the boulder's
+                // own top, all 15 such spots in the Valley read as 9-11 m from cover with cover 0.1-0.6 m
+                // away at their feet (22 Oct).
+                float from = p.y > floorHere + 1.3f ? p.y : floorHere;
+                Vector3 chest = new Vector3(p.x, from + 1.2f, p.z);
+                float best = 999f;
+                foreach (Collider c in covers)
+                {
+                    if (c.bounds.max.y < from + 1f) continue;
+                    Vector3 cp = c.ClosestPoint(chest);
+                    float d = Vector2.Distance(new Vector2(cp.x, cp.z), new Vector2(p.x, p.z));
+                    if (d < best) best = d;
+                }
                 if (p.y > floorHere + 1.3f) { if (best > MaxCoverDist) highExposed.Add(p); }
                 else
                 {

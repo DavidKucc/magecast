@@ -734,9 +734,11 @@ na úpatí neviditelná hranice. Polovina otočená o 180°, tým B na +z, tým 
   skály, vyšlapaná cesta), na svazích za hranicí jehličnatý les a níž listnáče (každý strom má dvojče
   otočené o 180°, jako všechno v této mapě), nad horami zasněžené štíty. Na podlaze pevnosti kruh run,
   nad ní krystal viditelný z celého údolí, na vysokých kamenech pochodně a prapory, po věžích břečťan.
-- **Krytí ve Valley má díru, která tam byla už před novým vzhledem:** audit hlásí FAIL — 15 z 6951 míst
-  je víc než 8 m od krytu (nejhorší 11,1 m, na vršcích nízkých balvanů u kraje mapy, třeba (−5,8; −42,8)).
-  Ověřeno sestavením původní verze: výsledek stejný.
+- **Audit krytí Valley hlásil FAIL** (15 z 6951 míst přes 8 m, nejhorší 11,1 m) — už před novým vzhledem,
+  ověřeno sestavením původní verze. Všech 15 míst bylo na vršku nízkého balvanu (0,8–1,2 m nad zemí):
+  audit měřil krytí od výšky kamene, ale bezpečí je seskok za ten kámen — kryt byl 0,1–0,6 m od nich.
+  Audit teď u nízkého vyvýšení (do 1,3 m) měří od země, na kterou se seskočí: Valley PASS (nejhůř 7,4 m),
+  Temple 4,7 m, Crossing 4,8 m; dosažitelná místa beze změny.
 
 **Pohyb:** chůze 5,0 m/s, sprint (Shift) 7,2 m/s. Rozjezd do klusu ~0,3 s, do sprintu ~0,5 s, zastavení ~0,2 s, otočka úhybu ~0,5 s (setrvačnost ~0,4 m), zatáčka o 90° ~0,3 s; změna směru je oblouk, ne zlom, aby se dal soupeř předvídat. Ve vzduchu se dá skok jen trochu ovlivnit. Měří to `Tools/Arena/Audit Movement`. Sprint stojí staminu (žlutý pruh nad životy):
 plná vydrží 4 s sprintu, doplní se za 3,5 s od chvíle, kdy přestaneš (s pauzou 0,8 s). Když ji
