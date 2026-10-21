@@ -54,9 +54,19 @@ namespace MageCast.EditorTools
 
 const string RootName = "Arena";
 
+        public const string ScenePath = "Assets/Scenes/Arena_Blockout.unity";
+
         [MenuItem("Tools/Arena/Rebuild Blockout")]
         public static void Rebuild()
         {
+            if (EditorApplication.isPlaying) { Debug.LogWarning("[Arena] stop play mode first"); return; }
+            var active = EditorSceneManager.GetActiveScene();
+            if (active.path != ScenePath)
+            {
+                if (active.isDirty) { Debug.LogWarning("[Arena] the open scene has unsaved changes -- save or discard them first"); return; }
+                EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            }
+
             GameObject old = GameObject.Find(RootName);
             if (old != null) Object.DestroyImmediate(old);
 
@@ -128,17 +138,16 @@ const string RootName = "Arena";
                 cam.transform.rotation = Quaternion.Euler(48f, 0f, 0f);
                 cam.farClipPlane = 300f;
             }
-            foreach (Light l in Object.FindObjectsOfType<Light>())
-                if (l.type == LightType.Directional) l.transform.rotation = Quaternion.Euler(50f, -35f, 0f);
+            // The look (since 21 Oct, "the Sanctum"): the boxes above stay the game, ArenaSanctum dresses
+            // them -- stone, runes, the core's spring and launch pads, the sky.
+            ArenaSanctum.Dress(root.transform);
+            ArenaSanctum.Atmosphere();
 
-                        // Flat bright ambient. Not a look, a working condition: a blockout you cannot read from
-            // an overhead screenshot is a blockout you cannot judge.
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.55f, 0.57f, 0.62f);
-
-AssetDatabase.SaveAssets();
-            EditorSceneManager.MarkSceneDirty(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
-            Debug.Log("[Arena] Blockout rebuilt: " + (root.GetComponentsInChildren<Transform>().Length - 1) + " objects.");
+            AssetDatabase.SaveAssets();
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log("[Arena] Blockout rebuilt: " + (root.GetComponentsInChildren<Transform>().Length - 1) + " objects.\n" + Audit());
         }
 
         /// <summary>

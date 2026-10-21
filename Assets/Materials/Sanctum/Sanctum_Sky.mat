@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Sanctum_Sky
+  m_Shader: {fileID: 4800000, guid: 69088a1ff66a1f546b31d43112d26598, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _Clouds: 0.55
+    - _Stars: 0.8
+    - _SunSize: 0.0012
+    m_Colors:
+    - _Below: {r: 0.16, g: 0.12, b: 0.24, a: 1}
+    - _CloudColour: {r: 1, g: 0.7, b: 0.62, a: 1}
+    - _Horizon: {r: 1, g: 0.6, b: 0.4, a: 1}
+    - _Middle: {r: 0.38, g: 0.24, b: 0.52, a: 1}
+    - _SunColour: {r: 1, g: 0.78, b: 0.54999995, a: 1}
+    - _SunDirection: {r: -0.49673176, g: 0.5, b: 0.7094065, a: 0}
+    - _Zenith: {r: 0.1, g: 0.08, b: 0.27, a: 1}
+  m_BuildTextureStacks: []

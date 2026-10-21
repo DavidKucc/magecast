@@ -426,6 +426,9 @@ namespace MageCast.Gestures
             Health hp = struck != null ? struck.GetComponentInParent<Health>() : null;
             PlayerMotor motor = struck != null ? struck.GetComponentInParent<PlayerMotor>() : null;
 
+            // runes cut into what it struck light up in its colour (the Sanctum's pillars and walls)
+            World.RuneGlow.Struck(collider, colour);
+
             // A barrier stops the shot where it stands and pays for it in durability. No bounce: a
             // barrier that threw fire back at whoever fired it would be a reward for being shot at.
             CastShield shield = struck != null ? struck.GetComponentInParent<CastShield>() : null;

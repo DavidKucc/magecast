@@ -408,7 +408,15 @@ namespace MageCast
             bool sprint = false;
             float face = facing;
 
-            if (target == null)
+            Vector3 heal;
+            if (target == null && WantsHealing(pos, out heal))
+            {
+                // hurt, with nobody in sight: up onto the core by a launch pad, into the healing spring
+                want = Follow(heal);
+                if (Flat(heal - pos).sqrMagnitude < 0.6f) want = Vector3.zero;
+                face = Yaw(want.sqrMagnitude > 0.01f ? want : transform.forward, facing);
+            }
+            else if (target == null)
             {
                 // nobody to fight: wander the map, looking where it goes
                 if (Time.time > wanderUntil || (wanderGoal - pos).sqrMagnitude < 4f)
@@ -516,9 +524,40 @@ namespace MageCast
             }
             if (corner < 0 || path.corners.Length == 0) return Flat(goal - pos).normalized;
             while (corner < path.corners.Length && Flat(path.corners[corner] - pos).sqrMagnitude < 0.5f) corner++;
-            if (corner >= path.corners.Length) return Vector3.zero;
+            if (corner >= path.corners.Length)
+            {
+                // The walkable surface ran out before the goal -- the top of a block it was thrown onto
+                // (a launch pad), with no way down but a step off the edge: so, off the edge.
+                if (path.status == NavMeshPathStatus.PathPartial && pos.y - goal.y > 1.5f)
+                    return Flat(goal - pos).normalized;
+                return Vector3.zero;
+            }
             return Flat(path.corners[corner] - pos).normalized;
         }
+
+        /// <summary>
+        /// Somewhere to heal, if the map has a healing spring and the bot is hurt enough to want it (more
+        /// often the more skilled): the spring itself when up beside it, else the nearest launch pad up.
+        /// </summary>
+        bool WantsHealing(Vector3 pos, out Vector3 goal)
+        {
+            goal = pos;
+            if (World.HealingSpring.All.Count == 0) return false;
+            if (health.Fraction > (healing ? 0.95f : 0.45f + 0.15f * Skill)) { healing = false; return false; }
+            healing = true;
+            World.HealingSpring spring = World.HealingSpring.All[0];
+            Vector3 at = spring.transform.position;
+            if (pos.y > at.y - 1f) { goal = at; return true; }
+            float best = float.MaxValue;
+            foreach (World.LaunchPad pad in World.LaunchPad.All)
+            {
+                float d = (pad.transform.position - pos).sqrMagnitude;
+                if (d < best) { best = d; goal = pad.transform.position; }
+            }
+            return best < float.MaxValue;
+        }
+
+        bool healing;
 
         static Vector3 Flat(Vector3 v) { v.y = 0f; return v; }
 

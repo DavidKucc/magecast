@@ -610,9 +610,37 @@ blesk na soupeře na ledu nebo ve vodě, vzduch na blízko nebo na toho, kdo kre
 nebo pod palbou, jinak oheň a led. Zabití se jim připisují (každý má vlastní číslo útočníka). Jejich zásahy
 se počítají v přesnosti zvlášť, jako „(bots)“.
 
-**Mapy:** v online hře vybírá hostitel v lobby, pro trénink se vybírá v menu — *Blockout* (původní šedá
-aréna), *Temple*, *Crossing* a *Valley*. Náhledy map v lobby generuje `Tools/Arena/Build Map Previews`
-(po změně mapy pustit znovu).
+**Mapy:** v online hře vybírá hostitel v lobby, pro trénink se vybírá v menu — *Blockout* (první aréna,
+od 21. 10. oblečená jako *Svatyně*), *Temple*, *Crossing* a *Valley*. Náhledy map v lobby generuje
+`Tools/Arena/Build Map Previews` (po změně mapy pustit znovu).
+
+**Blockout jako Svatyně run** (od 21. 10.; `Tools/Arena/Rebuild Blockout` postaví rozložení a
+`ArenaSanctum` ho obleče). Rozložení se nezměnilo — kvádry jsou pořád hra, kryt po prsa 1,6 m, plošiny
+1,2 m, audit krytu PASS. Vzhled ve stylu kouzel z balíků: kamenné nádvoří plující v soumraku.
+- **kámen:** vlastní shader `SanctumStone` — dlaždice a cihly promítané ze světa (jako `WorldStone`) plus
+  ručně „malované“ světlejší ošoupané hrany, velké skvrny druhé barvy a tmavší pata. Hrany se počítají
+  z kvádru samotného, proto tyhle objekty nejsou ve statickém batchingu.
+- **zdi:** římsa a cimbuří proti obloze, pilastry, prapory v barvách prvků s jejich runou ve zlatě,
+  krystalové lucerny,
+- **jádro:** podstavec, opěrné pilíře, pás run; nahoře **léčivý pramen** pod **plovoucím krystalem**,
+- **pilíře:** každý v barvě jednoho prvku, s ohněm v míse nahoře (oheň z balíku, udržovaný hořet),
+- **zem:** prstenec runových kanálků kolem jádra se šesti runami prvků v jejich barvách,
+- **kolem:** plovoucí skalní ostrovy, malovaná soumraková obloha (`SanctumSky`: fialová, růžová, jantarový
+  obzor, slunce, pásy mraků, hvězdy), poletující světélka.
+- **Světlo:** teplé nízké slunce s tvrdšími stíny, tmavší okolní světlo. Odrazy oblohy jsou na třetině —
+  bledá obloha zrcadlená ve všem pod šikmým úhlem dřív vybělila celý obraz a postavy ztratily barvu.
+
+**Aktivní prvky Svatyně:**
+- **Skokové plošiny** (4, u paty jádra, runa vzduchu): kdo na ni vstoupí, toho vyhodí vysokým obloukem
+  na vrchol jádra (5 m) — jediná cesta nahoru; dolů se seskočí. Vyhazuje si každý počítač svého hráče
+  (boty server), jako updraft; všichni vidí runu vzplanout a slyší vzduch.
+- **Léčivý pramen** na vrcholu jádra: kdo v něm stojí, dostává **5 životů/s**, ale ne do 2 s po zásahu
+  (doplní mezi souboji, nepřeléčí souboj). Nahoře není žádný kryt a vidí tě celá aréna. Léčí server.
+  Ověřeno: z 60 na 82,5 za 6,5 s.
+- **Runy, které odpovídají kouzlům:** runy vyryté v pilířích, jádře a deskách dýchají klidným světlem a když
+  do kamene udeří kouzlo, rozzáří se jeho barvou (oheň oranžově, led modře…) a během ~2 s se vrátí.
+- **Boti** plošiny i pramen používají: zraněný bot bez soupeře na dohled dojde na nejbližší plošinu, nechá
+  se vynést k prameni, a vyléčený (nebo když jde za soupeřem) z jádra seskočí.
 
 **Temple** (generuje `Tools/Arena/Build Temple Map`, měří `Tools/Arena/Audit Temple`): zřícený chrám
 44 × 44 m, čtvrtina orazítkovaná čtyřikrát otočením. Výšky jsou jen tyhle: 1,2 skok, 1,6 kryt po prsa
