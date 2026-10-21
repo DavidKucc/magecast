@@ -598,6 +598,28 @@ namespace MageCast.EditorTools
             RenderSettings.defaultReflectionMode = UnityEngine.Rendering.DefaultReflectionMode.Skybox;
         }
 
+        /// <summary>
+        /// The scene's ambient light and sky reflection, worked out and stored with it. The editor works
+        /// them out by itself as you look; a build has only what was stored, and without this the web
+        /// build had neither -- every face out of the sun went near black (21 Oct). Global illumination is
+        /// off, so this is the sky alone and takes a second; no lightmaps.
+        /// </summary>
+        public static void BakeEnvironment()
+        {
+            const string path = "Assets/Scenes/Arena_Blockout_Lighting.lighting";
+            LightingSettings s = AssetDatabase.LoadAssetAtPath<LightingSettings>(path);
+            if (s == null)
+            {
+                s = new LightingSettings { name = "Arena_Blockout_Lighting" };
+                AssetDatabase.CreateAsset(s, path);
+            }
+            s.bakedGI = false;
+            s.realtimeGI = false;
+            s.autoGenerate = false;
+            Lightmapping.lightingSettings = s;
+            if (!Lightmapping.Bake()) Debug.LogWarning("[Sanctum] could not bake the environment lighting");
+        }
+
         // ------------------------------------------------------------------ pieces
 
         static Transform Group(string name, Transform parent)

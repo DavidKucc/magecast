@@ -19,7 +19,7 @@ namespace MageCast
         /// <summary>One line per map, under its picture, in the order of NetSession.ArenaScenes.</summary>
         public static readonly string[] MapBlurbs =
         {
-            "the original test arena: compact, lots of cover, 1v1 lanes",
+            "a rune sanctum at dusk: compact, launch pads up to a healing spring",
             "altar, towers and a sunken tomb: a fight on three levels",
             "two bridges over a riverbed: flank below or hold the decks",
             "a grassy valley ringed by mountains, ruined towers: four times the floor"

@@ -610,8 +610,8 @@ blesk na soupeře na ledu nebo ve vodě, vzduch na blízko nebo na toho, kdo kre
 nebo pod palbou, jinak oheň a led. Zabití se jim připisují (každý má vlastní číslo útočníka). Jejich zásahy
 se počítají v přesnosti zvlášť, jako „(bots)“.
 
-**Mapy:** v online hře vybírá hostitel v lobby, pro trénink se vybírá v menu — *Blockout* (první aréna,
-od 21. 10. oblečená jako *Svatyně*), *Temple*, *Crossing* a *Valley*. Náhledy map v lobby generuje
+**Mapy:** v online hře vybírá hostitel v lobby, pro trénink se vybírá v menu — *Sanctum* (první aréna,
+scéna Arena_Blockout; do 21. 10. šedý „Blockout“), *Temple*, *Crossing* a *Valley*. Náhledy map v lobby generuje
 `Tools/Arena/Build Map Previews` (po změně mapy pustit znovu).
 
 **Blockout jako Svatyně run** (od 21. 10.; `Tools/Arena/Rebuild Blockout` postaví rozložení a
@@ -629,6 +629,9 @@ od 21. 10. oblečená jako *Svatyně*), *Temple*, *Crossing* a *Valley*. Náhled
   obzor, slunce, pásy mraků, hvězdy), poletující světélka.
 - **Světlo:** teplé nízké slunce s tvrdšími stíny, tmavší okolní světlo. Odrazy oblohy jsou na třetině —
   bledá obloha zrcadlená ve všem pod šikmým úhlem dřív vybělila celý obraz a postavy ztratily barvu.
+  Okolní světlo a odraz oblohy se při přestavbě **pečou** do scény (`ArenaSanctum.BakeEnvironment`, bez
+  lightmap, 1 s): editor si je dopočítává sám, ale build má jen to, co je uložené — bez toho byla ve webové
+  verzi každá strana mimo slunce skoro černá. (Temple, Crossing a Valley to zatím upečené nemají.)
 
 **Aktivní prvky Svatyně:**
 - **Skokové plošiny** (4, u paty jádra, runa vzduchu): kdo na ni vstoupí, toho vyhodí vysokým obloukem

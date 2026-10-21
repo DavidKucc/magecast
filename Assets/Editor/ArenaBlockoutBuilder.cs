@@ -147,6 +147,9 @@ const string RootName = "Arena";
             var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
+            ArenaSanctum.BakeEnvironment();
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
             Debug.Log("[Arena] Blockout rebuilt: " + (root.GetComponentsInChildren<Transform>().Length - 1) + " objects.\n" + Audit());
         }
 
