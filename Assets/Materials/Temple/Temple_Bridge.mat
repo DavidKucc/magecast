@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Temple_Bridge
-  m_Shader: {fileID: 4800000, guid: 9dd712816237acf4ab177922559b0e10, type: 3}
+  m_Shader: {fileID: 4800000, guid: 9bca1c95f7a45f9459b706624bde96f7, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -29,11 +29,17 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Glossiness: 0.08
+    - _EdgeWidth: 0.1
+    - _Glossiness: 0.1
     - _Grime: 0.2
+    - _PatchScale: 7
     - _Scale: 2
+    - _TopPatch: 0
     m_Colors:
-    - _Color: {r: 0.55, g: 0.46, b: 0.38, a: 1}
+    - _Color: {r: 0.61200005, g: 0.38717502, b: 0.26987502, a: 1}
+    - _EdgeColor: {r: 0.816, g: 0.64005, b: 0.46410003, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _TopColor: {r: 0.6, g: 0.52, b: 0.42, a: 1}
+    - _Tint2: {r: 0.5355, g: 0.4182, b: 0.35955, a: 1}
+    - _TopColor: {r: 0.646, g: 0.48960006, b: 0.34297502, a: 1}
+    - _TopColor2: {r: 0.646, g: 0.48960006, b: 0.34297502, a: 1}
   m_BuildTextureStacks: []

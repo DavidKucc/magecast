@@ -8,10 +8,10 @@ namespace MageCast.EditorTools
     /// The third map, "Crossing": a dry riverbed across the middle of a ruined courtyard, and three ways
     /// over it. Built entirely from this file -- Tools > Arena > Build Crossing Map, then Audit Crossing.
     ///
-    /// The look is held back on purpose. Every spell is a saturated colour -- orange fire, cyan ice,
-    /// yellow lightning, pale air, gold barrier -- and they have to be the brightest, most colourful
-    /// thing on screen. So the stone is grey-blue and the moss grey-green, nothing glows cold (a cyan
-    /// line on the floor reads as ice), and the only lights are a few dim warm lanterns.
+    /// The look (ArenaCrossingLook) is held back on purpose. Every spell is a saturated colour -- orange
+    /// fire, cyan ice, yellow lightning, pale air, gold barrier -- and they have to be the brightest, most
+    /// colourful thing on screen. So the stone is grey-blue and the moss grey-green, nothing glows cold (a
+    /// cyan line on the floor reads as ice), and the only lights are a few dim warm lanterns.
     ///
     /// Same scale contract and height set as the Temple:
     ///   1.2 a jump, 1.6 chest cover you can climb, 2.4 a ledge you climb, the riverbed 1.2 down.
@@ -37,7 +37,7 @@ namespace MageCast.EditorTools
         const float FordHalf = 3f;                     // solid ground over it at x -3..3
         const float BridgeX = 15f, BridgeHalfWidth = 1.5f;
 
-        static Material floorMat, bedMat, wallMat, stoneMat, columnMat, coverMat, darkMat, lampMat;
+        static Material floorMat, bedMat, wallMat, stoneMat, columnMat, coverMat, darkMat;
 
         [MenuItem("Tools/Arena/Build Crossing Map")]
         public static void Build()
@@ -65,9 +65,13 @@ namespace MageCast.EditorTools
             Materials();
             GameObject root = new GameObject("Arena");
             BuildMap(root.transform);
-            Atmosphere();
+            ArenaCrossingLook.Dress(root.transform);
+            ArenaCrossingLook.Atmosphere();
 
             EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            // the light is worked out from the saved scene, then saved with it
+            ArenaCrossingLook.BakeEnvironment();
             EditorSceneManager.SaveScene(scene);
             ArenaTempleBuilder.EnsureInBuild(ScenePath);
             Debug.Log("[Crossing] built: " + (root.GetComponentsInChildren<Transform>().Length - 1) + " objects\n" + Audit());
@@ -89,8 +93,9 @@ namespace MageCast.EditorTools
             float wx = HalfX + WallThick * 0.5f, wz = HalfZ + WallThick * 0.5f;
             Box("Wall_N", shell, wallMat, new Vector3(0f, WallHeight * 0.5f, wz), new Vector3(HalfX * 2f + 2f, WallHeight, WallThick));
             Box("Wall_S", shell, wallMat, new Vector3(0f, WallHeight * 0.5f, -wz), new Vector3(HalfX * 2f + 2f, WallHeight, WallThick));
-            Box("Wall_E", shell, wallMat, new Vector3(wx, WallHeight * 0.5f, 0f), new Vector3(WallThick, WallHeight, HalfZ * 2f + 2f));
-            Box("Wall_W", shell, wallMat, new Vector3(-wx, WallHeight * 0.5f, 0f), new Vector3(WallThick, WallHeight, HalfZ * 2f + 2f));
+            // east and west fit between north and south: overlapping at the corners, their faces flickered
+            Box("Wall_E", shell, wallMat, new Vector3(wx, WallHeight * 0.5f, 0f), new Vector3(WallThick, WallHeight, HalfZ * 2f));
+            Box("Wall_W", shell, wallMat, new Vector3(-wx, WallHeight * 0.5f, 0f), new Vector3(WallThick, WallHeight, HalfZ * 2f));
 
             for (int h = 0; h < 2; h++)
             {
@@ -159,11 +164,12 @@ namespace MageCast.EditorTools
 
             // --- south bank: a roofless chapel, open towards the middle, a window in its far wall
             float cx0 = 16f, cx1 = 22f, cz0 = -16f, cz1 = -10.5f, w = 0.7f;
+            // the east wall between the south and the north ones, which take the corners (overlapping there,
+            // their faces flickered); a window sill that used to be here lay wholly inside the east wall
             Block("Chapel_S", t, wallMat, cx0, cx1, cz0, cz0 + w, 0f, 3.6f);
-            Block("Chapel_E", t, wallMat, cx1 - w, cx1, cz0, cz1, 0f, 3.6f);
+            Block("Chapel_E", t, wallMat, cx1 - w, cx1, cz0 + w, cz1 - w, 0f, 3.6f);
             Block("Chapel_N", t, wallMat, cx0 + 2.6f, cx1, cz1 - w, cz1, 0f, 3.6f);
             Block("Chapel_N_Low", t, wallMat, cx0, cx0 + 1.2f, cz1 - w, cz1, 0f, ChestHigh);
-            Block("Chapel_Window_Sill", t, wallMat, cx1 - w, cx1, cz0 + 2f, cz0 + 3.5f, 0f, 1.1f);
             Box("Chapel_Altar", t, darkMat, new Vector3(20f, 0.5f, -14.2f), new Vector3(1.6f, 1f, 0.8f));
             Box("Fallen_Column", t, columnMat, new Vector3(9f, 0.45f, -9f), new Vector3(4.5f, 0.9f, 0.9f), 25f);
             Box("Ford_Wall", t, coverMat, new Vector3(4.6f, ChestHigh * 0.5f, -4.2f), new Vector3(3f, ChestHigh, 0.8f));
@@ -201,80 +207,48 @@ namespace MageCast.EditorTools
             Block("Merlon", t, wallMat, x0, x0 + 1.2f, z0, z0 + 0.6f, Ledge, Ledge + mh);
             Block("Merlon", t, wallMat, x1 - 1.2f, x1, z0, z0 + 0.6f, Ledge, Ledge + mh);
             Block("Merlon", t, wallMat, x0, x0 + 0.6f, 11.6f, z1, Ledge, Ledge + mh);
-            Block("Parapet", t, wallMat, x0, x1, z1 - 0.5f, z1, Ledge, Ledge + 0.6f);
+            // from the corner merlon on, not through it
+            Block("Parapet", t, wallMat, x0 + 0.6f, x1, z1 - 0.5f, z1, Ledge, Ledge + 0.6f);
         }
 
+        /// <summary>A lantern's post; its cage and its flame are ArenaCrossingLook's.</summary>
         static void Lantern(Transform t, Vector3 at)
         {
             Box("Lantern_Post", t, darkMat, at + new Vector3(0f, 0.7f, 0f), new Vector3(0.3f, 1.4f, 0.3f));
-            ArenaTempleBuilder.Deco("Lantern_Light", t, lampMat, at + new Vector3(0f, 1.55f, 0f), new Vector3(0.28f, 0.3f, 0.28f));
         }
 
         // ------------------------------------------------------------------ look
 
+        /// <summary>
+        /// Grey-blue stone in the painted style of the Sanctum (ArenaKit.Stone): worn pale edges, moss patches on
+        /// the tops, dried mud in the riverbed -- nothing a spell's colour could be mistaken for.
+        /// </summary>
         static void Materials()
         {
-            ArenaTempleBuilder.EnsureFolder(MatFolder);
+            ArenaKit.Begin(MatFolder, "Crossing");
             ArenaTempleBuilder.EnsureFolder("Assets/Textures");
             ArenaTempleBuilder.EnsureFolder("Assets/Textures/Temple");
             // the Temple's patterns: the same hand, so the maps look like one game
             Texture2D tiles = ArenaTempleBuilder.PatternTexture("Assets/Textures/Temple/Temple_Tiles.png", 4, 4, false, 11);
-            Texture2D bricks = ArenaTempleBuilder.PatternTexture("Assets/Textures/Temple/Temple_Bricks.png", 4, 8, true, 23);
             Texture2D blocks = ArenaTempleBuilder.PatternTexture("Assets/Textures/Temple/Temple_Blocks.png", 2, 4, true, 37);
+            Texture2D flags = ArenaTempleBuilder.PatternTexture(ArenaKit.TexFolder + "/Sanctum_Flagstones.png", 3, 3, true, 51);
 
-            // grey-blue stone and grey-green moss: no colour in the scenery that a spell also uses
-            floorMat  = Stone("Crossing_Floor",  tiles,  4f, new Color(0.49f, 0.48f, 0.45f), new Color(0.53f, 0.51f, 0.47f), 0.3f);
-            bedMat    = Stone("Crossing_Bed",    tiles,  1.5f, new Color(0.40f, 0.38f, 0.34f), new Color(0.43f, 0.40f, 0.35f), 0.35f);
-            wallMat   = Stone("Crossing_Wall",   bricks, 4f, new Color(0.40f, 0.41f, 0.44f), new Color(0.40f, 0.45f, 0.38f), 0.3f);
-            stoneMat  = Stone("Crossing_Stone",  blocks, 3f, new Color(0.52f, 0.51f, 0.48f), new Color(0.47f, 0.50f, 0.42f), 0.3f);
-            columnMat = Stone("Crossing_Column", blocks, 2f, new Color(0.62f, 0.61f, 0.58f), new Color(0.58f, 0.60f, 0.54f), 0.2f);
-            coverMat  = Stone("Crossing_Cover",  blocks, 2f, new Color(0.48f, 0.46f, 0.43f), new Color(0.44f, 0.47f, 0.40f), 0.3f);
-            darkMat   = Stone("Crossing_Dark",   blocks, 2f, new Color(0.24f, 0.25f, 0.27f), new Color(0.27f, 0.28f, 0.29f), 0.1f);
-            // a dim warm lamp, nowhere near as bright as a fire spell
-            lampMat = ArenaTempleBuilder.Glow("Crossing_Lamp", new Color(1.1f, 0.8f, 0.48f), MatFolder);
-        }
-
-        static Material Stone(string name, Texture2D pattern, float scale, Color side, Color top, float grime)
-        {
-            return ArenaTempleBuilder.Stone(name, pattern, scale, side, top, grime, MatFolder);
-        }
-
-        static void Atmosphere()
-        {
-            // A high, soft, slightly cool afternoon. No fog: the effect packs' particle shaders turn it
-            // into a square around every particle (see the Temple builder).
-            GameObject sun = new GameObject("Sun");
-            Light l = sun.AddComponent<Light>();
-            l.type = LightType.Directional;
-            l.color = new Color(1f, 0.95f, 0.88f);
-            l.intensity = 1.0f;
-            l.shadows = LightShadows.Soft;
-            l.shadowStrength = 0.65f;
-            // from the side, across the river: both teams look along z, so both get the same light --
-            // from behind one of them, one side would see every wall sunlit and the other every wall in shade
-            sun.transform.rotation = Quaternion.Euler(50f, 90f, 0f);
-            RenderSettings.sun = l;
-
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.50f, 0.54f, 0.60f);
-            RenderSettings.ambientEquatorColor = new Color(0.43f, 0.44f, 0.45f);
-            RenderSettings.ambientGroundColor = new Color(0.25f, 0.25f, 0.26f);
-            RenderSettings.fog = false;
-
-            string skyPath = MatFolder + "/Crossing_Sky.mat";
-            Material sky = AssetDatabase.LoadAssetAtPath<Material>(skyPath);
-            if (sky == null)
-            {
-                sky = new Material(Shader.Find("Skybox/Procedural"));
-                AssetDatabase.CreateAsset(sky, skyPath);
-            }
-            sky.SetFloat("_SunSize", 0.04f);
-            sky.SetFloat("_AtmosphereThickness", 1.5f);
-            sky.SetColor("_SkyTint", new Color(0.42f, 0.43f, 0.45f));
-            sky.SetColor("_GroundColor", new Color(0.33f, 0.33f, 0.34f));
-            sky.SetFloat("_Exposure", 1.05f);
-            EditorUtility.SetDirty(sky);
-            RenderSettings.skybox = sky;
+            Color moss = new Color(0.42f, 0.50f, 0.38f), pale = new Color(0.82f, 0.81f, 0.76f);
+            // no worn edges on the floor: it is laid in pieces, and their seams drew pale lines across the courtyard
+            floorMat  = ArenaKit.Stone("Crossing_Floor",  flags,  4f,   new Color(0.64f, 0.64f, 0.61f), new Color(0.58f, 0.61f, 0.57f), new Color(0.63f, 0.62f, 0.58f),
+                                       pale, 0f, 0.1f, 7f, new Color(0.52f, 0.56f, 0.47f), 0.6f);
+            bedMat    = ArenaKit.Stone("Crossing_Bed",    tiles,  1.5f, new Color(0.46f, 0.42f, 0.37f), new Color(0.44f, 0.42f, 0.38f), new Color(0.54f, 0.49f, 0.41f),
+                                       pale, 0f, 0.3f, 5f, new Color(0.46f, 0.44f, 0.37f), 0.7f);
+            wallMat   = ArenaKit.Stone("Crossing_Wall",   blocks, 4f,   new Color(0.50f, 0.52f, 0.56f), new Color(0.46f, 0.50f, 0.48f), moss,
+                                       pale, 0.12f, 0.35f);
+            stoneMat  = ArenaKit.Stone("Crossing_Stone",  blocks, 3f,   new Color(0.60f, 0.60f, 0.58f), new Color(0.54f, 0.57f, 0.54f), new Color(0.60f, 0.61f, 0.54f),
+                                       new Color(0.88f, 0.86f, 0.80f), 0.14f, 0.3f, 7f, moss, 0.5f);
+            columnMat = ArenaKit.Stone("Crossing_Column", blocks, 2f,   new Color(0.72f, 0.71f, 0.68f), new Color(0.66f, 0.68f, 0.64f), new Color(0.70f, 0.71f, 0.64f),
+                                       Color.white, 0f, 0.2f);
+            coverMat  = ArenaKit.Stone("Crossing_Cover",  blocks, 2f,   new Color(0.55f, 0.54f, 0.50f), new Color(0.50f, 0.53f, 0.49f), new Color(0.55f, 0.58f, 0.48f),
+                                       pale, 0.12f, 0.3f, 7f, moss, 0.5f);
+            darkMat   = ArenaKit.Stone("Crossing_Dark",   blocks, 2f,   new Color(0.27f, 0.28f, 0.31f), new Color(0.26f, 0.29f, 0.30f), new Color(0.30f, 0.31f, 0.32f),
+                                       new Color(0.52f, 0.52f, 0.54f), 0.08f, 0.1f);
         }
 
         // ------------------------------------------------------------------ helpers
@@ -305,7 +279,7 @@ namespace MageCast.EditorTools
             g.transform.localPosition = centre;
             g.transform.localScale = new Vector3(diameter, height * 0.5f, diameter);   // a cylinder is 2 high
             g.GetComponent<Renderer>().sharedMaterial = m;
-            g.isStatic = true;
+            ArenaKit.Static(g);
         }
     }
 }

@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Crossing_Stone
-  m_Shader: {fileID: 4800000, guid: 9dd712816237acf4ab177922559b0e10, type: 3}
+  m_Shader: {fileID: 4800000, guid: 9bca1c95f7a45f9459b706624bde96f7, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -29,11 +29,17 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Glossiness: 0.08
+    - _EdgeWidth: 0.14
+    - _Glossiness: 0.1
     - _Grime: 0.3
+    - _PatchScale: 7
     - _Scale: 3
+    - _TopPatch: 0.5
     m_Colors:
-    - _Color: {r: 0.52, g: 0.51, b: 0.48, a: 1}
+    - _Color: {r: 0.51000005, g: 0.51000005, b: 0.49045002, a: 1}
+    - _EdgeColor: {r: 0.748, g: 0.72845006, b: 0.66980004, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _TopColor: {r: 0.47, g: 0.5, b: 0.42, a: 1}
+    - _Tint2: {r: 0.45517504, g: 0.48450002, b: 0.45517504, a: 1}
+    - _TopColor: {r: 0.50872505, g: 0.51850003, b: 0.45007503, a: 1}
+    - _TopColor2: {r: 0.3468, g: 0.425, b: 0.3077, a: 1}
   m_BuildTextureStacks: []

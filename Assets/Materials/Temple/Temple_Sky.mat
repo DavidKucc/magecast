@@ -8,12 +8,12 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Temple_Sky
-  m_Shader: {fileID: 106, guid: 0000000000000000f000000000000000, type: 0}
+  m_Shader: {fileID: 4800000, guid: 69088a1ff66a1f546b31d43112d26598, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords:
+  m_ValidKeywords: []
+  m_InvalidKeywords:
   - _SUNDISK_HIGH_QUALITY
-  m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -27,11 +27,24 @@ Material:
     m_Ints: []
     m_Floats:
     - _AtmosphereThickness: 1.25
+    - _CloudCover: 0.5
+    - _CloudHeight: 0.75
+    - _CloudScale: 0.7
+    - _CloudStretch: 2.5
+    - _Clouds: 0.7
     - _Exposure: 1.1
+    - _Stars: 0
     - _SunDisk: 2
-    - _SunSize: 0.05
+    - _SunSize: 0.0016
     - _SunSizeConvergence: 5
     m_Colors:
+    - _Below: {r: 0.36, g: 0.3, b: 0.26, a: 1}
+    - _CloudColour: {r: 1, g: 0.88, b: 0.74, a: 1}
     - _GroundColor: {r: 0.32, g: 0.28, b: 0.3, a: 1}
+    - _Horizon: {r: 1, g: 0.76, b: 0.5, a: 1}
+    - _Middle: {r: 0.44, g: 0.6, b: 0.78, a: 1}
     - _SkyTint: {r: 0.62, g: 0.52, b: 0.68, a: 1}
+    - _SunColour: {r: 1, g: 0.82, b: 0.55, a: 1}
+    - _SunDirection: {r: 0.5328952, g: 0.5591929, b: -0.6350796, a: 0}
+    - _Zenith: {r: 0.14, g: 0.28, b: 0.56, a: 1}
   m_BuildTextureStacks: []

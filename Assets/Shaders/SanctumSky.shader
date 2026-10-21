@@ -16,6 +16,10 @@ Shader "MageCast/SanctumSky"
         _Stars ("Stars", Range(0, 2)) = 0.8
         _CloudColour ("Cloud", Color) = (1.0, 0.70, 0.62, 1)
         _Clouds ("Clouds", Range(0, 1)) = 0.55
+        _CloudCover ("Cloud cover (lower is more)", Range(0, 1)) = 0.55
+        _CloudHeight ("How high the clouds reach", Range(0.06, 1)) = 0.55
+        _CloudScale ("Cloud size (lower is bigger)", Range(0.1, 4)) = 1
+        _CloudStretch ("Cloud stretch along the horizon", Range(1, 8)) = 4
     }
     SubShader
     {
@@ -31,7 +35,7 @@ Shader "MageCast/SanctumSky"
 
             fixed4 _Zenith, _Middle, _Horizon, _Below, _SunColour, _CloudColour;
             float4 _SunDirection;
-            float _SunSize, _Stars, _Clouds;
+            float _SunSize, _Stars, _Clouds, _CloudCover, _CloudHeight, _CloudScale, _CloudStretch;
 
             struct v2f { float4 pos : SV_POSITION; float3 dir : TEXCOORD0; };
 
@@ -74,12 +78,13 @@ Shader "MageCast/SanctumSky"
                 float disc = smoothstep(1 - _SunSize, 1 - _SunSize * 0.5, c);
                 sky += _SunColour.rgb * (glow * saturate(1 - h * 1.2) + disc * 0.95);
 
-                // thin bands of cloud near the horizon, lit on the sun's side
+                // bands of cloud near the horizon -- at dusk thin and stretched, by day rounder and higher --
+                // lit on the sun's side
                 if (h > -0.02)
                 {
-                    float2 cp = d.xz / max(0.08, h + 0.12);
-                    float band = noise(cp * float2(0.6, 2.4) + 3.1) * 0.6 + noise(cp * float2(1.4, 5.0)) * 0.4;
-                    float cloud = smoothstep(0.55, 0.85, band) * smoothstep(0.55, 0.06, h) * smoothstep(-0.02, 0.05, h);
+                    float2 cp = d.xz / max(0.08, h + 0.12) * _CloudScale;
+                    float band = noise(cp * float2(0.6, 0.6 * _CloudStretch) + 3.1) * 0.6 + noise(cp * float2(1.4, 1.25 * _CloudStretch)) * 0.4;
+                    float cloud = smoothstep(_CloudCover, _CloudCover + 0.3, band) * smoothstep(_CloudHeight, 0.06, h) * smoothstep(-0.02, 0.05, h);
                     fixed3 lit = lerp(_Middle.rgb * 0.9, _CloudColour.rgb, saturate(c * 0.5 + 0.5));
                     sky = lerp(sky, lit, cloud * _Clouds);
                 }

@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Temple_Floor
-  m_Shader: {fileID: 4800000, guid: 9dd712816237acf4ab177922559b0e10, type: 3}
+  m_Shader: {fileID: 4800000, guid: 9bca1c95f7a45f9459b706624bde96f7, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -24,16 +24,22 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: 0edf4e69750206a44b9cac605144a21d, type: 3}
+        m_Texture: {fileID: 2800000, guid: 5d47104d2c4145e4aafd001fd4fa5198, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Glossiness: 0.08
-    - _Grime: 0.35
+    - _EdgeWidth: 0.05
+    - _Glossiness: 0.1
+    - _Grime: 0.25
+    - _PatchScale: 7
     - _Scale: 4
+    - _TopPatch: 0.55
     m_Colors:
-    - _Color: {r: 0.6, g: 0.54, b: 0.46, a: 1}
+    - _Color: {r: 0.595, g: 0.49725005, b: 0.36040005, a: 1}
+    - _EdgeColor: {r: 0.78200006, g: 0.68425006, b: 0.5083, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _TopColor: {r: 0.66, g: 0.6, b: 0.5, a: 1}
+    - _Tint2: {r: 0.527, g: 0.478125, b: 0.42924997, a: 1}
+    - _TopColor: {r: 0.697, g: 0.5992501, b: 0.44285002, a: 1}
+    - _TopColor2: {r: 0.578, g: 0.578, b: 0.40205002, a: 1}
   m_BuildTextureStacks: []

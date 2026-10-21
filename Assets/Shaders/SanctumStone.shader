@@ -18,6 +18,8 @@ Shader "MageCast/SanctumStone"
         _Color ("Side colour", Color) = (0.6, 0.55, 0.5, 1)
         _Tint2 ("Second side colour (patches)", Color) = (0.55, 0.52, 0.56, 1)
         _TopColor ("Top colour", Color) = (0.6, 0.6, 0.5, 1)
+        _TopColor2 ("Second top colour (patches)", Color) = (0.6, 0.6, 0.5, 1)
+        _TopPatch ("Patches on tops", Range(0, 1)) = 0
         _EdgeColor ("Edge colour", Color) = (0.95, 0.88, 0.76, 1)
         _EdgeWidth ("Edge width (m), 0 = none", Float) = 0.1
         _Scale ("Metres per texture", Float) = 4
@@ -36,8 +38,8 @@ Shader "MageCast/SanctumStone"
         #pragma target 3.0
 
         sampler2D _MainTex;
-        fixed4 _Color, _Tint2, _TopColor, _EdgeColor;
-        float _EdgeWidth, _Scale, _PatchScale, _Grime;
+        fixed4 _Color, _Tint2, _TopColor, _TopColor2, _EdgeColor;
+        float _EdgeWidth, _Scale, _PatchScale, _Grime, _TopPatch;
         half _Glossiness;
         fixed4 _EmissionColor;
 
@@ -80,8 +82,10 @@ Shader "MageCast/SanctumStone"
             float patch = noise(q.xz + q.y * 0.7) * w.y + noise(q.zy) * w.x + noise(q.xy) * w.z;
             fixed3 side = lerp(_Color.rgb, _Tint2.rgb, smoothstep(0.35, 0.75, patch));
 
+            // tops in their own colour -- with patches too, for a floor, which is all top
+            fixed3 top = lerp(_TopColor.rgb, _TopColor2.rgb, smoothstep(0.3, 0.8, patch) * _TopPatch);
             float up = saturate(n.y);
-            fixed3 colour = lerp(side, _TopColor.rgb, up * up);
+            fixed3 colour = lerp(side, top, up * up);
 
             // worn, lit edges
             if (_EdgeWidth > 0.001)

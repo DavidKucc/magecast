@@ -55,7 +55,7 @@ namespace MageCast.EditorTools
         const float MantleReach = 2.65f;     // PlayerMotor: highest ledge a jump-and-pull gets you onto
         const float JumpReach = 1.3f;
 
-        static Material floorMat, pitMat, wallMat, stoneMat, darkMat, bridgeMat, coverMat, glowMat, fireMat;
+        static Material floorMat, pitMat, wallMat, stoneMat, darkMat, bridgeMat, coverMat;
 
         [MenuItem("Tools/Arena/Build Temple Map")]
         public static void Build()
@@ -83,9 +83,13 @@ namespace MageCast.EditorTools
             Materials();
             GameObject root = new GameObject(RootName);
             BuildMap(root.transform);
-            Atmosphere();
+            ArenaTempleLook.Dress(root.transform);
+            ArenaTempleLook.Atmosphere();
 
             EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            // the light is worked out from the saved scene, then saved with it
+            ArenaTempleLook.BakeEnvironment();
             EditorSceneManager.SaveScene(scene);
             EnsureInBuild();
             Debug.Log("[Temple] built: " + (root.GetComponentsInChildren<Transform>().Length - 1) + " objects\n" + Audit());
@@ -112,17 +116,14 @@ namespace MageCast.EditorTools
             float wo = Half + WallThick * 0.5f, wl = Half * 2f + WallThick * 2f;
             Box("Wall_N", shell, wallMat, new Vector3(0f, WallHeight * 0.5f, wo), new Vector3(wl, WallHeight, WallThick));
             Box("Wall_S", shell, wallMat, new Vector3(0f, WallHeight * 0.5f, -wo), new Vector3(wl, WallHeight, WallThick));
-            Box("Wall_E", shell, wallMat, new Vector3(wo, WallHeight * 0.5f, 0f), new Vector3(WallThick, WallHeight, wl));
-            Box("Wall_W", shell, wallMat, new Vector3(-wo, WallHeight * 0.5f, 0f), new Vector3(WallThick, WallHeight, wl));
+            // east and west fit between north and south: overlapping at the corners, their faces flickered
+            Box("Wall_E", shell, wallMat, new Vector3(wo, WallHeight * 0.5f, 0f), new Vector3(WallThick, WallHeight, Half * 2f));
+            Box("Wall_W", shell, wallMat, new Vector3(-wo, WallHeight * 0.5f, 0f), new Vector3(WallThick, WallHeight, Half * 2f));
 
             // The altar: the one place you see the whole map from, and the one place the whole map sees.
             Box("Altar", centre, stoneMat, new Vector3(0f, Ledge * 0.5f, 0f), new Vector3(AltarHalf * 2f, Ledge, AltarHalf * 2f));
             // the obelisk kills every line across the altar top -- standing up there is strong, not a turret
             Box("Obelisk", centre, darkMat, new Vector3(0f, Ledge + 3f, 0f), new Vector3(1.4f, 6f, 1.4f));
-            foreach (float h in new[] { 1.2f, 2.8f, 4.4f })
-                Deco("Obelisk_Band", centre, glowMat, new Vector3(0f, Ledge + h, 0f), new Vector3(1.5f, 0.12f, 1.5f));
-            GameObject crystal = Deco("Obelisk_Crystal", centre, glowMat, new Vector3(0f, Ledge + 7.2f, 0f), new Vector3(0.9f, 0.9f, 0.9f));
-            crystal.transform.localRotation = Quaternion.Euler(45f, 0f, 45f);
 
             for (int q = 0; q < 4; q++)
             {
@@ -176,15 +177,9 @@ namespace MageCast.EditorTools
                     new Vector3(-0.5f + (i + 0.5f) * StepRun, h * 0.5f, AltarHalf + 1f),
                     new Vector3(StepRun, h, 2f));
             }
-            Deco("Altar_Edge", t, glowMat, new Vector3(0f, Ledge - 0.18f, AltarHalf + 0.02f), new Vector3(AltarHalf * 2f, 0.08f, 0.06f));
             // a stump on the altar top: something to duck behind up there besides the obelisk
             Box("Altar_Stump", t, stoneMat, new Vector3(2.6f, Ledge + ChestHigh * 0.5f, 2.6f), new Vector3(0.9f, ChestHigh, 0.9f));
-            // the ley line from the altar to the wall, and the sigil it runs into
-            Deco("Ley_Line", t, glowMat, new Vector3(0f, 0.015f, (AltarHalf + 2.2f + Half) * 0.5f),
-                 new Vector3(0.18f, 0.03f, Half - AltarHalf - 2.2f));
-            Deco("Wall_Sigil", t, glowMat, new Vector3(0f, 3.6f, Half - 0.04f), new Vector3(0.25f, 3.4f, 0.08f));
-            Deco("Wall_Sigil_Bar", t, glowMat, new Vector3(0f, 4.4f, Half - 0.04f), new Vector3(1.6f, 0.2f, 0.08f));
-            Deco("Wall_Sigil_Arm", t, glowMat, new Vector3(0f, 2.8f, Half - 0.04f), new Vector3(1.0f, 0.2f, 0.08f));
+            // (the ley line from the altar to the wall and the rune it runs into: ArenaTempleLook)
 
             BuildTower(t);
 
@@ -209,7 +204,7 @@ namespace MageCast.EditorTools
             column.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
             column.transform.localScale = new Vector3(1.2f, 2.5f, 1.2f);     // a cylinder is 2 high: 5 m long
             column.GetComponent<Renderer>().sharedMaterial = stoneMat;
-            column.isStatic = true;
+            ArenaKit.Static(column);
 
             // braziers by the tower doors: light to steer by
             Brazier(t, new Vector3(Tower.xMin - 0.8f, 0f, Tower.yMin + 0.6f));
@@ -221,9 +216,11 @@ namespace MageCast.EditorTools
             float x0 = Tower.xMin, x1 = Tower.xMax, z0 = Tower.yMin, z1 = Tower.yMax, w = TowerWall;
 
             // west wall, door towards the side lane
+            // West and east run between south and north, which take the corners: two walls both running
+            // into a corner put their faces in the same place there, and they flickered through each other.
             float dz0 = z0 + 1.1f, dz1 = dz0 + DoorWidth;
-            WallX("Tower_W", t, x0, x0 + w, z0, dz0, 0f, Storey);
-            WallX("Tower_W", t, x0, x0 + w, dz1, z1, 0f, Storey);
+            WallX("Tower_W", t, x0, x0 + w, z0 + w, dz0, 0f, Storey);
+            WallX("Tower_W", t, x0, x0 + w, dz1, z1 - w, 0f, Storey);
             WallX("Tower_W_Lintel", t, x0, x0 + w, dz0, dz1, DoorHeight, Storey);
             // south wall, door towards the ruin
             float dx0 = x0 + 3f, dx1 = dx0 + DoorWidth;
@@ -232,7 +229,7 @@ namespace MageCast.EditorTools
             WallX("Tower_S_Lintel", t, dx0, dx1, z0, z0 + w, DoorHeight, Storey);
             // north and east: solid, they face the outer wall
             WallX("Tower_N", t, x0, x1, z1 - w, z1, 0f, Storey);
-            WallX("Tower_E", t, x1 - w, x1, z0, z1, 0f, Storey);
+            WallX("Tower_E", t, x1 - w, x1, z0 + w, z1 - w, 0f, Storey);
 
             // The ramp up runs inside along the north wall, west to east, and comes out through a hole
             // in the roof. 34 degrees, under the controller's 50.
@@ -245,125 +242,60 @@ namespace MageCast.EditorTools
             WallX("Tower_Roof", t, x0 + w, x1 - w, z0 + w, rz0 - 0.4f, Storey - 0.4f, Storey);
             WallX("Tower_Roof", t, x0 + w, holeFrom, rz0 - 0.4f, rz1, Storey - 0.4f, Storey);
 
-            // battlements on the two edges that look into the arena; the corner stays open for the bridge
-            for (int i = 0; i < 3; i++)
+            // Battlements on the two edges that look into the arena; the corner stays open for the bridge.
+            // Two merlons an edge and a post at its far corner, where the parapet meets it. (A third merlon
+            // used to hang 0.6 m off the tower's back and run through the parapet there.)
+            for (int i = 0; i < 2; i++)
             {
                 float along = z0 + 2.6f + i * 2f;
                 Box("Merlon_W", t, wallMat, new Vector3(x0 + w * 0.5f, Storey + 0.6f, along + 0.5f), new Vector3(w, 1.2f, 1f));
                 float across = x0 + 2.6f + i * 2f;
                 Box("Merlon_S", t, wallMat, new Vector3(across + 0.5f, Storey + 0.6f, z0 + w * 0.5f), new Vector3(1f, 1.2f, w));
             }
-            Box("Parapet_N", t, wallMat, new Vector3((x0 + x1) * 0.5f, Storey + 0.3f, z1 - w * 0.5f), new Vector3(x1 - x0, 0.6f, w));
-            Box("Parapet_E", t, wallMat, new Vector3(x1 - w * 0.5f, Storey + 0.3f, (z0 + z1) * 0.5f), new Vector3(w, 0.6f, z1 - z0));
+            Box("Merlon_W", t, wallMat, new Vector3(x0 + w * 0.5f, Storey + 0.6f, z1 - w * 0.5f), new Vector3(w, 1.2f, w));
+            Box("Merlon_S", t, wallMat, new Vector3(x1 - w * 0.5f, Storey + 0.6f, z0 + w * 0.5f), new Vector3(w, 1.2f, w));
+            Box("Parapet_N", t, wallMat, new Vector3((x0 + w + x1) * 0.5f, Storey + 0.3f, z1 - w * 0.5f), new Vector3(x1 - x0 - w, 0.6f, w));
+            Box("Parapet_E", t, wallMat, new Vector3(x1 - w * 0.5f, Storey + 0.3f, (z0 + z1) * 0.5f), new Vector3(w, 0.6f, z1 - z0 - 2f * w));
         }
 
+        /// <summary>A brazier's stand; the fire in it is ArenaTempleLook's.</summary>
         static void Brazier(Transform t, Vector3 at)
         {
             Box("Brazier", t, darkMat, at + new Vector3(0f, 0.55f, 0f), new Vector3(0.45f, 1.1f, 0.45f));
-            Deco("Brazier_Fire", t, fireMat, at + new Vector3(0f, 1.25f, 0f), new Vector3(0.35f, 0.3f, 0.35f));
         }
 
         // ------------------------------------------------------------------ look
 
-        static void Atmosphere()
-        {
-            // a low warm sun: long shadows read the levels apart
-            GameObject sun = new GameObject("Sun");
-            Light l = sun.AddComponent<Light>();
-            l.type = LightType.Directional;
-            l.color = new Color(1f, 0.86f, 0.70f);
-            l.intensity = 1.15f;
-            l.shadows = LightShadows.Soft;
-            l.shadowStrength = 0.75f;
-            sun.transform.rotation = Quaternion.Euler(38f, -40f, 0f);
-            RenderSettings.sun = l;
-
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.50f, 0.54f, 0.66f);
-            RenderSettings.ambientEquatorColor = new Color(0.46f, 0.43f, 0.44f);
-            RenderSettings.ambientGroundColor = new Color(0.26f, 0.23f, 0.22f);
-
-            // No fog. The effect packs' particle shaders are surface shaders with their own blend mode,
-            // and Unity fogs them as if they were opaque: the see-through part of every smoke and glow
-            // quad takes the fog colour, and in the distance each particle shows as a square.
-            RenderSettings.fog = false;
-            RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = new Color(0.62f, 0.56f, 0.60f);
-            RenderSettings.fogStartDistance = 35f;
-            RenderSettings.fogEndDistance = 140f;
-
-            string skyPath = "Assets/Materials/Temple/Temple_Sky.mat";
-            Material sky = AssetDatabase.LoadAssetAtPath<Material>(skyPath);
-            if (sky == null)
-            {
-                sky = new Material(Shader.Find("Skybox/Procedural"));
-                AssetDatabase.CreateAsset(sky, skyPath);
-            }
-            sky.SetFloat("_SunSize", 0.05f);
-            sky.SetFloat("_AtmosphereThickness", 1.25f);
-            sky.SetColor("_SkyTint", new Color(0.62f, 0.52f, 0.68f));
-            sky.SetColor("_GroundColor", new Color(0.32f, 0.28f, 0.30f));
-            sky.SetFloat("_Exposure", 1.1f);
-            EditorUtility.SetDirty(sky);
-            RenderSettings.skybox = sky;
-        }
-
+        /// <summary>
+        /// Sandstone at golden hour, in the painted stone of the Sanctum (ArenaKit.Stone): warm blocks with worn
+        /// cream edges, rose-grey patches over the sides, moss on the tops; basalt for the obelisk and the tomb.
+        /// </summary>
         static void Materials()
         {
-            EnsureFolder("Assets/Materials/Temple");
+            ArenaKit.Begin("Assets/Materials/Temple", "Temple");
             EnsureFolder("Assets/Textures");
             EnsureFolder("Assets/Textures/Temple");
             Texture2D tiles = PatternTexture("Assets/Textures/Temple/Temple_Tiles.png", 4, 4, false, 11);
             Texture2D bricks = PatternTexture("Assets/Textures/Temple/Temple_Bricks.png", 4, 8, true, 23);
             Texture2D blocks = PatternTexture("Assets/Textures/Temple/Temple_Blocks.png", 2, 4, true, 37);
 
-            floorMat  = Stone("Temple_Floor",  tiles,  4f, new Color(0.60f, 0.54f, 0.46f), new Color(0.66f, 0.60f, 0.50f), 0.35f);
-            pitMat    = Stone("Temple_Pit",    tiles,  4f, new Color(0.36f, 0.34f, 0.33f), new Color(0.38f, 0.36f, 0.34f), 0.2f);
-            wallMat   = Stone("Temple_Wall",   bricks, 4f, new Color(0.46f, 0.43f, 0.44f), new Color(0.44f, 0.50f, 0.36f), 0.3f);
-            stoneMat  = Stone("Temple_Stone",  blocks, 3f, new Color(0.66f, 0.61f, 0.53f), new Color(0.60f, 0.63f, 0.48f), 0.3f);
-            darkMat   = Stone("Temple_Dark",   blocks, 2f, new Color(0.20f, 0.21f, 0.27f), new Color(0.24f, 0.26f, 0.30f), 0.1f);
-            bridgeMat = Stone("Temple_Bridge", bricks, 2f, new Color(0.55f, 0.46f, 0.38f), new Color(0.60f, 0.52f, 0.42f), 0.2f);
-            coverMat  = Stone("Temple_Cover",  blocks, 2f, new Color(0.64f, 0.52f, 0.40f), new Color(0.60f, 0.58f, 0.44f), 0.3f);
-            glowMat = Glow("Temple_Glow", new Color(0.25f, 1.6f, 1.45f));
-            fireMat = Glow("Temple_Fire", new Color(2.4f, 1.1f, 0.35f));
-        }
-
-        internal static Material Stone(string name, Texture2D pattern, float scale, Color side, Color top, float grime,
-                                       string folder = "Assets/Materials/Temple")
-        {
-            string path = folder + "/" + name + ".mat";
-            Material m = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (m == null)
-            {
-                m = new Material(Shader.Find("MageCast/WorldStone"));
-                AssetDatabase.CreateAsset(m, path);
-            }
-            m.shader = Shader.Find("MageCast/WorldStone");
-            m.SetTexture("_MainTex", pattern);
-            m.SetColor("_Color", side);
-            m.SetColor("_TopColor", top);
-            m.SetFloat("_Scale", scale);
-            m.SetFloat("_Grime", grime);
-            m.SetFloat("_Glossiness", 0.08f);
-            EditorUtility.SetDirty(m);
-            return m;
-        }
-
-        internal static Material Glow(string name, Color emission, string folder = "Assets/Materials/Temple")
-        {
-            string path = folder + "/" + name + ".mat";
-            Material m = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (m == null)
-            {
-                m = new Material(Shader.Find("Standard"));
-                AssetDatabase.CreateAsset(m, path);
-            }
-            m.color = new Color(emission.r, emission.g, emission.b) * 0.3f;
-            m.EnableKeyword("_EMISSION");
-            m.SetColor("_EmissionColor", emission);
-            m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
-            EditorUtility.SetDirty(m);
-            return m;
+            // big flagstones underfoot and big squared blocks in the walls: small bricks read as a house, not a temple
+            Texture2D flags = PatternTexture(ArenaKit.TexFolder + "/Sanctum_Flagstones.png", 3, 3, true, 51);
+            Color moss = new Color(0.50f, 0.58f, 0.34f);
+            floorMat  = ArenaKit.Stone("Temple_Floor",  flags,  4f, new Color(0.70f, 0.60f, 0.46f), new Color(0.62f, 0.57f, 0.52f), new Color(0.82f, 0.72f, 0.56f),
+                                       new Color(0.92f, 0.82f, 0.64f), 0.05f, 0.25f, 7f, new Color(0.68f, 0.68f, 0.50f), 0.55f);
+            pitMat    = ArenaKit.Stone("Temple_Pit",    tiles,  4f, new Color(0.46f, 0.43f, 0.38f), new Color(0.38f, 0.42f, 0.35f), new Color(0.48f, 0.49f, 0.36f),
+                                       new Color(0.64f, 0.62f, 0.52f), 0.05f, 0.25f, 5f, new Color(0.34f, 0.42f, 0.26f), 0.8f);
+            wallMat   = ArenaKit.Stone("Temple_Wall",   blocks, 4f, new Color(0.80f, 0.67f, 0.50f), new Color(0.72f, 0.64f, 0.58f), moss,
+                                       new Color(0.98f, 0.88f, 0.68f), 0.12f, 0.35f);
+            stoneMat  = ArenaKit.Stone("Temple_Stone",  blocks, 3f, new Color(0.82f, 0.71f, 0.56f), new Color(0.73f, 0.67f, 0.61f), new Color(0.74f, 0.70f, 0.52f),
+                                       new Color(1.00f, 0.90f, 0.70f), 0.14f, 0.3f, 7f, moss, 0.55f);
+            darkMat   = ArenaKit.Stone("Temple_Dark",   blocks, 2f, new Color(0.23f, 0.26f, 0.31f), new Color(0.20f, 0.30f, 0.32f), new Color(0.27f, 0.31f, 0.31f),
+                                       new Color(0.52f, 0.68f, 0.70f), 0.08f, 0.1f);
+            bridgeMat = ArenaKit.Stone("Temple_Bridge", bricks, 2f, new Color(0.72f, 0.49f, 0.37f), new Color(0.63f, 0.51f, 0.45f), new Color(0.76f, 0.60f, 0.45f),
+                                       new Color(0.96f, 0.78f, 0.60f), 0.10f, 0.2f);
+            coverMat  = ArenaKit.Stone("Temple_Cover",  blocks, 2f, new Color(0.75f, 0.59f, 0.43f), new Color(0.67f, 0.59f, 0.51f), new Color(0.66f, 0.64f, 0.44f),
+                                       new Color(0.98f, 0.85f, 0.64f), 0.12f, 0.3f, 7f, moss, 0.5f);
         }
 
         /// <summary>
@@ -436,6 +368,12 @@ namespace MageCast.EditorTools
 
         /// <summary>The same audit for any map built the same way: an "Arena" root with "Spawns", outer
         /// walls named Wall_*, inside -halfX..halfX by -halfZ..halfZ. Lines start with <paramref name="tag"/>.</summary>
+        static bool InLook(Transform t)
+        {
+            for (; t != null; t = t.parent) if (t.name == "Look") return true;
+            return false;
+        }
+
         internal static string AuditArea(string tag, float halfX, float halfZ)
         {
             Physics.SyncTransforms();
@@ -461,6 +399,9 @@ namespace MageCast.EditorTools
                         int under = i * nz + j;
                         cellFloor[under] = Mathf.Min(cellFloor[under], h.point.y);   // walkable or not: the floor under a block counts
                         if (h.collider.GetComponentInParent<Combat.TrainingDummy>() != null) continue;
+                        // the dressing (a map's "Look") is solid where it stands against a wall, but its tops are
+                        // scenery, not places: a pilaster's top 7 m up is nowhere anyone was meant to stand
+                        if (InLook(h.collider.transform)) continue;
                         Vector3 p = h.point;
                         if (Physics.CheckCapsule(p + Vector3.up * 0.45f, p + Vector3.up * 1.6f, 0.35f, mask, QueryTriggerInteraction.Ignore))
                             continue;
@@ -644,7 +585,7 @@ namespace MageCast.EditorTools
             g.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
             g.transform.localScale = size;
             g.GetComponent<Renderer>().sharedMaterial = m;
-            g.isStatic = true;
+            ArenaKit.Prepare(g);
             return g;
         }
 
@@ -661,15 +602,6 @@ namespace MageCast.EditorTools
             Box("Floor", parent, m, new Vector3(r.center.x, -thick * 0.5f, r.center.y), new Vector3(r.width, thick, r.height));
         }
 
-        /// <summary>Looks only: no collider, so spells and players go through it.</summary>
-        internal static GameObject Deco(string name, Transform parent, Material m, Vector3 pos, Vector3 size)
-        {
-            GameObject g = Box(name, parent, m, pos, size);
-            Object.DestroyImmediate(g.GetComponent<Collider>());
-            g.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            return g;
-        }
-
         /// <summary>A sloped slab whose walking surface runs from <paramref name="low"/> to <paramref name="high"/>.</summary>
         internal static void Ramp(string name, Transform parent, Material m, Vector3 low, Vector3 high, float width, float thick)
         {
@@ -682,7 +614,7 @@ namespace MageCast.EditorTools
             g.transform.localPosition = (low + high) * 0.5f - rot * Vector3.up * (thick * 0.5f);
             g.transform.localScale = new Vector3(width, thick, along.magnitude + 0.3f);
             g.GetComponent<Renderer>().sharedMaterial = m;
-            g.isStatic = true;
+            ArenaKit.Prepare(g);
         }
 
         internal static void Marker(string name, Transform parent, Vector3 pos, float yaw)

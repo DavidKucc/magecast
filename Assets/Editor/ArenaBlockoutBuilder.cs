@@ -91,8 +91,10 @@ const string RootName = "Arena";
             float wl = Half * 2f + WallThick * 2f;
             Box("Wall_N", walls, matWall, new Vector3(0f, WallHeight * 0.5f, wo), new Vector3(wl, WallHeight, WallThick));
             Box("Wall_S", walls, matWall, new Vector3(0f, WallHeight * 0.5f, -wo), new Vector3(wl, WallHeight, WallThick));
-            Box("Wall_E", walls, matWall, new Vector3(wo, WallHeight * 0.5f, 0f), new Vector3(WallThick, WallHeight, wl));
-            Box("Wall_W", walls, matWall, new Vector3(-wo, WallHeight * 0.5f, 0f), new Vector3(WallThick, WallHeight, wl));
+            // east and west fit between north and south rather than overlapping them at the corners, where the
+            // overlapping faces would flicker through each other (Tools > Arena > Audit Overlaps)
+            Box("Wall_E", walls, matWall, new Vector3(wo, WallHeight * 0.5f, 0f), new Vector3(WallThick, WallHeight, Half * 2f));
+            Box("Wall_W", walls, matWall, new Vector3(-wo, WallHeight * 0.5f, 0f), new Vector3(WallThick, WallHeight, Half * 2f));
 
             // central massif: kills both diagonals and the centre cross in one object
             // Bigger rather than more. With the arena cut to a third of its old piece count the long

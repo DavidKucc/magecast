@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Crossing_Dark
-  m_Shader: {fileID: 4800000, guid: 9dd712816237acf4ab177922559b0e10, type: 3}
+  m_Shader: {fileID: 4800000, guid: 9bca1c95f7a45f9459b706624bde96f7, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -29,11 +29,17 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Glossiness: 0.08
+    - _EdgeWidth: 0.08
+    - _Glossiness: 0.1
     - _Grime: 0.1
+    - _PatchScale: 7
     - _Scale: 2
+    - _TopPatch: 0
     m_Colors:
-    - _Color: {r: 0.24, g: 0.25, b: 0.27, a: 1}
+    - _Color: {r: 0.22440001, g: 0.234175, b: 0.2635, a: 1}
+    - _EdgeColor: {r: 0.43945, g: 0.43945, b: 0.45900002, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _TopColor: {r: 0.27, g: 0.28, b: 0.29, a: 1}
+    - _Tint2: {r: 0.2159, g: 0.245225, b: 0.25500003, a: 1}
+    - _TopColor: {r: 0.25245002, g: 0.26222503, b: 0.272, a: 1}
+    - _TopColor2: {r: 0.25245002, g: 0.26222503, b: 0.272, a: 1}
   m_BuildTextureStacks: []

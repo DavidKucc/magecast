@@ -7,7 +7,7 @@ TerrainLayer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Valley_Grass_Dark
-  m_DiffuseTexture: {fileID: 2800000, guid: c0feabe04dd76d84ca5697597f3b3c84, type: 3}
+  m_DiffuseTexture: {fileID: 2800000, guid: ba5cace241307464094d27e39751d1f1, type: 3}
   m_NormalMapTexture: {fileID: 0}
   m_MaskMapTexture: {fileID: 0}
   m_TileSize: {x: 7, y: 7}

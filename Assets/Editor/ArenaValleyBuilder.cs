@@ -44,7 +44,7 @@ namespace MageCast.EditorTools
         // --- heights this map is made of ---
         const float Jump = 1.2f, Chest = 1.6f, Ledge = 2.4f;
 
-        static Material stoneMat, rockMat, woodMat, darkMat;
+        static Material stoneMat, rockMat, woodMat;
         /// <summary>Everything placed so far that a player can hide behind: centre x, z and rough radius.</summary>
         static readonly List<Vector3> cover = new List<Vector3>();
         static Terrain terrain;
@@ -83,12 +83,16 @@ namespace MageCast.EditorTools
             PlanFlatSpots();
             BuildTerrain(root.transform);
             BuildProps(root.transform);
-            Atmosphere();
+            ArenaValleyLook.Dress(root.transform, terrain);
+            ArenaValleyLook.Atmosphere();
 
             Camera cam = Camera.main;
             if (cam != null) cam.farClipPlane = 400f;
 
             EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            // the light is worked out from the saved scene, then saved with it
+            ArenaValleyLook.BakeEnvironment();
             EditorSceneManager.SaveScene(scene);
             ArenaTempleBuilder.EnsureInBuild(ScenePath);
             Debug.Log("[Valley] built: " + (root.GetComponentsInChildren<Transform>().Length - 1) + " objects\n" + Audit());
@@ -189,13 +193,18 @@ namespace MageCast.EditorTools
                 }
             td.SetHeights(0, 0, heights);
 
-            // grass light, grass dark, rock, bare earth
+            // A meadow with a scatter of small flowers, a deeper meadow, crag, a trodden path: painted, not
+            // photographed -- soft patches of a warmer and a cooler green, the flowers a dot of colour each.
             td.terrainLayers = new[]
             {
-                Layer("Valley_Grass", Noise("Valley_Grass", new Color(0.42f, 0.49f, 0.29f), new Color(0.33f, 0.41f, 0.23f), 31, false), 5f),
-                Layer("Valley_Grass_Dark", Noise("Valley_Grass_Dark", new Color(0.34f, 0.41f, 0.24f), new Color(0.27f, 0.34f, 0.19f), 47, false), 7f),
-                Layer("Valley_Rock", Noise("Valley_Rock", new Color(0.52f, 0.51f, 0.49f), new Color(0.37f, 0.37f, 0.37f), 59, true), 8f),
-                Layer("Valley_Earth", Noise("Valley_Earth", new Color(0.47f, 0.41f, 0.32f), new Color(0.37f, 0.32f, 0.25f), 71, false), 4f),
+                Layer("Valley_Grass", Noise("Valley_Meadow", new Color(0.43f, 0.51f, 0.28f), new Color(0.29f, 0.39f, 0.21f), 31, false,
+                                            new Color(0.53f, 0.54f, 0.30f), 0.35f, new Color(0.95f, 0.92f, 0.70f), 0.004f), 5f),
+                Layer("Valley_Grass_Dark", Noise("Valley_Meadow_Deep", new Color(0.34f, 0.44f, 0.24f), new Color(0.21f, 0.31f, 0.18f), 47, false,
+                                                 new Color(0.30f, 0.44f, 0.30f), 0.3f, new Color(0.80f, 0.70f, 0.95f), 0.003f), 7f),
+                Layer("Valley_Rock", Noise("Valley_Crag", new Color(0.60f, 0.57f, 0.53f), new Color(0.36f, 0.35f, 0.37f), 59, true,
+                                           new Color(0.50f, 0.52f, 0.44f), 0.25f, Color.black, 0f), 8f),
+                Layer("Valley_Earth", Noise("Valley_Path", new Color(0.58f, 0.48f, 0.35f), new Color(0.42f, 0.35f, 0.26f), 71, false,
+                                            new Color(0.52f, 0.50f, 0.38f), 0.3f, new Color(0.70f, 0.66f, 0.58f), 0.01f), 4f),
             };
 
             const int aRes = 256;
@@ -328,19 +337,22 @@ namespace MageCast.EditorTools
                 if (heights[i] <= 0f) continue;      // the way in
                 float a = (i + 0.5f) * 360f / n;
                 Vector3 dir = Quaternion.Euler(0f, a, 0f) * Vector3.forward;
-                float h = heights[i] + sunk;
+                // every other piece 2 cm taller: neighbours overlap at their ends, and two the same height there
+                // put their tops in one plane, flickering
+                float h = heights[i] + sunk + (i % 2) * ArenaKit.Proud;
                 ArenaTempleBuilder.Box(name + "_Wall", t, stoneMat, dir * radius + Vector3.up * (h * 0.5f - sunk),
                                        new Vector3(chord + 0.15f, h, thick), a);
             }
 
             // The perch: on a tower, a floor over the half of the inside furthest from the way in; on the
             // keep, which has a way in on both sides, across the whole inside (the same seen from either team).
+            // 2 cm under the wall pieces of the same height it runs into, so their tops are not one plane
             float fr = radius - thick * 0.5f;
             if (fullFloor)
-                ArenaTempleBuilder.Box(name + "_Floor", t, woodMat, new Vector3(0f, floorAt - 0.15f, 0f),
+                ArenaTempleBuilder.Box(name + "_Floor", t, woodMat, new Vector3(0f, floorAt - 0.15f - ArenaKit.Proud, 0f),
                                        new Vector3(fr * 1.4f, 0.3f, fr * 1.4f));
             else
-                ArenaTempleBuilder.Box(name + "_Floor", t, woodMat, new Vector3(0f, floorAt - 0.15f, -fr * 0.45f),
+                ArenaTempleBuilder.Box(name + "_Floor", t, woodMat, new Vector3(0f, floorAt - 0.15f - ArenaKit.Proud, -fr * 0.45f),
                                        new Vector3(fr * 1.7f, 0.3f, fr * 1.0f));
 
             // fallen stones round the foot
@@ -497,17 +509,24 @@ namespace MageCast.EditorTools
 
         // ------------------------------------------------------------------ look
 
+        /// <summary>The ruins in the painted stone of the Sanctum (ArenaKit.Stone): weathered grey, lit worn edges, moss on top.</summary>
         static void Materials()
         {
+            ArenaKit.Begin(MatFolder, "Valley");
             ArenaTempleBuilder.EnsureFolder("Assets/Textures");
             ArenaTempleBuilder.EnsureFolder("Assets/Textures/Temple");
             Texture2D blocks = ArenaTempleBuilder.PatternTexture("Assets/Textures/Temple/Temple_Blocks.png", 2, 4, true, 37);
-            Texture2D rock = Noise("Valley_Rock", new Color(0.52f, 0.51f, 0.49f), new Color(0.37f, 0.37f, 0.37f), 59, true);
             Texture2D planks = ArenaTempleBuilder.PatternTexture("Assets/Textures/Temple/Temple_Bricks.png", 4, 8, true, 23);
-            stoneMat = ArenaTempleBuilder.Stone("Valley_Stone", blocks, 3f, new Color(0.56f, 0.54f, 0.50f), new Color(0.44f, 0.50f, 0.36f), 0.3f, MatFolder);
-            rockMat = ArenaTempleBuilder.Stone("Valley_Boulder", rock, 3f, new Color(1.0f, 0.99f, 0.96f), new Color(0.86f, 0.95f, 0.76f), 0.2f, MatFolder);
-            woodMat = ArenaTempleBuilder.Stone("Valley_Wood", planks, 2f, new Color(0.45f, 0.36f, 0.27f), new Color(0.50f, 0.40f, 0.30f), 0.2f, MatFolder);
-            darkMat = ArenaTempleBuilder.Stone("Valley_Dark", blocks, 2f, new Color(0.25f, 0.26f, 0.27f), new Color(0.27f, 0.29f, 0.27f), 0.1f, MatFolder);
+            Texture2D rock = Noise("Valley_Crag", new Color(0.60f, 0.57f, 0.53f), new Color(0.36f, 0.35f, 0.37f), 59, true,
+                                   new Color(0.50f, 0.52f, 0.44f), 0.25f, Color.black, 0f);
+            Color moss = new Color(0.44f, 0.54f, 0.30f);
+            stoneMat = ArenaKit.Stone("Valley_Stone", blocks, 3f, new Color(0.64f, 0.62f, 0.58f), new Color(0.56f, 0.58f, 0.54f), moss,
+                                      new Color(0.90f, 0.88f, 0.80f), 0.13f, 0.3f);
+            // boulders: soft lit edges read their facets as a rough stone's
+            rockMat = ArenaKit.Stone("Valley_Boulder", rock, 3f, new Color(0.98f, 0.96f, 0.92f), new Color(0.86f, 0.90f, 0.84f), new Color(0.82f, 0.94f, 0.66f),
+                                     new Color(1.15f, 1.12f, 1.05f), 0.08f, 0.2f);
+            woodMat = ArenaKit.Stone("Valley_Wood", planks, 2f, new Color(0.50f, 0.38f, 0.27f), new Color(0.46f, 0.37f, 0.29f), new Color(0.56f, 0.44f, 0.32f),
+                                     new Color(0.72f, 0.60f, 0.46f), 0.06f, 0.2f);
         }
 
         static TerrainLayer Layer(string name, Texture2D tex, float tile)
@@ -533,9 +552,11 @@ namespace MageCast.EditorTools
         /// <summary>
         /// A seamless noise texture between two colours, written once as a PNG. Grass gets fine speckle
         /// for blades, rock gets dark creases. Seamless by blending the noise with itself shifted a whole
-        /// tile, so the terrain shows no grid.
+        /// tile, so the terrain shows no grid. Over it, soft patches of an accent colour and a scatter of
+        /// dots (flowers in a meadow, pebbles on a path), as a painter would dab them.
         /// </summary>
-        static Texture2D Noise(string name, Color light, Color dark, int seed, bool creases)
+        static Texture2D Noise(string name, Color light, Color dark, int seed, bool creases,
+                               Color accent, float accentAmount, Color dot, float dots)
         {
             string path = TexFolder + "/" + name + ".png";
             Texture2D existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
@@ -554,15 +575,28 @@ namespace MageCast.EditorTools
                     float t = broad * 0.6f + fine * 0.4f;
                     if (creases)
                     {
-                        float c = Mathf.Abs(Tileable(u, v, 7f, seed + 23) - 0.5f) * 2f;
-                        t *= Mathf.Lerp(0.55f, 1f, Mathf.SmoothStep(0f, 1f, c * 4f));
+                        float crease = Mathf.Abs(Tileable(u, v, 7f, seed + 23) - 0.5f) * 2f;
+                        t *= Mathf.Lerp(0.55f, 1f, Mathf.SmoothStep(0f, 1f, crease * 4f));
                     }
                     else
                     {
                         t += ((float)r.NextDouble() - 0.5f) * 0.18f;      // blades and pebbles
                     }
-                    px[y * size + x] = Color.Lerp(dark, light, Mathf.Clamp01(t));
+                    Color c = Color.Lerp(dark, light, Mathf.Clamp01(t));
+                    float patch = Tileable(u, v, 3f, seed + 37);
+                    c = Color.Lerp(c, accent * (0.85f + t * 0.3f), Mathf.SmoothStep(0.45f, 0.75f, patch) * accentAmount);
+                    px[y * size + x] = c;
                 }
+            // the dots: a few pixels across each, so they stay specks at a distance (mipmaps blend them away)
+            for (int k = 0; k < dots * size * size / 9f; k++)
+            {
+                int cx = r.Next(size), cy = r.Next(size);
+                Color d = dot * (0.85f + (float)r.NextDouble() * 0.3f);
+                for (int oy = -1; oy <= 1; oy++)
+                    for (int ox = -1; ox <= 1; ox++)
+                        if (Mathf.Abs(ox) + Mathf.Abs(oy) < 2)
+                            px[((cy + oy + size) % size) * size + (cx + ox + size) % size] = d;
+            }
             tex.SetPixels(px);
             tex.Apply();
             System.IO.File.WriteAllBytes(path, tex.EncodeToPNG());
@@ -585,42 +619,6 @@ namespace MageCast.EditorTools
             float c = Mathf.PerlinNoise(u * freq + ox, (v - 1f) * freq + oy);
             float d = Mathf.PerlinNoise((u - 1f) * freq + ox, (v - 1f) * freq + oy);
             return Mathf.Lerp(Mathf.Lerp(a, b, u), Mathf.Lerp(c, d, u), v);
-        }
-
-        static void Atmosphere()
-        {
-            // from the side across the valley, as on the Crossing: both teams get the same light.
-            // No fog -- the effect packs' particles turn it into squares (see the Temple builder).
-            GameObject sun = new GameObject("Sun");
-            Light l = sun.AddComponent<Light>();
-            l.type = LightType.Directional;
-            l.color = new Color(1f, 0.94f, 0.84f);
-            l.intensity = 1.15f;
-            l.shadows = LightShadows.Soft;
-            l.shadowStrength = 0.7f;
-            sun.transform.rotation = Quaternion.Euler(42f, 90f, 0f);
-            RenderSettings.sun = l;
-
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.55f, 0.60f, 0.68f);
-            RenderSettings.ambientEquatorColor = new Color(0.45f, 0.47f, 0.44f);
-            RenderSettings.ambientGroundColor = new Color(0.25f, 0.26f, 0.22f);
-            RenderSettings.fog = false;
-
-            string skyPath = MatFolder + "/Valley_Sky.mat";
-            Material sky = AssetDatabase.LoadAssetAtPath<Material>(skyPath);
-            if (sky == null)
-            {
-                sky = new Material(Shader.Find("Skybox/Procedural"));
-                AssetDatabase.CreateAsset(sky, skyPath);
-            }
-            sky.SetFloat("_SunSize", 0.04f);
-            sky.SetFloat("_AtmosphereThickness", 1.1f);
-            sky.SetColor("_SkyTint", new Color(0.47f, 0.52f, 0.60f));
-            sky.SetColor("_GroundColor", new Color(0.33f, 0.35f, 0.30f));
-            sky.SetFloat("_Exposure", 1.15f);
-            EditorUtility.SetDirty(sky);
-            RenderSettings.skybox = sky;
         }
     }
 }

@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Crossing_Column
-  m_Shader: {fileID: 4800000, guid: 9dd712816237acf4ab177922559b0e10, type: 3}
+  m_Shader: {fileID: 4800000, guid: 9bca1c95f7a45f9459b706624bde96f7, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -29,11 +29,17 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Glossiness: 0.08
+    - _EdgeWidth: 0
+    - _Glossiness: 0.1
     - _Grime: 0.2
+    - _PatchScale: 7
     - _Scale: 2
+    - _TopPatch: 0
     m_Colors:
-    - _Color: {r: 0.62, g: 0.61, b: 0.58, a: 1}
+    - _Color: {r: 0.61200005, g: 0.602225, b: 0.57290006, a: 1}
+    - _EdgeColor: {r: 0.85, g: 0.85, b: 0.85, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _TopColor: {r: 0.58, g: 0.6, b: 0.54, a: 1}
+    - _Tint2: {r: 0.55845004, g: 0.578, b: 0.5389, a: 1}
+    - _TopColor: {r: 0.593725, g: 0.6035, b: 0.535075, a: 1}
+    - _TopColor2: {r: 0.593725, g: 0.6035, b: 0.535075, a: 1}
   m_BuildTextureStacks: []

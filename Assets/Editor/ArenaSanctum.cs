@@ -3,6 +3,7 @@ using MageCast.Gestures;
 using MageCast.World;
 using UnityEditor;
 using UnityEngine;
+using static MageCast.EditorTools.ArenaKit;
 
 namespace MageCast.EditorTools
 {
@@ -28,23 +29,11 @@ namespace MageCast.EditorTools
     public static class ArenaSanctum
     {
         const string MatFolder = "Assets/Materials/Sanctum";
-        const string TexFolder = "Assets/Textures/Sanctum";
-        const string MeshFolder = "Assets/Meshes";
-        const string AoE = "Assets/Vefects/Stylized AoE VFX/VFX/";
-        const string Anime = "Assets/Vefects/Anime Stylized VFX/";
 
         const float Half = 20f, WallHeight = 6f, WallThick = 1f, CoreHalf = 6.5f, CoreHigh = 5f;
 
-        // the elements, as the game colours them (MenuArt.ElementColours)
-        static readonly Color Fire = new Color(1f, 0.45f, 0.15f), Ice = new Color(0.55f, 0.85f, 1f),
-                              Bolt = new Color(1f, 0.9f, 0.35f), Air = new Color(0.75f, 1f, 0.9f),
-                              Earth = new Color(0.85f, 0.62f, 0.38f), Ward = new Color(1f, 0.85f, 0.4f),
-                              Arcane = new Color(0.3f, 1f, 0.92f), Gold = new Color(1f, 0.8f, 0.42f);
-
-        static Material floor, wall, core, pillar, cover, slab, plat, trim, rock, disc, metal, crystal, pool, glowLine, mote;
-        static readonly Dictionary<string, Material> halos = new Dictionary<string, Material>();
+        static Material floor, wall, core, pillar, cover, slab, plat, trim, rock, disc, metal, crystal, pool;
         static readonly Dictionary<string, Material> cloths = new Dictionary<string, Material>();
-        static Mesh crystalMesh;
 
         public static void Dress(Transform root)
         {
@@ -58,22 +47,16 @@ namespace MageCast.EditorTools
             Quarters(Group("Quarters", look), root.Find("Cover"));
             FloorRunes(Group("FloorRunes", look));
             Beyond(Group("Beyond", look));
-            Motes(look);
+            Motes(look, new Vector3(0f, 3.5f, 0f), new Vector3(38f, 6f, 38f), 14f, 140, 0.13f, Arcane, Gold, new Color(1f, 0.6f, 0.8f));
 
             BakeGlows(look);
-            // anything that moves cannot be in a static batch: it would be frozen where it was built
-            foreach (FloatingBob b in look.GetComponentsInChildren<FloatingBob>(true))
-                foreach (Transform c in b.GetComponentsInChildren<Transform>(true))
-                    GameObjectUtility.SetStaticEditorFlags(c.gameObject, 0);
         }
 
         // ------------------------------------------------------------------ materials
 
         static void Materials()
         {
-            Folder(MatFolder);
-            Folder(TexFolder);
-            Folder(MeshFolder);
+            Begin(MatFolder, "Sanctum");
             Texture2D flags = ArenaTempleBuilder.PatternTexture(TexFolder + "/Sanctum_Flagstones.png", 3, 3, true, 51);
             Texture2D bricks = ArenaTempleBuilder.PatternTexture(TexFolder + "/Sanctum_Bricks.png", 4, 8, true, 53);
             Texture2D blocks = ArenaTempleBuilder.PatternTexture(TexFolder + "/Sanctum_Blocks.png", 2, 3, true, 57);
@@ -95,49 +78,7 @@ namespace MageCast.EditorTools
             crystal = Standard("Sanctum_Crystal", new Color(0.30f, 0.90f, 0.90f), 0f, 0.9f, new Color(0.10f, 0.55f, 0.50f));
             pool = Standard("Sanctum_Spring", new Color(0.25f, 0.65f, 0.55f), 0f, 0.95f, new Color(0.25f, 1.1f, 0.75f));
 
-            glowLine = Glow("Sanctum_GlowLine", Color.white * 1.15f, false, 1.6f, 0.9f);
-            mote = Glow("Sanctum_Mote", Color.white * 1.2f, true, 2.6f, 1.2f);
             foreach (var e in Elements()) cloths[e.Key] = Standard("Sanctum_Banner_" + e.Key, e.Value * 0.55f, 0f, 0.15f, e.Value * 0.12f);
-
-            crystalMesh = CrystalMesh();
-        }
-
-        static Material Halo(string name, Color colour)
-        {
-            Material m;
-            if (halos.TryGetValue(name, out m)) return m;
-            m = Glow("Sanctum_Halo_" + name, colour, true, 2.2f, 0.25f);
-            halos[name] = m;
-            return m;
-        }
-
-        static IEnumerable<KeyValuePair<string, Color>> Elements()
-        {
-            yield return new KeyValuePair<string, Color>("Fire", Fire);
-            yield return new KeyValuePair<string, Color>("Ice", Ice);
-            yield return new KeyValuePair<string, Color>("Lightning", Bolt);
-            yield return new KeyValuePair<string, Color>("Air", Air);
-            yield return new KeyValuePair<string, Color>("Earth", Earth);
-            yield return new KeyValuePair<string, Color>("Barrier", Ward);
-        }
-
-        static string RuneOf(string element)
-        {
-            switch (element)
-            {
-                case "Fire": return GestureTemplates.Kenaz;
-                case "Ice": return GestureTemplates.Laguz;
-                case "Lightning": return GestureTemplates.Sowulo;
-                case "Air": return GestureTemplates.Ehwaz;
-                case "Earth": return GestureTemplates.Thurisaz;
-                default: return GestureTemplates.Uruz;
-            }
-        }
-
-        static Color ColourOf(string element)
-        {
-            foreach (var e in Elements()) if (e.Key == element) return e.Value;
-            return Arcane;
         }
 
         /// <summary>The blockout's own boxes in the Sanctum's stone.</summary>
@@ -173,13 +114,15 @@ namespace MageCast.EditorTools
                 Transform w = Group("Wall_" + side, t);
                 w.localRotation = Quaternion.Euler(0f, 90f * side, 0f);
 
-                Box("Cornice", w, trim, new Vector3(0f, WallHeight + 0.2f, wo), new Vector3(wl + 0.6f, 0.4f, WallThick + 0.7f));
+                // every other side's cornice a touch deeper, so where two cross at a corner their tops do not share a plane
+                Box("Cornice", w, trim, new Vector3(0f, WallHeight + 0.2f, wo), new Vector3(wl + 0.6f, 0.4f + (side % 2) * 2f * Proud, WallThick + 0.7f));
                 for (float x = -Half + 1.3f; x <= Half - 1.2f; x += 2.6f)
                     Box("Merlon", w, wall, new Vector3(x, WallHeight + 0.85f, wo + 0.1f), new Vector3(1.2f, 0.9f, WallThick + 0.1f));
 
                 foreach (float x in new[] { -14f, -7f, 0f, 7f, 14f })
                 {
-                    Box("Pilaster", w, wall, new Vector3(x, WallHeight * 0.5f, Half - 0.22f), new Vector3(1.1f, WallHeight, 0.45f));
+                    // stops inside its head, so the two tops are not one plane
+                    Box("Pilaster", w, wall, new Vector3(x, (WallHeight - 0.1f) * 0.5f, Half - 0.22f), new Vector3(1.1f, WallHeight - 0.1f, 0.45f));
                     Box("Pilaster_Base", w, trim, new Vector3(x, 0.35f, Half - 0.35f), new Vector3(1.45f, 0.7f, 0.7f));
                     Box("Pilaster_Head", w, trim, new Vector3(x, WallHeight - 0.25f, Half - 0.32f), new Vector3(1.35f, 0.5f, 0.64f));
                     if (Mathf.Abs(x) > 6f && Mathf.Abs(x) < 8f)
@@ -199,8 +142,9 @@ namespace MageCast.EditorTools
             Deco("Rod", b, metal, new Vector3(0f, 5.05f, -0.02f), new Vector3(1.3f, 0.08f, 0.08f));
             Deco("Cloth", b, cloths[element], new Vector3(0f, 3.75f, 0f), new Vector3(1.05f, 2.55f, 0.04f));
             // the swallowtail: two small pieces at the bottom
-            Deco("Tail_L", b, cloths[element], new Vector3(-0.3f, 2.35f, 0f), new Vector3(0.42f, 0.32f, 0.04f));
-            Deco("Tail_R", b, cloths[element], new Vector3(0.3f, 2.35f, 0f), new Vector3(0.42f, 0.32f, 0.04f));
+            // a little thinner than the cloth they hang from, so the faces where they overlap are not one plane
+            Deco("Tail_L", b, cloths[element], new Vector3(-0.3f, 2.35f, 0f), new Vector3(0.42f, 0.32f, 0.024f));
+            Deco("Tail_R", b, cloths[element], new Vector3(0.3f, 2.35f, 0f), new Vector3(0.42f, 0.32f, 0.024f));
             Vector3 face = b.TransformPoint(new Vector3(0f, 3.85f, -0.035f));
             LineRenderer rune = Glyph("Rune", b, RuneOf(element), face, b.right, b.up, 0.62f, Gold, 0.07f, -b.forward);
             RuneGlow g = b.gameObject.AddComponent<RuneGlow>();
@@ -216,7 +160,7 @@ namespace MageCast.EditorTools
             l.localPosition = at;
             Deco("Bracket", l, metal, new Vector3(0f, -0.15f, -0.25f), new Vector3(0.18f, 0.12f, 0.5f));
             Deco("Cup", l, metal, new Vector3(0f, -0.05f, -0.45f), new Vector3(0.3f, 0.12f, 0.3f));
-            GameObject c = Crystal("Crystal", l, new Vector3(0f, 0.22f, -0.45f), new Vector3(0.22f, 0.42f, 0.22f));
+            GameObject c = Crystal("Crystal", l, crystal, new Vector3(0f, 0.22f, -0.45f), new Vector3(0.22f, 0.42f, 0.22f));
             c.transform.localRotation = Quaternion.Euler(0f, 45f, 0f);
             HaloQuad("Glow", l, new Vector3(0f, 0.15f, -0.02f), Quaternion.identity, 1.7f, Halo("Arcane", Arcane * 0.55f));
         }
@@ -235,7 +179,7 @@ namespace MageCast.EditorTools
             {
                 Transform f = Group("Face_" + side, t);
                 f.localRotation = Quaternion.Euler(0f, 90f * side, 0f);
-                Box("Cornice", f, trim, new Vector3(0f, CoreHigh - 0.35f, -CoreHalf - 0.12f), new Vector3(CoreHalf * 2f + 0.2f, 0.4f, 0.35f));
+                Box("Cornice", f, trim, new Vector3(0f, CoreHigh - 0.35f, -CoreHalf - 0.12f), new Vector3(CoreHalf * 2f + 0.2f, 0.4f + (side % 2) * 2f * Proud, 0.35f));
                 Vector3 normal = -f.forward;
                 Vector3 onFace = f.TransformPoint(new Vector3(0f, 0f, -CoreHalf - 0.025f));
                 lines.Add(Line("Band_Low", f, new[] { onFace + f.right * -5.6f + Vector3.up * 1.1f, onFace + f.right * 5.6f + Vector3.up * 1.1f }, Arcane, 0.07f, normal));
@@ -255,8 +199,9 @@ namespace MageCast.EditorTools
             Object.DestroyImmediate(water.GetComponent<Collider>());
             Box("Spring_Rim", top, trim, new Vector3(0f, 0.06f, 2.35f), new Vector3(4.9f, 0.12f, 0.25f), 0f, false);
             Box("Spring_Rim", top, trim, new Vector3(0f, 0.06f, -2.35f), new Vector3(4.9f, 0.12f, 0.25f), 0f, false);
-            Box("Spring_Rim", top, trim, new Vector3(2.35f, 0.06f, 0f), new Vector3(0.25f, 0.12f, 4.9f), 0f, false);
-            Box("Spring_Rim", top, trim, new Vector3(-2.35f, 0.06f, 0f), new Vector3(0.25f, 0.12f, 4.9f), 0f, false);
+            // these two fit between the other two rather than crossing them at the corners
+            Box("Spring_Rim", top, trim, new Vector3(2.35f, 0.06f, 0f), new Vector3(0.25f, 0.12f, 4.45f), 0f, false);
+            Box("Spring_Rim", top, trim, new Vector3(-2.35f, 0.06f, 0f), new Vector3(0.25f, 0.12f, 4.45f), 0f, false);
             Vector3 c0 = top.position + Vector3.up * 0.06f;
             RuneGlow springGlow = top.gameObject.AddComponent<RuneGlow>();
             springGlow.rest = new Color(0.4f, 1f, 0.6f);
@@ -269,11 +214,11 @@ namespace MageCast.EditorTools
 
             Transform float_ = Group("Floating_Crystal", top);
             float_.localPosition = new Vector3(0f, 3.6f, 0f);
-            GameObject big = Crystal("Crystal", float_, Vector3.zero, new Vector3(1.3f, 2.3f, 1.3f));
+            GameObject big = Crystal("Crystal", float_, crystal, Vector3.zero, new Vector3(1.3f, 2.3f, 1.3f));
             big.transform.localRotation = Quaternion.Euler(0f, 20f, 0f);
-            Crystal("Shard", float_, new Vector3(1.4f, -0.6f, 0.3f), new Vector3(0.35f, 0.7f, 0.35f));
-            Crystal("Shard", float_, new Vector3(-1.1f, 0.5f, -0.9f), new Vector3(0.3f, 0.6f, 0.3f));
-            Crystal("Shard", float_, new Vector3(-0.4f, -0.9f, 1.3f), new Vector3(0.25f, 0.5f, 0.25f));
+            Crystal("Shard", float_, crystal, new Vector3(1.4f, -0.6f, 0.3f), new Vector3(0.35f, 0.7f, 0.35f));
+            Crystal("Shard", float_, crystal, new Vector3(-1.1f, 0.5f, -0.9f), new Vector3(0.3f, 0.6f, 0.3f));
+            Crystal("Shard", float_, crystal, new Vector3(-0.4f, -0.9f, 1.3f), new Vector3(0.25f, 0.5f, 0.25f));
             Billboard("Glow", float_, Vector3.zero, 6f, Arcane * 0.45f);
             FloatingBob bob = float_.gameObject.AddComponent<FloatingBob>();
             bob.height = 0.35f;
@@ -298,7 +243,7 @@ namespace MageCast.EditorTools
             p.localPosition = at;
             GameObject padDisc = Cylinder("Disc", p, disc, new Vector3(0f, 0.015f, 0f), 2.4f, 0.03f);
             Object.DestroyImmediate(padDisc.GetComponent<Collider>());
-            Vector3 c = p.position + Vector3.up * 0.04f;
+            Vector3 c = p.position + Vector3.up * 0.05f;
             Vector3 toward = new Vector3(-at.x, 0f, -at.z).normalized;
             Vector3 side = Vector3.Cross(Vector3.up, toward);
             var lines = new List<LineRenderer>
@@ -307,7 +252,7 @@ namespace MageCast.EditorTools
                 Circle("Ring_Inner", p, c, Vector3.up, 0.8f, Air, 0.04f),
                 Glyph("Rune", p, GestureTemplates.Ehwaz, c, side, toward, 0.5f, Air, 0.07f, Vector3.up)
             };
-            HaloQuad("Glow", p, new Vector3(0f, 0.035f, 0f), Quaternion.Euler(90f, 0f, 0f), 3.2f, Halo("Air", Air * 0.35f));
+            HaloQuad("Glow", p, new Vector3(0f, 0.055f, 0f), Quaternion.Euler(90f, 0f, 0f), 3.2f, Halo("Air", Air * 0.35f));
             Effect("Air_Fx", p, Vector3.zero, AoE + "Air/Particles/VFX_Air_Area_01.prefab", 0.35f, 0f,
                    "Light Rays", "Embers LOOP", "Thin Smoke LOOP", "Zone Indicator LOOP");
 
@@ -340,7 +285,7 @@ namespace MageCast.EditorTools
 
                 Box("Base", p, trim, new Vector3(0f, 0.3f, 0f), new Vector3(2.1f, 0.6f, 2.1f));
                 Box("Collar", p, trim, new Vector3(0f, 0.75f, 0f), new Vector3(1.75f, 0.3f, 1.75f));
-                Box("Capital", p, trim, new Vector3(0f, WallHeight - 0.22f, 0f), new Vector3(2.0f, 0.45f, 2.0f));
+                Box("Capital", p, trim, new Vector3(0f, WallHeight - 0.22f + Proud, 0f), new Vector3(2.0f, 0.45f, 2.0f));
                 GameObject bowl = Cylinder("Bowl", p, metal, new Vector3(0f, WallHeight + 0.18f, 0f), 1.45f, 0.18f);
                 Object.DestroyImmediate(bowl.GetComponent<Collider>());
                 Effect("Flame", p, new Vector3(0f, WallHeight + 0.3f, 0f), Anime + "Shared/Particles/VFX_Fire.prefab", 2.6f, 18f);
@@ -378,12 +323,12 @@ namespace MageCast.EditorTools
 
                 Transform chest = quarter.Find("Cover_Chest");
                 if (chest != null)
-                    Box("Cap", look, trim, chest.localPosition + new Vector3(0f, 0.72f, 0f), new Vector3(chest.localScale.x + 0.2f, 0.16f, chest.localScale.z + 0.2f), 0f, false);
+                    Box("Cap", look, trim, chest.localPosition + new Vector3(0f, 0.72f + Proud, 0f), new Vector3(chest.localScale.x + 0.2f, 0.16f, chest.localScale.z + 0.2f), 0f, false);
 
                 Transform s = quarter.Find("Slab_A");
                 if (s != null)
                 {
-                    Box("Cap", look, trim, s.localPosition + new Vector3(0f, s.localScale.y * 0.5f - 0.15f, 0f), new Vector3(s.localScale.x + 0.3f, 0.3f, s.localScale.z + 0.3f), 0f, false);
+                    Box("Cap", look, trim, s.localPosition + new Vector3(0f, s.localScale.y * 0.5f - 0.15f + Proud, 0f), new Vector3(s.localScale.x + 0.3f, 0.3f, s.localScale.z + 0.3f), 0f, false);
                     var lines = new List<LineRenderer>();
                     Color colour = ColourOf(slabRunes[q]);
                     foreach (float sign in new[] { -1f, 1f })
@@ -455,10 +400,6 @@ namespace MageCast.EditorTools
 
         static void Beyond(Transform t)
         {
-            Mesh spike = null;
-            foreach (Object o in AssetDatabase.LoadAllAssetsAtPath(AoE + "Earth/Meshes/SM_VFX_Pointy_Rock_01.FBX"))
-                if (o is Mesh) spike = (Mesh)o;
-
             var rnd = new System.Random(7);
             for (int i = 0; i < 18; i++)
             {
@@ -466,589 +407,35 @@ namespace MageCast.EditorTools
                 float r = 40f + (float)rnd.NextDouble() * 34f;
                 float y = 2f + (float)rnd.NextDouble() * 20f;
                 float s = 2.5f + (float)rnd.NextDouble() * 6f;
-                Island(t, new Vector3(Mathf.Cos(a) * r, y, Mathf.Sin(a) * r), s, spike, rnd, i % 3 == 0);
+                Island(t, new Vector3(Mathf.Cos(a) * r, y, Mathf.Sin(a) * r), s, rnd, rock, i % 3 == 0 ? crystal : null, Arcane * 0.3f);
             }
             // a few big ones far out, to give the horizon a shape
             for (int i = 0; i < 5; i++)
             {
                 float a = (i * 72f + 30f) * Mathf.Deg2Rad;
-                Island(t, new Vector3(Mathf.Cos(a) * 130f, -6f + i * 3f, Mathf.Sin(a) * 130f), 22f + i * 3f, spike, rnd, true);
+                Island(t, new Vector3(Mathf.Cos(a) * 130f, -6f + i * 3f, Mathf.Sin(a) * 130f), 22f + i * 3f, rnd, rock, crystal, Arcane * 0.3f);
             }
-        }
-
-        /// <summary>A floating rock: the pack's spike turned point-down under a mossy top.</summary>
-        static void Island(Transform t, Vector3 at, float size, Mesh spike, System.Random rnd, bool crystalOnTop)
-        {
-            Transform isl = Group("Island", t);
-            isl.position = at;
-            isl.rotation = Quaternion.Euler(0f, (float)rnd.NextDouble() * 360f, 0f);
-            if (spike != null)
-            {
-                var go = new GameObject("Rock");
-                go.transform.SetParent(isl, false);
-                Bounds b = spike.bounds;
-                float k = size / Mathf.Max(b.size.x, b.size.y);
-                go.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-                go.transform.localScale = new Vector3(k, k, k * 0.9f);
-                // its broad end (min z) up against the top, its point hanging down
-                go.transform.localPosition = Vector3.up * (b.min.z * k * 0.9f);
-                go.AddComponent<MeshFilter>().sharedMesh = spike;
-                go.AddComponent<MeshRenderer>().sharedMaterial = rock;
-                Static(go);
-            }
-            GameObject top = Cylinder("Top", isl, rock, new Vector3(0f, 0f, 0f), size * 1.05f, size * 0.12f);
-            Object.DestroyImmediate(top.GetComponent<Collider>());
-            if (crystalOnTop)
-            {
-                Crystal("Crystal", isl, new Vector3(size * 0.15f, size * 0.22f, 0f), new Vector3(size * 0.12f, size * 0.3f, size * 0.12f));
-                Billboard("Glow", isl, new Vector3(size * 0.15f, size * 0.25f, 0f), size * 0.6f, Arcane * 0.3f);
-            }
-            float height = 0.4f + (float)rnd.NextDouble() * 0.8f, period = 7f + (float)rnd.NextDouble() * 6f;
-            float spin = (float)rnd.NextDouble() * 2f - 1f, phase = (float)rnd.NextDouble();
-            // only the ones with a crystal drift; the rest stand still, and so batch with each other
-            if (!crystalOnTop) return;
-            FloatingBob bob = isl.gameObject.AddComponent<FloatingBob>();
-            bob.height = height;
-            bob.period = period;
-            bob.spin = spin;
-            bob.phase = phase;
-        }
-
-        // ------------------------------------------------------------------ motes
-
-        static void Motes(Transform t)
-        {
-            var go = new GameObject("Motes");
-            go.transform.SetParent(t, false);
-            go.transform.localPosition = new Vector3(0f, 3.5f, 0f);
-            ParticleSystem ps = go.AddComponent<ParticleSystem>();
-            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-            var main = ps.main;
-            main.loop = true;
-            main.duration = 10f;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(7f, 11f);
-            main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(0.07f, 0.18f);
-            main.maxParticles = 140;
-            main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.prewarm = true;
-            var grad = new Gradient();
-            grad.SetKeys(new[] { new GradientColorKey(Arcane, 0f), new GradientColorKey(Gold, 0.5f), new GradientColorKey(new Color(1f, 0.6f, 0.8f), 1f) },
-                         new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) });
-            main.startColor = new ParticleSystem.MinMaxGradient(grad) { mode = ParticleSystemGradientMode.RandomColor };
-            var emission = ps.emission;
-            emission.rateOverTime = 14f;
-            var shape = ps.shape;
-            shape.shapeType = ParticleSystemShapeType.Box;
-            shape.scale = new Vector3(38f, 6f, 38f);
-            var vel = ps.velocityOverLifetime;
-            vel.enabled = true;
-            vel.space = ParticleSystemSimulationSpace.World;
-            vel.x = new ParticleSystem.MinMaxCurve(-0.1f, 0.1f);
-            vel.y = new ParticleSystem.MinMaxCurve(0.08f, 0.25f);
-            vel.z = new ParticleSystem.MinMaxCurve(-0.1f, 0.1f);
-            var noise = ps.noise;
-            noise.enabled = true;
-            noise.strength = 0.25f;
-            noise.frequency = 0.3f;
-            var fade = ps.colorOverLifetime;
-            fade.enabled = true;
-            var alpha = new Gradient();
-            alpha.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
-                          new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.2f), new GradientAlphaKey(1f, 0.75f), new GradientAlphaKey(0f, 1f) });
-            fade.color = alpha;
-            var r = go.GetComponent<ParticleSystemRenderer>();
-            r.sharedMaterial = mote;
-            r.renderMode = ParticleSystemRenderMode.Billboard;
-            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            r.receiveShadows = false;
         }
 
         // ------------------------------------------------------------------ atmosphere
 
         public static void Atmosphere()
         {
-            GameObject oldSun = GameObject.Find("Sun");
-            if (oldSun != null) Object.DestroyImmediate(oldSun);
-            foreach (Light l in Object.FindObjectsOfType<Light>())
-                if (l.type == LightType.Directional) Object.DestroyImmediate(l.gameObject);
-
-            GameObject sun = new GameObject("Sun");
-            Light light = sun.AddComponent<Light>();
-            light.type = LightType.Directional;
-            light.color = new Color(1f, 0.80f, 0.64f);
-            light.intensity = 1.1f;
-            light.shadows = LightShadows.Soft;
-            light.shadowStrength = 0.85f;
-            sun.transform.rotation = Quaternion.Euler(30f, 145f, 0f);
-            RenderSettings.sun = light;
-
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.48f, 0.43f, 0.70f);
-            RenderSettings.ambientEquatorColor = new Color(0.56f, 0.44f, 0.50f);
-            RenderSettings.ambientGroundColor = new Color(0.24f, 0.20f, 0.27f);
-            RenderSettings.fog = false;      // see ArenaTempleBuilder: the packs' particles fog as squares
-            // The dusk sky mirrored in everything at a glancing angle washes the picture out -- the far floor
-            // goes cream and the characters lose their colour. Under half of it is a sheen.
-            RenderSettings.reflectionIntensity = 0.45f;
-
-            string skyPath = MatFolder + "/Sanctum_Sky.mat";
-            Material sky = AssetDatabase.LoadAssetAtPath<Material>(skyPath);
-            if (sky == null)
+            Light sun = Sun(new Color(1f, 0.80f, 0.64f), 1.1f, 0.85f, new Vector3(30f, 145f, 0f));
+            Ambient(new Color(0.48f, 0.43f, 0.70f), new Color(0.56f, 0.44f, 0.50f), new Color(0.24f, 0.20f, 0.27f), 0.45f);
+            Sky("Sanctum_Sky", sun, new SkyColours
             {
-                sky = new Material(Shader.Find("MageCast/SanctumSky"));
-                AssetDatabase.CreateAsset(sky, skyPath);
-            }
-            sky.shader = Shader.Find("MageCast/SanctumSky");
-            Vector3 toSun = -sun.transform.forward;
-            sky.SetVector("_SunDirection", new Vector4(toSun.x, toSun.y, toSun.z, 0f));
-            sky.SetFloat("_SunSize", 0.0012f);
-            sky.SetColor("_Zenith", new Color(0.10f, 0.08f, 0.27f));
-            sky.SetColor("_Middle", new Color(0.38f, 0.24f, 0.52f));
-            sky.SetColor("_Horizon", new Color(1.0f, 0.60f, 0.40f));
-            sky.SetColor("_Below", new Color(0.16f, 0.12f, 0.24f));
-            EditorUtility.SetDirty(sky);
-            RenderSettings.skybox = sky;
-            RenderSettings.defaultReflectionMode = UnityEngine.Rendering.DefaultReflectionMode.Skybox;
+                zenith = new Color(0.10f, 0.08f, 0.27f), middle = new Color(0.38f, 0.24f, 0.52f),
+                horizon = new Color(1.0f, 0.60f, 0.40f), below = new Color(0.16f, 0.12f, 0.24f),
+                sun = new Color(1.0f, 0.78f, 0.55f), cloud = new Color(1.0f, 0.70f, 0.62f),
+                sunSize = 0.0012f, stars = 0.8f, clouds = 0.55f,
+                cloudCover = 0.55f, cloudHeight = 0.55f, cloudScale = 1f, cloudStretch = 4f,
+            });
         }
 
-        /// <summary>
-        /// The scene's ambient light and sky reflection, worked out and stored with it. The editor works
-        /// them out by itself as you look; a build has only what was stored, and without this the web
-        /// build had neither -- every face out of the sun went near black (21 Oct). Global illumination is
-        /// off, so this is the sky alone and takes a second; no lightmaps.
-        /// </summary>
         public static void BakeEnvironment()
         {
-            const string path = "Assets/Scenes/Arena_Blockout_Lighting.lighting";
-            LightingSettings s = AssetDatabase.LoadAssetAtPath<LightingSettings>(path);
-            if (s == null)
-            {
-                s = new LightingSettings { name = "Arena_Blockout_Lighting" };
-                AssetDatabase.CreateAsset(s, path);
-            }
-            s.bakedGI = false;
-            s.realtimeGI = false;
-            s.autoGenerate = false;
-            Lightmapping.lightingSettings = s;
-            if (!Lightmapping.Bake()) Debug.LogWarning("[Sanctum] could not bake the environment lighting");
-        }
-
-        // ------------------------------------------------------------------ pieces
-
-        static Transform Group(string name, Transform parent)
-        {
-            var g = new GameObject(name);
-            g.transform.SetParent(parent, false);
-            return g.transform;
-        }
-
-        /// <summary>A block, solid unless <paramref name="solid"/> is false; local to <paramref name="parent"/>.</summary>
-        static GameObject Box(string name, Transform parent, Material m, Vector3 pos, Vector3 size, float yaw = 0f, bool solid = true)
-        {
-            GameObject g = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            g.name = name;
-            g.transform.SetParent(parent, false);
-            g.transform.localPosition = pos;
-            g.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
-            g.transform.localScale = size;
-            g.GetComponent<Renderer>().sharedMaterial = m;
-            if (!solid) Object.DestroyImmediate(g.GetComponent<Collider>());
-            Prepare(g);
-            return g;
-        }
-
-        static GameObject Deco(string name, Transform parent, Material m, Vector3 pos, Vector3 size)
-        {
-            return Box(name, parent, m, pos, size, 0f, false);
-        }
-
-        static GameObject Cylinder(string name, Transform parent, Material m, Vector3 pos, float diameter, float height)
-        {
-            GameObject g = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            g.name = name;
-            g.transform.SetParent(parent, false);
-            g.transform.localPosition = pos;
-            g.transform.localScale = new Vector3(diameter, height * 0.5f, diameter);
-            g.GetComponent<Renderer>().sharedMaterial = m;
-            Static(g);
-            return g;
-        }
-
-        static GameObject Crystal(string name, Transform parent, Vector3 pos, Vector3 size)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = pos;
-            go.transform.localScale = size;
-            go.AddComponent<MeshFilter>().sharedMesh = crystalMesh;
-            var r = go.AddComponent<MeshRenderer>();
-            r.sharedMaterial = crystal;
-            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            Static(go);
-            return go;
-        }
-
-        /// <summary>A flat soft glow lying on a surface (a quad, local to its parent).</summary>
-        static GameObject HaloQuad(string name, Transform parent, Vector3 pos, Quaternion rot, float size, Material m)
-        {
-            GameObject q = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            q.name = name;
-            Object.DestroyImmediate(q.GetComponent<Collider>());
-            q.transform.SetParent(parent, false);
-            q.transform.localPosition = pos;
-            q.transform.localRotation = rot;
-            q.transform.localScale = Vector3.one * size;
-            var r = q.GetComponent<Renderer>();
-            r.sharedMaterial = m;
-            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            r.receiveShadows = false;
-            Static(q);
-            return q;
-        }
-
-        /// <summary>A soft glow that always faces the camera: one particle that never dies.</summary>
-        static void Billboard(string name, Transform parent, Vector3 pos, float size, Color colour)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = pos;
-            ParticleSystem ps = go.AddComponent<ParticleSystem>();
-            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-            var main = ps.main;
-            main.loop = false;
-            main.duration = 1f;
-            main.startLifetime = 1000000f;
-            main.startSpeed = 0f;
-            main.startSize = size;
-            main.startColor = colour;
-            main.maxParticles = 1;
-            main.simulationSpace = ParticleSystemSimulationSpace.Local;
-            var emission = ps.emission;
-            emission.rateOverTime = 0f;
-            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, 1) });
-            var shape = ps.shape;
-            shape.enabled = false;
-            var r = go.GetComponent<ParticleSystemRenderer>();
-            r.sharedMaterial = mote;
-            r.renderMode = ParticleSystemRenderMode.Billboard;
-            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            r.receiveShadows = false;
-            r.maxParticleSize = 5f;
-        }
-
-        /// <summary>One of the packs' effects, kept going in the map (AmbientFx).</summary>
-        static void Effect(string name, Transform parent, Vector3 pos, string prefabPath, float scale, float flames = 0f,
-                           params string[] keep)
-        {
-            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
-            if (prefab == null) { Debug.LogWarning("[Sanctum] missing effect " + prefabPath); return; }
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = pos;
-            AmbientFx fx = go.AddComponent<AmbientFx>();
-            fx.prefab = prefab;
-            fx.scale = scale;
-            fx.flames = flames;
-            fx.keep = keep;
-        }
-
-        // --- glowing lines (LineRenderers in world space, flat on a surface facing <normal>)
-
-        static LineRenderer NewLine(string name, Transform parent, Color colour, float width, Vector3 normal, bool loop)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            go.transform.rotation = Quaternion.LookRotation(normal.sqrMagnitude > 0.01f ? normal : Vector3.up);
-            var l = go.AddComponent<LineRenderer>();
-            l.useWorldSpace = true;
-            l.loop = loop;
-            l.alignment = LineAlignment.TransformZ;
-            l.widthMultiplier = width;
-            l.numCornerVertices = 3;
-            l.numCapVertices = 3;
-            l.sharedMaterial = glowLine;
-            l.startColor = l.endColor = colour;
-            l.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            l.receiveShadows = false;
-            l.textureMode = LineTextureMode.Stretch;
-            return l;
-        }
-
-        static LineRenderer Line(string name, Transform parent, Vector3[] points, Color colour, float width, Vector3 normal)
-        {
-            LineRenderer l = NewLine(name, parent, colour, width, normal, false);
-            l.positionCount = points.Length;
-            l.SetPositions(points);
-            return l;
-        }
-
-        static LineRenderer Circle(string name, Transform parent, Vector3 centre, Vector3 normal, float radius, Color colour, float width)
-        {
-            LineRenderer l = NewLine(name, parent, colour, width, normal, true);
-            Vector3 n = normal.normalized;
-            Vector3 a = Vector3.Cross(n, Mathf.Abs(n.y) > 0.9f ? Vector3.forward : Vector3.up).normalized;
-            Vector3 b = Vector3.Cross(n, a);
-            int segments = Mathf.Clamp(Mathf.RoundToInt(radius * 18f), 24, 160);
-            l.positionCount = segments;
-            for (int i = 0; i < segments; i++)
-            {
-                float t = i / (float)segments * Mathf.PI * 2f;
-                l.SetPosition(i, centre + (a * Mathf.Cos(t) + b * Mathf.Sin(t)) * radius);
-            }
-            return l;
-        }
-
-        /// <summary>A rune drawn as the game draws it (its template's corners), <paramref name="half"/> metres from middle to edge.</summary>
-        static LineRenderer Glyph(string name, Transform parent, string rune, Vector3 centre, Vector3 right, Vector3 up, float half,
-                                  Color colour, float width, Vector3 normal)
-        {
-            Vector2[] corners = GestureTemplates.Corners(rune);
-            LineRenderer l = NewLine(name, parent, colour, width, normal, false);
-            l.positionCount = corners.Length;
-            for (int i = 0; i < corners.Length; i++)
-                l.SetPosition(i, centre + (right * corners[i].x + up * corners[i].y) * half);
-            return l;
-        }
-
-        // --- materials and meshes
-
-        /// <summary>
-        /// Colours as written above, deepened: a little more saturated and somewhat darker, so the runes
-        /// stand out from the stone. Picked by eye (21 Oct) in pictures that match the web build -- a camera
-        /// rendering into a texture; the editor's own game-view capture shows everything paler than the
-        /// build does, and tuned by that, the web build came out gloomy.
-        /// </summary>
-        static Color Tone(Color c)
-        {
-            float h, s, v;
-            Color.RGBToHSV(c, out h, out s, out v);
-            return Color.HSVToRGB(h, Mathf.Min(1f, s * 1.15f), v * 0.85f);
-        }
-
-        static Material Stone(string name, Texture2D pattern, float scale, Color side, Color tint2, Color top, Color edge, float edgeWidth, float grime)
-        {
-            side = Tone(side);
-            tint2 = Tone(tint2);
-            top = Tone(top);
-            edge = Tone(edge);
-            string path = MatFolder + "/" + name + ".mat";
-            Material m = AssetDatabase.LoadAssetAtPath<Material>(path);
-            Shader s = Shader.Find("MageCast/SanctumStone");
-            if (m == null) { m = new Material(s); AssetDatabase.CreateAsset(m, path); }
-            m.shader = s;
-            m.SetTexture("_MainTex", pattern);
-            m.SetColor("_Color", side);
-            m.SetColor("_Tint2", tint2);
-            m.SetColor("_TopColor", top);
-            m.SetColor("_EdgeColor", edge);
-            m.SetFloat("_EdgeWidth", edgeWidth);
-            m.SetFloat("_Scale", scale);
-            m.SetFloat("_PatchScale", 7f);
-            m.SetFloat("_Grime", grime);
-            m.SetFloat("_Glossiness", 0.1f);
-            EditorUtility.SetDirty(m);
-            return m;
-        }
-
-        static Material Standard(string name, Color albedo, float metallic, float smoothness, Color emission)
-        {
-            string path = MatFolder + "/" + name + ".mat";
-            Material m = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (m == null) { m = new Material(Shader.Find("Standard")); AssetDatabase.CreateAsset(m, path); }
-            m.color = albedo;
-            m.SetFloat("_Metallic", metallic);
-            m.SetFloat("_Glossiness", smoothness);
-            if (emission.maxColorComponent > 0.001f)
-            {
-                m.EnableKeyword("_EMISSION");
-                m.SetColor("_EmissionColor", emission);
-                m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
-            }
-            else m.DisableKeyword("_EMISSION");
-            EditorUtility.SetDirty(m);
-            return m;
-        }
-
-        static Material Glow(string name, Color colour, bool radial, float softness, float core)
-        {
-            string path = MatFolder + "/" + name + ".mat";
-            Material m = AssetDatabase.LoadAssetAtPath<Material>(path);
-            Shader s = Shader.Find("MageCast/SanctumGlow");
-            if (m == null) { m = new Material(s); AssetDatabase.CreateAsset(m, path); }
-            m.shader = s;
-            m.SetColor("_Color", colour);
-            m.SetFloat("_Radial", radial ? 1f : 0f);
-            m.SetFloat("_Softness", softness);
-            m.SetFloat("_Core", core);
-            m.SetFloat("_Boost", 1f);
-            EditorUtility.SetDirty(m);
-            return m;
-        }
-
-        /// <summary>An eight-sided crystal, 1 m tall and 1 m across, flat-shaded, kept as an asset.</summary>
-        static Mesh CrystalMesh()
-        {
-            string path = MeshFolder + "/Sanctum_Crystal.asset";
-            Mesh m = AssetDatabase.LoadAssetAtPath<Mesh>(path);
-            if (m != null) return m;
-            Vector3 top = new Vector3(0f, 0.5f, 0f), bottom = new Vector3(0f, -0.5f, 0f);
-            Vector3[] ring = { new Vector3(0.5f, 0.05f, 0f), new Vector3(0f, 0.05f, 0.5f), new Vector3(-0.5f, 0.05f, 0f), new Vector3(0f, 0.05f, -0.5f) };
-            var v = new List<Vector3>();
-            var tris = new List<int>();
-            for (int i = 0; i < 4; i++)
-            {
-                Vector3 a = ring[i], b = ring[(i + 1) % 4];
-                int s = v.Count;
-                v.Add(top); v.Add(b); v.Add(a);
-                tris.Add(s); tris.Add(s + 1); tris.Add(s + 2);
-                s = v.Count;
-                v.Add(bottom); v.Add(a); v.Add(b);
-                tris.Add(s); tris.Add(s + 1); tris.Add(s + 2);
-            }
-            m = new Mesh { name = "Sanctum_Crystal" };
-            m.SetVertices(v);
-            m.SetTriangles(tris, 0);
-            m.RecalculateNormals();
-            m.RecalculateBounds();
-            AssetDatabase.CreateAsset(m, path);
-            return m;
-        }
-
-        /// <summary>Static, so it batches with everything else in its material.</summary>
-        static void Static(GameObject g)
-        {
-            GameObjectUtility.SetStaticEditorFlags(g, StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccluderStatic
-                                                      | StaticEditorFlags.OccludeeStatic);
-        }
-
-        /// <summary>
-        /// A block made ready: static, and if its stone has worn edges, its own copy of the cube carrying where
-        /// each corner sits in the cube (uv3) and the block's size (uv4) -- SanctumStone reads its edges from
-        /// these, since in a static batch the block's own matrix is gone.
-        /// </summary>
-        static void Prepare(GameObject g)
-        {
-            Static(g);
-            Renderer r = g.GetComponent<Renderer>();
-            MeshFilter f = g.GetComponent<MeshFilter>();
-            if (r == null || f == null || r.sharedMaterial == null || !r.sharedMaterial.HasProperty("_EdgeWidth")) return;
-            if (r.sharedMaterial.GetFloat("_EdgeWidth") <= 0.001f) return;
-            f.sharedMesh = BoxMesh(g.transform.lossyScale);
-        }
-
-        static readonly Dictionary<string, Mesh> boxes = new Dictionary<string, Mesh>();
-
-        static Mesh BoxMesh(Vector3 scale)
-        {
-            string key = scale.x.ToString("0.###") + "x" + scale.y.ToString("0.###") + "x" + scale.z.ToString("0.###");
-            Mesh m;
-            if (boxes.TryGetValue(key, out m) && m != null) return m;
-            Mesh cube = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
-            m = Object.Instantiate(cube);
-            m.name = "Block_" + key;
-            var at = new List<Vector3>(m.vertices);
-            var size = new List<Vector3>();
-            for (int i = 0; i < at.Count; i++) size.Add(scale);
-            m.SetUVs(2, at);
-            m.SetUVs(3, size);
-            boxes[key] = m;
-            return m;
-        }
-
-        /// <summary>
-        /// Every group of rune lines turned into one mesh -- a soft ribbon along each line, coloured like it --
-        /// drawn in one go and lit up by its RuneGlow through a property block. As LineRenderers they were a
-        /// draw each, some hundred and thirty of them.
-        /// </summary>
-        static void BakeGlows(Transform look)
-        {
-            Transform holder = Group("Glows", look);
-            foreach (RuneGlow g in look.parent.GetComponentsInChildren<RuneGlow>(true))
-            {
-                if (g.lines == null || g.lines.Length == 0) continue;
-                var v = new List<Vector3>();
-                var uv = new List<Vector2>();
-                var col = new List<Color>();
-                var tris = new List<int>();
-                foreach (LineRenderer l in g.lines) if (l != null) Ribbon(l, v, uv, col, tris);
-
-                var mesh = new Mesh { name = "Runes_" + g.name };
-                if (v.Count > 65000) mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-                mesh.SetVertices(v);
-                mesh.SetUVs(0, uv);
-                mesh.SetColors(col);
-                mesh.SetTriangles(tris, 0);
-                mesh.RecalculateBounds();
-
-                var go = new GameObject("Runes_" + g.name);
-                go.transform.SetParent(holder, false);
-                go.AddComponent<MeshFilter>().sharedMesh = mesh;
-                var r = go.AddComponent<MeshRenderer>();
-                r.sharedMaterial = glowLine;
-                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                r.receiveShadows = false;
-
-                foreach (LineRenderer l in g.lines) if (l != null) Object.DestroyImmediate(l.gameObject);
-                g.lines = null;
-                g.glows = new Renderer[] { r };
-            }
-        }
-
-        /// <summary>A LineRenderer's line as a flat ribbon (uv.y across it), lying in the plane it faced.</summary>
-        static void Ribbon(LineRenderer l, List<Vector3> v, List<Vector2> uv, List<Color> col, List<int> tris)
-        {
-            int n = l.positionCount;
-            if (n < 2) return;
-            var p = new Vector3[n];
-            l.GetPositions(p);
-            bool loop = l.loop;
-            Vector3 normal = l.transform.forward;
-            float half = l.widthMultiplier * 0.5f;
-            Color c = l.startColor;
-            int count = loop ? n + 1 : n;
-            int start = v.Count;
-            for (int i = 0; i < count; i++)
-            {
-                int k = i % n;
-                Vector3 prev = loop ? p[(k - 1 + n) % n] : p[Mathf.Max(0, k - 1)];
-                Vector3 next = loop ? p[(k + 1) % n] : p[Mathf.Min(n - 1, k + 1)];
-                Vector3 dir = next - prev;
-                if (dir.sqrMagnitude < 1e-8f) dir = Vector3.right;
-                dir.Normalize();
-                Vector3 side = Vector3.Cross(normal, dir).normalized;
-                float widen = 1f;
-                bool end = !loop && (k == 0 || k == n - 1);
-                if (!end)
-                {
-                    // across a corner the ribbon keeps its width
-                    Vector3 before = Vector3.Cross(normal, (p[k] - prev).normalized).normalized;
-                    widen = 1f / Mathf.Max(0.4f, Vector3.Dot(before, side));
-                }
-                Vector3 at = p[k];
-                // the tips stick out half a width, so a rune's ends are not cut square
-                if (!loop && k == 0) at -= dir * half;
-                if (!loop && k == n - 1) at += dir * half;
-                v.Add(at - side * half * widen);
-                v.Add(at + side * half * widen);
-                uv.Add(new Vector2(0f, 0f));
-                uv.Add(new Vector2(0f, 1f));
-                col.Add(c);
-                col.Add(c);
-                if (i > 0)
-                {
-                    int a = start + (i - 1) * 2;
-                    tris.Add(a); tris.Add(a + 2); tris.Add(a + 1);
-                    tris.Add(a + 1); tris.Add(a + 2); tris.Add(a + 3);
-                }
-            }
-        }
-
-        static void Folder(string path)
-        {
-            if (AssetDatabase.IsValidFolder(path)) return;
-            int cut = path.LastIndexOf('/');
-            AssetDatabase.CreateFolder(path.Substring(0, cut), path.Substring(cut + 1));
+            ArenaKit.BakeEnvironment("Assets/Scenes/Arena_Blockout_Lighting.lighting");
         }
     }
 }

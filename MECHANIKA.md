@@ -631,7 +631,7 @@ scéna Arena_Blockout; do 21. 10. šedý „Blockout“), *Temple*, *Crossing* a
   bledá obloha zrcadlená ve všem pod šikmým úhlem dřív vybělila celý obraz a postavy ztratily barvu.
   Okolní světlo a odraz oblohy se při přestavbě **pečou** do scény (`ArenaSanctum.BakeEnvironment`, bez
   lightmap, 1 s): editor si je dopočítává sám, ale build má jen to, co je uložené — bez toho byla ve webové
-  verzi každá strana mimo slunce skoro černá. (Temple, Crossing a Valley to zatím upečené nemají.)
+  verzi každá strana mimo slunce skoro černá. (Od 22. 10. stejně i Temple, Crossing a Valley.)
 
 **Výkon (web):** první verze stála 1331 vykreslovacích dávek (Temple 227). Teď ~400 na webové kvalitě:
 - kámen čte polohu v kvádru a jeho velikost z vlastního meshe (uv3, uv4), ne z matice objektu, takže se smí
@@ -669,6 +669,31 @@ scéna Arena_Blockout; do 21. 10. šedý „Blockout“), *Temple*, *Crossing* a
   kritický i bez záře — vlastní emisí a velikostí.
 - `ArenaPostFx.Capture` vyfotí scénu s efekty a bez nich a vrátí průměrný jas a podíl přepálených pixelů.
 
+**Vzhled ostatních map** (od 22. 10.): Temple, Crossing a Valley jsou oblečené stejnými kousky jako Svatyně —
+`ArenaKit` (malovaný kámen `SanctumStone` s ošoupanými hranami, mechem a skvrnami i na vodorovných plochách,
+malovaná obloha `SanctumSky` s denními mraky, runy pečené do jednoho meshe, efekty z balíků, plovoucí skály,
+zapečené okolní světlo). Každá mapa má svůj soubor `Arena<Mapa>Look.cs`, stavitel ho volá sám. Nic z
+oblečení nemění, jak se hraje: všechno, do čeho by hráč mohl vejít, je bez kolizí a nízké (rákos, kamínky),
+pevné jsou jen pilastry u zdí; audity map dávají stejné dosažitelné plochy a stejné krytí jako předtím.
+- **stromy** (`ArenaTrees`): listnaté, jehličnaté, keře, břečťan a rákos se generují jako meshe (shader
+  `Foliage`: barva podle výšky v koruně, bez textury) a stojí jen **mimo** hrací plochu, aby se jimi nechodilo,
+- **vzdálené hory** (`ArenaKit.Ridge`, shader `Distant`): prstenec štítů v oparu, ve Valley se sněhem.
+- **Výkon na webu** (snímky/s bez omezení, CPU na snímek): Sanctum 127 / 3,1 ms, Temple 116 / 3,9 ms,
+  Crossing 117 / 3,9 ms, Valley 108 / 4,6 ms. Ve Valley stojí většinu terén (bez oblečení ~546 dávek,
+  s ním ~633); oblečení Temple přidává ~250 dávek, statické slučování z 1172 kreseb dělá 134.
+
+**Prosvítání ploch (z-fighting)** — od 22. 10. měří `Tools/Arena/Audit Overlaps (all maps)`: dvě plochy v
+jedné rovině, otočené stejně a překrývající se, hloubkový buffer neumí seřadit a při pohybu kamery se
+proplétají v pruzích. Bylo jich 70 (Sanctum), 40 (Temple), 12 (Crossing) a 56 (Valley); teď je to ve všech
+mapách **0**. Typické příčiny a jak se jim teď vyhnout:
+- dvě zdi, které obě vedou až do rohu → kratší z nich končí na té delší (vnější zdi, rohy věží a kaple),
+- ozdoba položená naplocho na blok (hlavice, krytka, římsa) → stojí 2 cm nad ním (`ArenaKit.Proud`),
+- dva pásy křížící se v rohu → `ArenaKit.Band` dělá jeden pár o 2 cm větší,
+- díl ukrytý celý ve zdi (parapet „okna" v kapli Crossing — okno nikdy neexistovalo) → pryč,
+- stejně vysoké sousední kusy zdi na věžích Valley → každý druhý o 2 cm vyšší, podlaha věže 2 cm pod nimi.
+Kamera do zdí nevidí (sférický test 0,28 m proti kolizím, blízká rovina 0,05 m); ozdoby bez kolizí u zdí
+(prapory, břečťan) stojí tak, aby kamera skončila před nimi.
+
 **Temple** (generuje `Tools/Arena/Build Temple Map`, měří `Tools/Arena/Audit Temple`): zřícený chrám
 44 × 44 m, čtvrtina orazítkovaná čtyřikrát otočením. Výšky jsou jen tyhle: 1,2 skok, 1,6 kryt po prsa
 (dá se vyšplhat), 2,4 hrana na vyšplhání, 4 patro (po rampě).
@@ -677,6 +702,12 @@ scéna Arena_Blockout; do 21. 10. šedý „Blockout“), *Temple*, *Crossing* a
 - **mosty:** ze střechy každé věže dolů na roh oltáře. Výhled, ale žádný kryt — a vzduch tě z nich shodí,
 - **boční uličky:** půlka je propadlina 1,2 m (kouzla létají nad tebou, plochy se v ní drží), půlka ruina
   (zeď 2,4 m na vyšplhání, padlý sloup, kryt po prsa).
+- **vzhled** (`ArenaTempleLook`): pískovcový chrám v džungli ve zlaté hodince. Velké kvádry, mech na
+  vrcholech; na oltáři a obelisku runy živlů, zlatá špička a nad ní otáčející se krystal; od paty schodů
+  vedou ke každé vnější zdi **linie síly** do velké runy — zásah do zdi rozsvítí celou linii až k oltáři.
+  Oheň v pánvích u věží, prapory, břečťan z říms, za zdmi koruny džungle, zalesněné kopce, sesterská
+  pyramida a hory v modravém oparu. Opravená chyba geometrie: třetí zub cimbuří na věžích visel 0,6 m
+  za věž a vedl skrz parapet — teď roh drží sloupek.
 
 **Crossing** (`Tools/Arena/Build Crossing Map`, `Audit Crossing`): nádvoří 48 × 40 m s vyschlým
 korytem řeky (1,2 m) napříč středem. Polovina otočená o 180° — tým B na +z, tým A na −z.
@@ -687,6 +718,9 @@ korytem řeky (1,2 m) napříč středem. Polovina otočená o 180° — tým B 
 - **vzhled je záměrně tlumený** (šedomodrý kámen, šedozelený mech, jen pár slabých teplých lamp), aby
   nejbarevnější věc na obrazovce byla kouzla; nic nesvítí studeně, protože tyrkysová čára vypadá jako led.
   Slunce svítí z boku, aby oba týmy měly stejné světlo.
+- `ArenaCrossingLook`: nádvoří u lesa v jemném ránu; v korytě tmavé oblé kamínky a suchý rákos (světlé
+  hranaté kamínky vypadaly jako kostky ledu), na brodu velká kamenná lucerna s plamenem, v lucernách na
+  sloupcích malé plameny, na oltáři kaple svíčky, prapory v tlumené vínové a břidlicové bez run.
 
 **Valley** (`Tools/Arena/Build Valley Map`, `Audit Valley`): travnaté údolí 88 × 88 m (čtyřikrát
 víc plochy než Temple) obklopené horami. Terén je generovaný: mírné kopce (±2,4 m), za okrajem hory,
@@ -696,6 +730,13 @@ na úpatí neviditelná hranice. Polovina otočená o 180°, tým B na +z, tým 
 - **skupiny balvanů** asi 13 m od sebe (velký kámen na schování, menší na vylezení) a mezi nimi otevřená
   tráva, **zbořené zdi** a jedna u každého spawnu,
 - tlumené barvy (tráva ztlumená, šedé kameny), slunce z boku, bez mlhy.
+- `ArenaValleyLook`: horské údolí v jasném ránu. Malovaný terén (louka s drobnými kvítky, hlubší tráva,
+  skály, vyšlapaná cesta), na svazích za hranicí jehličnatý les a níž listnáče (každý strom má dvojče
+  otočené o 180°, jako všechno v této mapě), nad horami zasněžené štíty. Na podlaze pevnosti kruh run,
+  nad ní krystal viditelný z celého údolí, na vysokých kamenech pochodně a prapory, po věžích břečťan.
+- **Krytí ve Valley má díru, která tam byla už před novým vzhledem:** audit hlásí FAIL — 15 z 6951 míst
+  je víc než 8 m od krytu (nejhorší 11,1 m, na vršcích nízkých balvanů u kraje mapy, třeba (−5,8; −42,8)).
+  Ověřeno sestavením původní verze: výsledek stejný.
 
 **Pohyb:** chůze 5,0 m/s, sprint (Shift) 7,2 m/s. Rozjezd do klusu ~0,3 s, do sprintu ~0,5 s, zastavení ~0,2 s, otočka úhybu ~0,5 s (setrvačnost ~0,4 m), zatáčka o 90° ~0,3 s; změna směru je oblouk, ne zlom, aby se dal soupeř předvídat. Ve vzduchu se dá skok jen trochu ovlivnit. Měří to `Tools/Arena/Audit Movement`. Sprint stojí staminu (žlutý pruh nad životy):
 plná vydrží 4 s sprintu, doplní se za 3,5 s od chvíle, kdy přestaneš (s pauzou 0,8 s). Když ji

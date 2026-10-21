@@ -25,6 +25,10 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
+    - _CloudCover: 0.55
+    - _CloudHeight: 0.55
+    - _CloudScale: 1
+    - _CloudStretch: 4
     - _Clouds: 0.55
     - _Stars: 0.8
     - _SunSize: 0.0012
@@ -33,7 +37,7 @@ Material:
     - _CloudColour: {r: 1, g: 0.7, b: 0.62, a: 1}
     - _Horizon: {r: 1, g: 0.6, b: 0.4, a: 1}
     - _Middle: {r: 0.38, g: 0.24, b: 0.52, a: 1}
-    - _SunColour: {r: 1, g: 0.78, b: 0.54999995, a: 1}
+    - _SunColour: {r: 1, g: 0.78, b: 0.55, a: 1}
     - _SunDirection: {r: -0.49673176, g: 0.5, b: 0.7094065, a: 0}
     - _Zenith: {r: 0.1, g: 0.08, b: 0.27, a: 1}
   m_BuildTextureStacks: []

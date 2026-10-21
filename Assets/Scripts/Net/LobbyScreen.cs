@@ -20,9 +20,9 @@ namespace MageCast
         public static readonly string[] MapBlurbs =
         {
             "a rune sanctum at dusk: compact, launch pads up to a healing spring",
-            "altar, towers and a sunken tomb: a fight on three levels",
-            "two bridges over a riverbed: flank below or hold the decks",
-            "a grassy valley ringed by mountains, ruined towers: four times the floor"
+            "a jungle temple at golden hour: altar, towers, a sunken tomb",
+            "a courtyard by a forest: two bridges over a dry riverbed",
+            "a highland valley under snow peaks: ruins, four times the floor"
         };
 
         static readonly Color Gold = new Color(1f, 0.82f, 0.45f);
