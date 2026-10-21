@@ -284,7 +284,9 @@ namespace MageCast.EditorTools
             for (int side = 0; side < 4; side++)
             {
                 Quaternion q = Quaternion.Euler(0f, 90f * side, 0f);
-                Vector3 at = q * new Vector3(0f, 0.02f, -(CoreHalf + 1.9f));
+                // Far enough out that a throw from its near edge still clears the cornice: at 1.9 m from the
+                // core a player stepping on there came down on the cornice's lip instead of the top (21 Oct).
+                Vector3 at = q * new Vector3(0f, 0.02f, -(CoreHalf + 3.1f));
                 Vector3 land = q * new Vector3(0f, CoreHigh + 0.05f, -(CoreHalf - 3.2f));
                 Pad(t, at, land);
             }
@@ -316,7 +318,8 @@ namespace MageCast.EditorTools
             g.lines = lines.ToArray();
             LaunchPad pad = p.gameObject.AddComponent<LaunchPad>();
             pad.landing = landing;
-            pad.apex = 2f;
+            // a high arc: well over the cornice before it is reached, even in a browser at a few frames a second
+            pad.apex = 3f;
             pad.radius = 1.1f;
             pad.rune = g;
             pad.sound = AssetDatabase.LoadAssetAtPath<AudioClip>(Anime + "Sounds/WAV/SFX_Dash.wav");

@@ -643,8 +643,9 @@ scéna Arena_Blockout; do 21. 10. šedý „Blockout“), *Temple*, *Crossing* a
 - plovoucí ostrovy se hýbou jen ty s krystalem, ostatní stojí a slučují se.
 
 **Aktivní prvky Svatyně:**
-- **Skokové plošiny** (4, u paty jádra, runa vzduchu): kdo na ni vstoupí, toho vyhodí vysokým obloukem
-  na vrchol jádra (5 m) — jediná cesta nahoru; dolů se seskočí. Vyhazuje si každý počítač svého hráče
+- **Skokové plošiny** (4, 3 m od paty jádra, runa vzduchu): kdo na ni vstoupí, toho vyhodí vysokým obloukem
+  (3 m nad vrchol) na vrchol jádra (5 m) — jediná cesta nahoru; dolů se seskočí. (Původně 1,9 m od jádra
+  a 2 m nad vrchol: z bližšího okraje plošiny oblouk narazil do římsy a hráč zůstal na jejím okraji.) Vyhazuje si každý počítač svého hráče
   (boty server), jako updraft; všichni vidí runu vzplanout a slyší vzduch.
 - **Léčivý pramen** na vrcholu jádra: kdo v něm stojí, dostává **5 životů/s**, ale ne do 2 s po zásahu
   (doplní mezi souboji, nepřeléčí souboj). Nahoře není žádný kryt a vidí tě celá aréna. Léčí server.
