@@ -9,8 +9,9 @@ namespace MageCast.World
     /// seconds -- fire leaves a pillar burning orange for a moment, ice washes it blue. Looks only, on
     /// every machine (each flies its own copy of every spell, so each sees the same strike).
     ///
-    /// The lines are LineRenderers and halo quads using the SanctumGlow material; their colour is their
-    /// vertex colour, set here.
+    /// The runes are meshes the map builder baked from their lines (glows), in the SanctumGlow material,
+    /// coloured by their vertices; here they breathe (_Boost) and flare (_Tint) through a property block,
+    /// one draw per group. Plain LineRenderers (lines) still work, coloured directly.
     /// </summary>
     public class RuneGlow : MonoBehaviour
     {
@@ -19,8 +20,13 @@ namespace MageCast.World
         public float breath = 0.25f;
         public float breathPeriod = 3.5f;
         public float phase;
+        public Renderer[] glows;
         public LineRenderer[] lines;
         public MeshFilter[] halos;
+
+        MaterialPropertyBlock block;
+        static readonly int BoostId = Shader.PropertyToID("_Boost"), TintId = Shader.PropertyToID("_Tint"),
+                            TintAmountId = Shader.PropertyToID("_TintAmount");
 
         Color flare;
         float flareAt = -99f;
@@ -45,14 +51,22 @@ namespace MageCast.World
         {
             float b = 1f - breath * 0.5f + breath * 0.5f * Mathf.Sin((Time.time / breathPeriod + phase) * Mathf.PI * 2f);
             Color c = rest * b;
-            float since = Time.time - flareAt;
+            float since = Time.time - flareAt, k = 0f;
             if (since < FlareSeconds)
             {
-                float k = 1f - since / FlareSeconds;
+                k = 1f - since / FlareSeconds;
                 k = k * k;
                 c = Color.Lerp(c, flare * 1.4f, k);       // brighter than at rest, but still its own colour
             }
             c.a = 1f;
+            if (glows != null && glows.Length > 0)
+            {
+                if (block == null) block = new MaterialPropertyBlock();
+                block.SetFloat(BoostId, Mathf.Lerp(b, 1.4f, k));
+                block.SetColor(TintId, flare);
+                block.SetFloat(TintAmountId, k);
+                foreach (Renderer r in glows) if (r != null) r.SetPropertyBlock(block);
+            }
             if (lines != null)
                 foreach (LineRenderer l in lines)
                     if (l != null) { l.startColor = c; l.endColor = c; }

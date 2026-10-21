@@ -21,6 +21,8 @@ namespace MageCast.World
         public float flames;
         /// <summary>Its own sound, looped quietly in the world -- or none.</summary>
         public float soundVolume;
+        /// <summary>Only these of its parts (by name), if any are named: a full area effect is a dozen draws.</summary>
+        public string[] keep;
 
         GameObject effect;
 
@@ -41,12 +43,28 @@ namespace MageCast.World
                 if (!a.isPlaying) a.Play();
             }
 
+            NoLights(effect);
             if (flames > 0f) SpellFx.KeepBurning(effect, flames);
-            else Loop(effect);
+            else Loop(effect, keep);
+        }
+
+        /// <summary>
+        /// The packs light their effects with real lights (a "Light" particle system spawning one): fine for a
+        /// spell's moment, but standing in the map each is another pass over everything near it -- the
+        /// Sanctum's point lights alone doubled what it took to draw (21 Oct). The glow is painted instead.
+        /// </summary>
+        static void NoLights(GameObject go)
+        {
+            foreach (ParticleSystem ps in go.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                var lights = ps.lights;
+                lights.enabled = false;
+            }
+            foreach (Light l in go.GetComponentsInChildren<Light>(true)) l.enabled = false;
         }
 
         /// <summary>Keeps an effect going: its opening and closing parts dropped, everything else repeating.</summary>
-        public static void Loop(GameObject go)
+        public static void Loop(GameObject go, string[] keep = null)
         {
             ParticleSystem[] systems = go.GetComponentsInChildren<ParticleSystem>(true);
             foreach (ParticleSystem ps in systems) ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
@@ -55,7 +73,9 @@ namespace MageCast.World
                 string n = ps.name.ToUpperInvariant();
                 var main = ps.main;
                 var emission = ps.emission;
-                if (n.Contains("OUT") || n.Contains("WINDUP") || n.Contains("WIND UP"))
+                bool unwanted = keep != null && keep.Length > 0 && ps.gameObject != go
+                                && System.Array.IndexOf(keep, ps.name) < 0;
+                if (unwanted || n == "LIGHT" || n.Contains("OUT") || n.Contains("WINDUP") || n.Contains("WIND UP"))
                 {
                     emission.enabled = false;
                     continue;

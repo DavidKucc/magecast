@@ -1,8 +1,9 @@
 // Light painted onto the Sanctum: rune lines on the floor and walls, halos under them, the glow round a
 // crystal. Additive, no texture: a line (LineRenderer, its width across uv.y) is brightest down its
 // middle and falls off softly to its sides; a quad in radial mode (_Radial 1) is a round soft halo.
-// Colour times vertex colour, so one material serves every element's colour, and _Boost lets the
-// runes be lit up (RuneGlow) beyond their resting brightness.
+// Colour times vertex colour, so one material serves every element's colour; RuneGlow breathes a
+// group of runes with _Boost and flares them towards another colour with _Tint/_TintAmount (per
+// renderer, through a property block).
 Shader "MageCast/SanctumGlow"
 {
     Properties
@@ -12,6 +13,8 @@ Shader "MageCast/SanctumGlow"
         _Softness ("Falloff power", Range(0.5, 8)) = 2
         _Core ("Bright core", Range(0, 2)) = 0.6
         _Boost ("Boost", Float) = 1
+        _Tint ("Flare colour", Color) = (1, 1, 1, 1)
+        _TintAmount ("Flare", Range(0, 1)) = 0
     }
     SubShader
     {
@@ -27,8 +30,8 @@ Shader "MageCast/SanctumGlow"
             #pragma fragment frag
             #include "UnityCG.cginc"
 
-            fixed4 _Color;
-            float _Radial, _Softness, _Core, _Boost;
+            fixed4 _Color, _Tint;
+            float _Radial, _Softness, _Core, _Boost, _TintAmount;
 
             struct appdata { float4 vertex : POSITION; float2 uv : TEXCOORD0; fixed4 colour : COLOR; };
             struct v2f { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; fixed4 colour : COLOR; };
@@ -47,7 +50,8 @@ Shader "MageCast/SanctumGlow"
                 float r = _Radial > 0.5 ? saturate(length(i.uv * 2 - 1)) : abs(i.uv.y * 2 - 1);
                 float soft = pow(saturate(1 - r), _Softness);
                 float core = pow(saturate(1 - r), _Softness * 4) * _Core;
-                return fixed4(_Color.rgb * i.colour.rgb * i.colour.a * (soft + core) * _Boost, 1);
+                fixed3 c = lerp(i.colour.rgb, _Tint.rgb, _TintAmount);
+                return fixed4(_Color.rgb * c * i.colour.a * (soft + core) * _Boost, 1);
             }
             ENDCG
         }

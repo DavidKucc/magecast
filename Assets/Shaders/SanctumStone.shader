@@ -5,9 +5,11 @@
 // dust; and the foot darker where it meets the floor.
 //
 // The edges are found from the box itself: every block is a unit cube scaled by its transform, so how
-// far a point is from the nearest edge, in metres, is (0.5 - |object position|) times the scale on each
-// axis -- the two smallest of those on a face. That needs the object's own matrix, so these blocks must
-// not be batched (DisableBatching, and the builder leaves them out of static batching).
+// far a point is from the nearest edge, in metres, is (0.5 - |position in the cube|) times the scale on
+// each axis -- the two smallest of those on a face. Both are written into the block's own mesh by the
+// builder (the position in the cube in uv3, the scale in uv4), because static batching merges the blocks
+// into one mesh in world space and the object's matrix is gone; this way they still batch (21 Oct: read
+// from the matrix, unbatched, the map took six times the draw calls of the Temple).
 Shader "MageCast/SanctumStone"
 {
     Properties
@@ -26,7 +28,7 @@ Shader "MageCast/SanctumStone"
     }
     SubShader
     {
-        Tags { "RenderType" = "Opaque" "DisableBatching" = "True" }
+        Tags { "RenderType" = "Opaque" }
         LOD 200
 
         CGPROGRAM
@@ -44,12 +46,14 @@ Shader "MageCast/SanctumStone"
             float3 worldPos;
             float3 worldNormal;
             float3 objPos;
+            float3 boxScale;
         };
 
         void vert(inout appdata_full v, out Input o)
         {
             UNITY_INITIALIZE_OUTPUT(Input, o);
-            o.objPos = v.vertex.xyz;
+            o.objPos = v.texcoord2.xyz;
+            o.boxScale = v.texcoord3.xyz;
         }
 
         // cheap smooth value noise, for the big colour patches
@@ -82,10 +86,7 @@ Shader "MageCast/SanctumStone"
             // worn, lit edges
             if (_EdgeWidth > 0.001)
             {
-                float3 s = float3(length(unity_ObjectToWorld._m00_m10_m20),
-                                  length(unity_ObjectToWorld._m01_m11_m21),
-                                  length(unity_ObjectToWorld._m02_m12_m22));
-                float3 e = (0.5 - abs(IN.objPos)) * s;
+                float3 e = (0.5 - abs(IN.objPos)) * IN.boxScale;
                 float lo = min(e.x, min(e.y, e.z)), hi = max(e.x, max(e.y, e.z));
                 float edge = e.x + e.y + e.z - lo - hi;           // the second smallest: the nearest edge on this face
                 float width = _EdgeWidth * (0.55 + 0.9 * pattern);

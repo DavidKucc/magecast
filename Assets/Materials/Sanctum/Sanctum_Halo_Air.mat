@@ -29,6 +29,8 @@ Material:
     - _Core: 0.25
     - _Radial: 1
     - _Softness: 2.2
+    - _TintAmount: 0
     m_Colors:
     - _Color: {r: 0.2625, g: 0.35, b: 0.315, a: 0.35}
+    - _Tint: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []

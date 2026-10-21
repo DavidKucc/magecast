@@ -633,6 +633,15 @@ scéna Arena_Blockout; do 21. 10. šedý „Blockout“), *Temple*, *Crossing* a
   lightmap, 1 s): editor si je dopočítává sám, ale build má jen to, co je uložené — bez toho byla ve webové
   verzi každá strana mimo slunce skoro černá. (Temple, Crossing a Valley to zatím upečené nemají.)
 
+**Výkon (web):** první verze stála 1331 vykreslovacích dávek (Temple 227). Teď ~400 na webové kvalitě:
+- kámen čte polohu v kvádru a jeho velikost z vlastního meshe (uv3, uv4), ne z matice objektu, takže se smí
+  statický batching (dřív kvůli hranám vypnutý),
+- runové čáry jedné skupiny jsou jeden mesh (dřív ~130 LineRendererů), svítí a vzplanou přes property block,
+- **žádná bodová světla** — samotná zdvojnásobila cenu (každé = další průchod přes všechno v dosahu); efekty
+  z balíků mají vlastní „Light" systém se světlem, ten se vypíná (`AmbientFx`), a z plošných efektů zůstávají
+  jen vybrané části,
+- plovoucí ostrovy se hýbou jen ty s krystalem, ostatní stojí a slučují se.
+
 **Aktivní prvky Svatyně:**
 - **Skokové plošiny** (4, u paty jádra, runa vzduchu): kdo na ni vstoupí, toho vyhodí vysokým obloukem
   na vrchol jádra (5 m) — jediná cesta nahoru; dolů se seskočí. Vyhazuje si každý počítač svého hráče

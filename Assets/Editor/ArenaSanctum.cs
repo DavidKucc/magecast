@@ -59,6 +59,12 @@ namespace MageCast.EditorTools
             FloorRunes(Group("FloorRunes", look));
             Beyond(Group("Beyond", look));
             Motes(look);
+
+            BakeGlows(look);
+            // anything that moves cannot be in a static batch: it would be frozen where it was built
+            foreach (FloatingBob b in look.GetComponentsInChildren<FloatingBob>(true))
+                foreach (Transform c in b.GetComponentsInChildren<Transform>(true))
+                    GameObjectUtility.SetStaticEditorFlags(c.gameObject, 0);
         }
 
         // ------------------------------------------------------------------ materials
@@ -150,7 +156,7 @@ namespace MageCast.EditorTools
                            : null;
                 if (m == null) continue;
                 r.sharedMaterial = m;
-                Unbatched(r.gameObject);
+                Prepare(r.gameObject);
             }
         }
 
@@ -180,7 +186,7 @@ namespace MageCast.EditorTools
                         Banner(w, new Vector3(x, 0f, Half - 0.47f), order[banner++ % order.Length]);
                 }
 
-                foreach (float x in new[] { -17.5f, -10.5f, -3.5f, 3.5f, 10.5f, 17.5f })
+                foreach (float x in new[] { -10.5f, -3.5f, 3.5f, 10.5f })
                     Lantern(w, new Vector3(x, 3.6f, Half));
             }
         }
@@ -258,7 +264,8 @@ namespace MageCast.EditorTools
                                        Circle("Ring_Inner", top, c0, Vector3.up, 1.35f, springGlow.rest, 0.05f) };
             HealingSpring spring = top.gameObject.AddComponent<HealingSpring>();
             spring.radius = 2.2f;
-            Effect("Spring_Fx", top, new Vector3(0f, 0.05f, 0f), AoE + "Heal/Particles/VFX_Heal_Area_01.prefab", 0.75f);
+            Effect("Spring_Fx", top, new Vector3(0f, 0.05f, 0f), AoE + "Heal/Particles/VFX_Heal_Area_01.prefab", 0.75f, 0f,
+                   "Wave LOOP", "Light Rays", "Embers LOOP", "Main Area Indicator LOOP", "Sparkle Star", "Pillar", "Embers Pillar");
 
             Transform float_ = Group("Floating_Crystal", top);
             float_.localPosition = new Vector3(0f, 3.6f, 0f);
@@ -268,7 +275,6 @@ namespace MageCast.EditorTools
             Crystal("Shard", float_, new Vector3(-1.1f, 0.5f, -0.9f), new Vector3(0.3f, 0.6f, 0.3f));
             Crystal("Shard", float_, new Vector3(-0.4f, -0.9f, 1.3f), new Vector3(0.25f, 0.5f, 0.25f));
             Billboard("Glow", float_, Vector3.zero, 6f, Arcane * 0.45f);
-            PointLight("Light", float_, Vector3.zero, Arcane, 2.2f, 18f);
             FloatingBob bob = float_.gameObject.AddComponent<FloatingBob>();
             bob.height = 0.35f;
             bob.period = 5f;
@@ -300,7 +306,8 @@ namespace MageCast.EditorTools
                 Glyph("Rune", p, GestureTemplates.Ehwaz, c, side, toward, 0.5f, Air, 0.07f, Vector3.up)
             };
             HaloQuad("Glow", p, new Vector3(0f, 0.035f, 0f), Quaternion.Euler(90f, 0f, 0f), 3.2f, Halo("Air", Air * 0.35f));
-            Effect("Air_Fx", p, Vector3.zero, AoE + "Air/Particles/VFX_Air_Area_01.prefab", 0.35f);
+            Effect("Air_Fx", p, Vector3.zero, AoE + "Air/Particles/VFX_Air_Area_01.prefab", 0.35f, 0f,
+                   "Light Rays", "Embers LOOP", "Thin Smoke LOOP", "Zone Indicator LOOP");
 
             RuneGlow g = p.gameObject.AddComponent<RuneGlow>();
             g.rest = Air * 0.9f;
@@ -335,7 +342,6 @@ namespace MageCast.EditorTools
                 Object.DestroyImmediate(bowl.GetComponent<Collider>());
                 Effect("Flame", p, new Vector3(0f, WallHeight + 0.3f, 0f), Anime + "Shared/Particles/VFX_Fire.prefab", 2.6f, 18f);
                 Billboard("Glow", p, new Vector3(0f, WallHeight + 0.9f, 0f), 4.5f, new Color(1f, 0.55f, 0.2f) * 0.4f);
-                PointLight("Light", p, new Vector3(0f, WallHeight + 1.2f, 0f), new Color(1f, 0.62f, 0.32f), 1.5f, 12f);
 
                 var lines = new List<LineRenderer>();
                 for (int side = 0; side < 4; side++)
@@ -485,6 +491,7 @@ namespace MageCast.EditorTools
                 go.transform.localPosition = Vector3.up * (b.min.z * k * 0.9f);
                 go.AddComponent<MeshFilter>().sharedMesh = spike;
                 go.AddComponent<MeshRenderer>().sharedMaterial = rock;
+                Static(go);
             }
             GameObject top = Cylinder("Top", isl, rock, new Vector3(0f, 0f, 0f), size * 1.05f, size * 0.12f);
             Object.DestroyImmediate(top.GetComponent<Collider>());
@@ -493,11 +500,15 @@ namespace MageCast.EditorTools
                 Crystal("Crystal", isl, new Vector3(size * 0.15f, size * 0.22f, 0f), new Vector3(size * 0.12f, size * 0.3f, size * 0.12f));
                 Billboard("Glow", isl, new Vector3(size * 0.15f, size * 0.25f, 0f), size * 0.6f, Arcane * 0.3f);
             }
+            float height = 0.4f + (float)rnd.NextDouble() * 0.8f, period = 7f + (float)rnd.NextDouble() * 6f;
+            float spin = (float)rnd.NextDouble() * 2f - 1f, phase = (float)rnd.NextDouble();
+            // only the ones with a crystal drift; the rest stand still, and so batch with each other
+            if (!crystalOnTop) return;
             FloatingBob bob = isl.gameObject.AddComponent<FloatingBob>();
-            bob.height = 0.4f + (float)rnd.NextDouble() * 0.8f;
-            bob.period = 7f + (float)rnd.NextDouble() * 6f;
-            bob.spin = (float)rnd.NextDouble() * 2f - 1f;
-            bob.phase = (float)rnd.NextDouble();
+            bob.height = height;
+            bob.period = period;
+            bob.spin = spin;
+            bob.phase = phase;
         }
 
         // ------------------------------------------------------------------ motes
@@ -640,7 +651,7 @@ namespace MageCast.EditorTools
             g.transform.localScale = size;
             g.GetComponent<Renderer>().sharedMaterial = m;
             if (!solid) Object.DestroyImmediate(g.GetComponent<Collider>());
-            Unbatched(g);
+            Prepare(g);
             return g;
         }
 
@@ -657,7 +668,7 @@ namespace MageCast.EditorTools
             g.transform.localPosition = pos;
             g.transform.localScale = new Vector3(diameter, height * 0.5f, diameter);
             g.GetComponent<Renderer>().sharedMaterial = m;
-            GameObjectUtility.SetStaticEditorFlags(g, StaticEditorFlags.ContributeGI | StaticEditorFlags.OccluderStatic | StaticEditorFlags.OccludeeStatic);
+            Static(g);
             return g;
         }
 
@@ -671,6 +682,7 @@ namespace MageCast.EditorTools
             var r = go.AddComponent<MeshRenderer>();
             r.sharedMaterial = crystal;
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            Static(go);
             return go;
         }
 
@@ -688,6 +700,7 @@ namespace MageCast.EditorTools
             r.sharedMaterial = m;
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             r.receiveShadows = false;
+            Static(q);
             return q;
         }
 
@@ -721,22 +734,9 @@ namespace MageCast.EditorTools
             r.maxParticleSize = 5f;
         }
 
-        static void PointLight(string name, Transform parent, Vector3 pos, Color colour, float intensity, float range)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = pos;
-            Light l = go.AddComponent<Light>();
-            l.type = LightType.Point;
-            l.color = colour;
-            l.intensity = intensity;
-            l.range = range;
-            l.shadows = LightShadows.None;
-            l.renderMode = LightRenderMode.Auto;
-        }
-
         /// <summary>One of the packs' effects, kept going in the map (AmbientFx).</summary>
-        static void Effect(string name, Transform parent, Vector3 pos, string prefabPath, float scale, float flames = 0f)
+        static void Effect(string name, Transform parent, Vector3 pos, string prefabPath, float scale, float flames = 0f,
+                           params string[] keep)
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
             if (prefab == null) { Debug.LogWarning("[Sanctum] missing effect " + prefabPath); return; }
@@ -747,6 +747,7 @@ namespace MageCast.EditorTools
             fx.prefab = prefab;
             fx.scale = scale;
             fx.flames = flames;
+            fx.keep = keep;
         }
 
         // --- glowing lines (LineRenderers in world space, flat on a surface facing <normal>)
@@ -911,15 +912,133 @@ namespace MageCast.EditorTools
             return m;
         }
 
-        /// <summary>
-        /// Out of static batching: SanctumStone finds a block's edges from its own matrix, which batching
-        /// would bake away. Everything else static stays.
-        /// </summary>
-        static void Unbatched(GameObject g)
+        /// <summary>Static, so it batches with everything else in its material.</summary>
+        static void Static(GameObject g)
         {
-            GameObjectUtility.SetStaticEditorFlags(g, StaticEditorFlags.ContributeGI | StaticEditorFlags.OccluderStatic
-                                                      | StaticEditorFlags.OccludeeStatic
-                                                      | StaticEditorFlags.ReflectionProbeStatic);
+            GameObjectUtility.SetStaticEditorFlags(g, StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccluderStatic
+                                                      | StaticEditorFlags.OccludeeStatic);
+        }
+
+        /// <summary>
+        /// A block made ready: static, and if its stone has worn edges, its own copy of the cube carrying where
+        /// each corner sits in the cube (uv3) and the block's size (uv4) -- SanctumStone reads its edges from
+        /// these, since in a static batch the block's own matrix is gone.
+        /// </summary>
+        static void Prepare(GameObject g)
+        {
+            Static(g);
+            Renderer r = g.GetComponent<Renderer>();
+            MeshFilter f = g.GetComponent<MeshFilter>();
+            if (r == null || f == null || r.sharedMaterial == null || !r.sharedMaterial.HasProperty("_EdgeWidth")) return;
+            if (r.sharedMaterial.GetFloat("_EdgeWidth") <= 0.001f) return;
+            f.sharedMesh = BoxMesh(g.transform.lossyScale);
+        }
+
+        static readonly Dictionary<string, Mesh> boxes = new Dictionary<string, Mesh>();
+
+        static Mesh BoxMesh(Vector3 scale)
+        {
+            string key = scale.x.ToString("0.###") + "x" + scale.y.ToString("0.###") + "x" + scale.z.ToString("0.###");
+            Mesh m;
+            if (boxes.TryGetValue(key, out m) && m != null) return m;
+            Mesh cube = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
+            m = Object.Instantiate(cube);
+            m.name = "Block_" + key;
+            var at = new List<Vector3>(m.vertices);
+            var size = new List<Vector3>();
+            for (int i = 0; i < at.Count; i++) size.Add(scale);
+            m.SetUVs(2, at);
+            m.SetUVs(3, size);
+            boxes[key] = m;
+            return m;
+        }
+
+        /// <summary>
+        /// Every group of rune lines turned into one mesh -- a soft ribbon along each line, coloured like it --
+        /// drawn in one go and lit up by its RuneGlow through a property block. As LineRenderers they were a
+        /// draw each, some hundred and thirty of them.
+        /// </summary>
+        static void BakeGlows(Transform look)
+        {
+            Transform holder = Group("Glows", look);
+            foreach (RuneGlow g in look.parent.GetComponentsInChildren<RuneGlow>(true))
+            {
+                if (g.lines == null || g.lines.Length == 0) continue;
+                var v = new List<Vector3>();
+                var uv = new List<Vector2>();
+                var col = new List<Color>();
+                var tris = new List<int>();
+                foreach (LineRenderer l in g.lines) if (l != null) Ribbon(l, v, uv, col, tris);
+
+                var mesh = new Mesh { name = "Runes_" + g.name };
+                if (v.Count > 65000) mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+                mesh.SetVertices(v);
+                mesh.SetUVs(0, uv);
+                mesh.SetColors(col);
+                mesh.SetTriangles(tris, 0);
+                mesh.RecalculateBounds();
+
+                var go = new GameObject("Runes_" + g.name);
+                go.transform.SetParent(holder, false);
+                go.AddComponent<MeshFilter>().sharedMesh = mesh;
+                var r = go.AddComponent<MeshRenderer>();
+                r.sharedMaterial = glowLine;
+                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                r.receiveShadows = false;
+
+                foreach (LineRenderer l in g.lines) if (l != null) Object.DestroyImmediate(l.gameObject);
+                g.lines = null;
+                g.glows = new Renderer[] { r };
+            }
+        }
+
+        /// <summary>A LineRenderer's line as a flat ribbon (uv.y across it), lying in the plane it faced.</summary>
+        static void Ribbon(LineRenderer l, List<Vector3> v, List<Vector2> uv, List<Color> col, List<int> tris)
+        {
+            int n = l.positionCount;
+            if (n < 2) return;
+            var p = new Vector3[n];
+            l.GetPositions(p);
+            bool loop = l.loop;
+            Vector3 normal = l.transform.forward;
+            float half = l.widthMultiplier * 0.5f;
+            Color c = l.startColor;
+            int count = loop ? n + 1 : n;
+            int start = v.Count;
+            for (int i = 0; i < count; i++)
+            {
+                int k = i % n;
+                Vector3 prev = loop ? p[(k - 1 + n) % n] : p[Mathf.Max(0, k - 1)];
+                Vector3 next = loop ? p[(k + 1) % n] : p[Mathf.Min(n - 1, k + 1)];
+                Vector3 dir = next - prev;
+                if (dir.sqrMagnitude < 1e-8f) dir = Vector3.right;
+                dir.Normalize();
+                Vector3 side = Vector3.Cross(normal, dir).normalized;
+                float widen = 1f;
+                bool end = !loop && (k == 0 || k == n - 1);
+                if (!end)
+                {
+                    // across a corner the ribbon keeps its width
+                    Vector3 before = Vector3.Cross(normal, (p[k] - prev).normalized).normalized;
+                    widen = 1f / Mathf.Max(0.4f, Vector3.Dot(before, side));
+                }
+                Vector3 at = p[k];
+                // the tips stick out half a width, so a rune's ends are not cut square
+                if (!loop && k == 0) at -= dir * half;
+                if (!loop && k == n - 1) at += dir * half;
+                v.Add(at - side * half * widen);
+                v.Add(at + side * half * widen);
+                uv.Add(new Vector2(0f, 0f));
+                uv.Add(new Vector2(0f, 1f));
+                col.Add(c);
+                col.Add(c);
+                if (i > 0)
+                {
+                    int a = start + (i - 1) * 2;
+                    tris.Add(a); tris.Add(a + 2); tris.Add(a + 1);
+                    tris.Add(a + 1); tris.Add(a + 2); tris.Add(a + 3);
+                }
+            }
         }
 
         static void Folder(string path)
