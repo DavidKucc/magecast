@@ -570,13 +570,13 @@ namespace MageCast.EditorTools
             RenderSettings.sun = light;
 
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.30f, 0.27f, 0.46f);
-            RenderSettings.ambientEquatorColor = new Color(0.38f, 0.29f, 0.33f);
-            RenderSettings.ambientGroundColor = new Color(0.12f, 0.10f, 0.14f);
+            RenderSettings.ambientSkyColor = new Color(0.48f, 0.43f, 0.70f);
+            RenderSettings.ambientEquatorColor = new Color(0.56f, 0.44f, 0.50f);
+            RenderSettings.ambientGroundColor = new Color(0.24f, 0.20f, 0.27f);
             RenderSettings.fog = false;      // see ArenaTempleBuilder: the packs' particles fog as squares
-            // The pale dusk sky mirrored in everything at a glancing angle washed the whole picture out --
-            // the far floor went cream and the characters lost their colour. A third of it is a sheen.
-            RenderSettings.reflectionIntensity = 0.3f;
+            // The dusk sky mirrored in everything at a glancing angle washes the picture out -- the far floor
+            // goes cream and the characters lose their colour. Under half of it is a sheen.
+            RenderSettings.reflectionIntensity = 0.45f;
 
             string skyPath = MatFolder + "/Sanctum_Sky.mat";
             Material sky = AssetDatabase.LoadAssetAtPath<Material>(skyPath);
@@ -810,15 +810,16 @@ namespace MageCast.EditorTools
         // --- materials and meshes
 
         /// <summary>
-        /// Colours as written above, deepened: a little more saturated and a good deal darker. Picked by
-        /// eye in the editor's game view (21 Oct) -- as written they read pastel and washed out under the
-        /// dusk sun, and the runes did not stand out from the stone.
+        /// Colours as written above, deepened: a little more saturated and somewhat darker, so the runes
+        /// stand out from the stone. Picked by eye (21 Oct) in pictures that match the web build -- a camera
+        /// rendering into a texture; the editor's own game-view capture shows everything paler than the
+        /// build does, and tuned by that, the web build came out gloomy.
         /// </summary>
         static Color Tone(Color c)
         {
             float h, s, v;
             Color.RGBToHSV(c, out h, out s, out v);
-            return Color.HSVToRGB(h, Mathf.Min(1f, s * 1.25f), v * 0.72f);
+            return Color.HSVToRGB(h, Mathf.Min(1f, s * 1.15f), v * 0.85f);
         }
 
         static Material Stone(string name, Texture2D pattern, float scale, Color side, Color tint2, Color top, Color edge, float edgeWidth, float grime)
