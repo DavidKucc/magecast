@@ -158,8 +158,8 @@ namespace MageCast.Gestures
             go.transform.localScale = Vector3.one * (radius * 2f);
 
             Renderer r = go.GetComponent<Renderer>();
-            // No post-processing in a blockout, so the only way a crit can read as a crit is raw
-            // emission and size. Both scale with the quality of the stroke that produced it.
+            // Bloom (World.PostFx) can be switched off, so a crit has to read as a crit by raw emission
+            // and size alone. Both scale with the quality of the stroke that produced it.
             Material m = RuntimeMaterials.Emissive(colour, 1.2f + power * 0.9f);
             r.material = m;
 

@@ -655,6 +655,20 @@ scéna Arena_Blockout; do 21. 10. šedý „Blockout“), *Temple*, *Crossing* a
 - **Boti** plošiny i pramen používají: zraněný bot bez soupeře na dohled dojde na nejbližší plošinu, nechá
   se vynést k prameni, a vyléčený (nebo když jde za soupeřem) z jádra seskočí.
 
+**Dokončení obrazu ve všech arénách** (od 21. 10.; balík Post Processing v2, profil staví
+`Tools/Arena/Build Post Fx`, kameře ho při načtení arény přidá `World.PostFx` — menu a lobby zůstávají bez):
+- **záře (bloom):** jen to, co je jasnější než bílá — kouzla, rozsvícené runy, oheň, slunce; bledý kámen ne
+  (práh 1, síla 4),
+- **ACES tónování:** jasná obloha nebo ohnivá koule se zaoblí místo přepálené bílé skvrny (v záběrech s
+  ohněm bylo přepálených 2–10 % obrazu, teď 0–0,3 %); střední tóny stáhne dolů, proto expozice +1 EV
+  (průměrný jas záběrů zůstal ±10 %),
+- lehká vinětace (0,2) a rychlé FXAA (web nemá MSAA).
+- **Cena na webu:** 127 snímků/s se zapnutými, 132 s vypnutými (≈ 0,2 ms na snímek). Na webu se barevné
+  ladění počítá přes 2D tabulku, protože WebGL nemá compute shadery.
+- Vypínač *Glow and colour effects* v Nastavení (pro slabý počítač). Kritický zásah proto pořád čte jako
+  kritický i bez záře — vlastní emisí a velikostí.
+- `ArenaPostFx.Capture` vyfotí scénu s efekty a bez nich a vrátí průměrný jas a podíl přepálených pixelů.
+
 **Temple** (generuje `Tools/Arena/Build Temple Map`, měří `Tools/Arena/Audit Temple`): zřícený chrám
 44 × 44 m, čtvrtina orazítkovaná čtyřikrát otočením. Výšky jsou jen tyhle: 1,2 skok, 1,6 kryt po prsa
 (dá se vyšplhat), 2,4 hrana na vyšplhání, 4 patro (po rampě).

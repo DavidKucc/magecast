@@ -14,13 +14,14 @@ namespace MageCast
         const string SensitivityKey = "MouseSensitivity";
         const string MasterKey = "MasterVolume";
         const string SpellKey = "SpellVolume";
+        const string EffectsKey = "Effects";
         public const float MinSensitivity = 0.1f;
         public const float MaxSensitivity = 4f;
 
         /// <summary>Spells start a little under full: the packs mix them loud, for a demo of one at a time.</summary>
         const float DefaultSpellVolume = 0.7f;
 
-        static float? sensitivity, master, spells;
+        static float? sensitivity, master, spells, effects;
 
         /// <summary>
         /// Multiplies how far the camera turns per unit of mouse movement. 1 is the tuned default.
@@ -51,6 +52,17 @@ namespace MageCast
             set { Write(ref spells, SpellKey, Mathf.Clamp01(value)); }
         }
 
+        /// <summary>Bloom, tone mapping and the grade on the arena camera (World.PostFx). Off for a slow machine.</summary>
+        public static bool Effects
+        {
+            get { return Read(ref effects, EffectsKey, 1f) > 0.5f; }
+            set
+            {
+                Write(ref effects, EffectsKey, value ? 1f : 0f);
+                World.PostFx.Apply();
+            }
+        }
+
         /// <summary>Puts the saved volume into effect -- once, when the game starts.</summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         public static void Apply()
@@ -72,10 +84,10 @@ namespace MageCast
             PlayerPrefs.Save();
         }
 
-        static GUIStyle label, value;
+        static GUIStyle label, value, toggle;
 
         /// <summary>How tall Draw's column is, for anything that frames it.</summary>
-        public const float Height = 3 * 54f + 36f;
+        public const float Height = 3 * 54f + 32f + 36f;
 
         /// <summary>Draws the settings into a column starting at y, and returns where it ended.</summary>
         public static float Draw(float x, float y, float width)
@@ -85,6 +97,8 @@ namespace MageCast
                 label = new GUIStyle(GUI.skin.label) { fontSize = 16 };
                 label.normal.textColor = new Color(1f, 1f, 1f, 0.85f);
                 value = new GUIStyle(label) { alignment = TextAnchor.MiddleRight, fontStyle = FontStyle.Bold };
+                toggle = new GUIStyle(GUI.skin.toggle) { fontSize = 16 };
+                toggle.normal.textColor = toggle.onNormal.textColor = label.normal.textColor;
             }
 
             // stepped in 0.05 so a value can be told to someone and set again exactly
@@ -92,12 +106,15 @@ namespace MageCast
                                       MinSensitivity, MaxSensitivity, MouseSensitivity.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
             MasterVolume = Slider(x, ref y, width, "Volume", MasterVolume, 0f, 1f, Mathf.RoundToInt(MasterVolume * 100f) + " %");
             SpellVolume = Slider(x, ref y, width, "Spell sounds", SpellVolume, 0f, 1f, Mathf.RoundToInt(SpellVolume * 100f) + " %");
+            Effects = GUI.Toggle(new Rect(x, y, width, 24f), Effects, "  Glow and colour effects", toggle);
+            y += 32f;
 
             if (GUI.Button(new Rect(x, y, 120f, 26f), "Defaults"))
             {
                 MouseSensitivity = 1f;
                 MasterVolume = 1f;
                 SpellVolume = DefaultSpellVolume;
+                Effects = true;
             }
             return y + 36f;
         }
