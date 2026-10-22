@@ -620,11 +620,13 @@ scéna Arena_Blockout; do 21. 10. šedý „Blockout“), *Temple*, *Crossing* a
 - **kámen:** vlastní shader `SanctumStone` — dlaždice a cihly promítané ze světa (jako `WorldStone`) plus
   ručně „malované“ světlejší ošoupané hrany, velké skvrny druhé barvy a tmavší pata. Hrany se počítají
   z kvádru samotného, proto tyhle objekty nejsou ve statickém batchingu.
-- **zdi:** římsa a cimbuří proti obloze, pilastry, prapory v barvách prvků s jejich runou ve zlatě,
+- **zdi:** římsa a cimbuří proti obloze, pilastry, prapory v barvách prvků se zlatými proužky,
   krystalové lucerny,
-- **jádro:** podstavec, opěrné pilíře, pás run; nahoře **léčivý pramen** pod **plovoucím krystalem**,
-- **pilíře:** každý v barvě jednoho prvku, s ohněm v míse nahoře (oheň z balíku, udržovaný hořet),
-- **zem:** prstenec runových kanálků kolem jádra se šesti runami prvků v jejich barvách,
+- **jádro:** podstavec, opěrné pilíře, svítící pásy a kruhy; nahoře **léčivý pramen** pod **plovoucím krystalem**,
+- **pilíře:** každý v barvě jednoho prvku, svítící hrany, s ohněm v míse nahoře,
+- **zem:** dvojitý svítící prstenec kolem jádra.
+- **Symboly run v mapách nejsou** (od 22. 10., na přání): zmizely ze zdí, pilířů, desek, podlahy,
+  praporů, oltáře a obelisku ve všech mapách. Svítící čáry a kruhy zůstaly.
 - **kolem:** plovoucí skalní ostrovy, malovaná soumraková obloha (`SanctumSky`: fialová, růžová, jantarový
   obzor, slunce, pásy mraků, hvězdy), poletující světélka.
 - **Světlo:** teplé nízké slunce s tvrdšími stíny, tmavší okolní světlo. Odrazy oblohy jsou na třetině —
@@ -643,14 +645,14 @@ scéna Arena_Blockout; do 21. 10. šedý „Blockout“), *Temple*, *Crossing* a
 - plovoucí ostrovy se hýbou jen ty s krystalem, ostatní stojí a slučují se.
 
 **Aktivní prvky Svatyně:**
-- **Skokové plošiny** (4, 3 m od paty jádra, runa vzduchu): kdo na ni vstoupí, toho vyhodí vysokým obloukem
+- **Skokové plošiny** (4, 3 m od paty jádra, kruhy v barvě vzduchu): kdo na ni vstoupí, toho vyhodí vysokým obloukem
   (3 m nad vrchol) na vrchol jádra (5 m) — jediná cesta nahoru; dolů se seskočí. (Původně 1,9 m od jádra
   a 2 m nad vrchol: z bližšího okraje plošiny oblouk narazil do římsy a hráč zůstal na jejím okraji.) Vyhazuje si každý počítač svého hráče
   (boty server), jako updraft; všichni vidí runu vzplanout a slyší vzduch.
 - **Léčivý pramen** na vrcholu jádra: kdo v něm stojí, dostává **5 životů/s**, ale ne do 2 s po zásahu
   (doplní mezi souboji, nepřeléčí souboj). Nahoře není žádný kryt a vidí tě celá aréna. Léčí server.
   Ověřeno: z 60 na 82,5 za 6,5 s.
-- **Runy, které odpovídají kouzlům:** runy vyryté v pilířích, jádře a deskách dýchají klidným světlem a když
+- **Svítící čáry, které odpovídají kouzlům:** čáry a kruhy v pilířích, jádře a deskách dýchají klidným světlem a když
   do kamene udeří kouzlo, rozzáří se jeho barvou (oheň oranžově, led modře…) a během ~2 s se vrátí.
 - **Boti** plošiny i pramen používají: zraněný bot bez soupeře na dohled dojde na nejbližší plošinu, nechá
   se vynést k prameni, a vyléčený (nebo když jde za soupeřem) z jádra seskočí.
@@ -682,6 +684,11 @@ pevné jsou jen pilastry u zdí; audity map dávají stejné dosažitelné ploch
   Crossing 117 / 3,9 ms, Valley 108 / 4,6 ms. Ve Valley stojí většinu terén (bez oblečení ~546 dávek,
   s ním ~633); oblečení Temple přidává ~250 dávek, statické slučování z 1172 kreseb dělá 134.
 
+**Ohně v mapách** (pánve, pochodně, lucerny, pilíře Svatyně) jsou od 22. 10. vlastní klidný plamen
+(`ArenaKit.Flame`): ~20 slabých měkkých světel stoupá a mírně se vlní, součet svítí. Oheň z balíku je
+jednorázový obláček se zábleskem, dělaný pro okamžik kouzla — udržovaný hořet v mapě blikal jako na diskotéce.
+Jas záběru na plamen kolísá o ±0,7 % (šest vzorků za 12 s).
+
 **Prosvítání ploch (z-fighting)** — od 22. 10. měří `Tools/Arena/Audit Overlaps (all maps)`: dvě plochy v
 jedné rovině, otočené stejně a překrývající se, hloubkový buffer neumí seřadit a při pohybu kamery se
 proplétají v pruzích. Bylo jich 70 (Sanctum), 40 (Temple), 12 (Crossing) a 56 (Valley); teď je to ve všech
@@ -691,6 +698,8 @@ mapách **0**. Typické příčiny a jak se jim teď vyhnout:
 - dva pásy křížící se v rohu → `ArenaKit.Band` dělá jeden pár o 2 cm větší,
 - díl ukrytý celý ve zdi (parapet „okna" v kapli Crossing — okno nikdy neexistovalo) → pryč,
 - stejně vysoké sousední kusy zdi na věžích Valley → každý druhý o 2 cm vyšší, podlaha věže 2 cm pod nimi.
+Audit hledá jen plochy v jedné rovině; mírně skloněná plocha protínající jinou (most v Temple, 7°) se s ní
+proplétá podél průsečnice stejně — takové kusy mají končit tam, kde se potkají, ne skrz.
 Kamera do zdí nevidí (sférický test 0,28 m proti kolizím, blízká rovina 0,05 m); ozdoby bez kolizí u zdí
 (prapory, břečťan) stojí tak, aby kamera skončila před nimi.
 
@@ -703,8 +712,10 @@ Kamera do zdí nevidí (sférický test 0,28 m proti kolizím, blízká rovina 0
 - **boční uličky:** půlka je propadlina 1,2 m (kouzla létají nad tebou, plochy se v ní drží), půlka ruina
   (zeď 2,4 m na vyšplhání, padlý sloup, kryt po prsa).
 - **vzhled** (`ArenaTempleLook`): pískovcový chrám v džungli ve zlaté hodince. Velké kvádry, mech na
-  vrcholech; na oltáři a obelisku runy živlů, zlatá špička a nad ní otáčející se krystal; od paty schodů
-  vedou ke každé vnější zdi **linie síly** do velké runy — zásah do zdi rozsvítí celou linii až k oltáři.
+  vrcholech; na oltáři kruhy, na obelisku zlaté pásy a špička, nad ní otáčející se krystal; od paty schodů
+  vedou ke každé vnější zdi **linie síly** do velkého svítícího kruhu — zásah do zdi rozsvítí celou linii až
+  k oltáři. **Mosty** končí přesně tam, kde přistávají (dřív přesahovaly o 15 cm: mírný sklon 7° protínal
+  rovinu střechy věže a v pásu podél hrany se obě plochy proplétaly), a dosedají 1 cm pod střechu.
   Oheň v pánvích u věží, prapory, břečťan z říms, za zdmi koruny džungle, zalesněné kopce, sesterská
   pyramida a hory v modravém oparu. Opravená chyba geometrie: třetí zub cimbuří na věžích visel 0,6 m
   za věž a vedl skrz parapet — teď roh drží sloupek.

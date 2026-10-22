@@ -74,19 +74,6 @@ namespace MageCast.EditorTools
             yield return new KeyValuePair<string, Color>("Barrier", Ward);
         }
 
-        public static string RuneOf(string element)
-        {
-            switch (element)
-            {
-                case "Fire": return GestureTemplates.Kenaz;
-                case "Ice": return GestureTemplates.Laguz;
-                case "Lightning": return GestureTemplates.Sowulo;
-                case "Air": return GestureTemplates.Ehwaz;
-                case "Earth": return GestureTemplates.Thurisaz;
-                default: return GestureTemplates.Uruz;
-            }
-        }
-
         public static Color ColourOf(string element)
         {
             foreach (var e in Elements()) if (e.Key == element) return e.Value;
@@ -350,8 +337,9 @@ namespace MageCast.EditorTools
         }
 
         /// <summary>
-        /// A banner in an element's colour with its rune in gold, hung on a face at <paramref name="at"/> in the
-        /// frame <paramref name="w"/>, the face looking along -z of that frame.
+        /// A banner in an element's colour, two bands of gold thread across it, hung on a face at
+        /// <paramref name="at"/> in the frame <paramref name="w"/>, the face looking along -z of that frame.
+        /// (No rune on it: rune symbols are not wanted in the maps, 22 Oct.)
         /// </summary>
         public static void Banner(Transform w, Vector3 at, string element, Material cloth, Material metal)
         {
@@ -362,12 +350,9 @@ namespace MageCast.EditorTools
             // the swallowtail: two pieces at the bottom, thinner than the cloth so their faces are not its
             Deco("Tail_L", b, cloth, new Vector3(-0.3f, 2.35f, 0f), new Vector3(0.42f, 0.32f, 0.024f));
             Deco("Tail_R", b, cloth, new Vector3(0.3f, 2.35f, 0f), new Vector3(0.42f, 0.32f, 0.024f));
-            Vector3 face = b.TransformPoint(new Vector3(0f, 3.85f, -0.035f));
-            LineRenderer rune = Glyph("Rune", b, RuneOf(element), face, b.right, b.up, 0.62f, Gold, 0.07f, -b.forward);
-            RuneGlow g = b.gameObject.AddComponent<RuneGlow>();
-            g.rest = Gold * 0.9f;
-            g.breath = 0.15f;
-            g.lines = new[] { rune };
+            // gold thread laid on the front of the cloth (its back on the cloth's face, which looks the other way)
+            foreach (float y in new[] { 4.7f, 2.85f })
+                Deco("Thread", b, metal, new Vector3(0f, y, -0.03f), new Vector3(1.05f, 0.07f, 0.02f));
         }
 
         /// <summary>The far hills (MageCast/Distant): a colour up the slopes, snow above a line, faded into the haze.</summary>
@@ -463,14 +448,71 @@ namespace MageCast.EditorTools
             tris.Add(a); tris.Add(b); tris.Add(c);
         }
 
-        /// <summary>Fire in a metal bowl, with its glow: the anime pack's flame kept burning.</summary>
+        /// <summary>Fire in a metal bowl, with its glow.</summary>
         public static void FireBowl(Transform parent, Vector3 at, float size, Material metal)
         {
             Transform t = Group("FireBowl", parent);
             t.localPosition = at;
             Cylinder("Bowl", t, metal, new Vector3(0f, 0.09f * size, 0f), 0.75f * size, 0.18f * size, false);
-            Effect("Flame", t, new Vector3(0f, 0.15f * size, 0f), Anime + "Shared/Particles/VFX_Fire.prefab", 1.35f * size, 14f + 4f * size);
-            Billboard("Glow", t, new Vector3(0f, 0.6f * size, 0f), 2.6f * size, new Color(1f, 0.55f, 0.2f) * 0.4f);
+            Flame(t, new Vector3(0f, 0.12f * size, 0f), 0.62f * size);
+            Billboard("Glow", t, new Vector3(0f, 0.6f * size, 0f), 2.6f * size, new Color(1f, 0.55f, 0.2f) * 0.32f);
+        }
+
+        /// <summary>
+        /// A steady flame, <paramref name="size"/> metres across at its root: soft glows rising and swaying a
+        /// little, warm white at the root through orange to a dull red as they fade, enough of them at once that
+        /// the whole never flickers. The packs' fire is a puff with a flash, made for a spell's moment -- kept
+        /// burning in a map it strobed like a disco (22 Oct).
+        /// </summary>
+        public static ParticleSystem Flame(Transform parent, Vector3 pos, float size)
+        {
+            var go = new GameObject("Flame");
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = pos;
+            ParticleSystem ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main;
+            main.loop = true;
+            main.duration = 5f;
+            main.prewarm = true;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.6f, 0.9f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.9f * size, 1.4f * size);
+            main.startSize = new ParticleSystem.MinMaxCurve(1.1f * size, 1.5f * size);
+            main.startColor = Color.white;
+            main.maxParticles = 48;
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
+            var emission = ps.emission;
+            emission.rateOverTime = 30f;
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 5f;
+            shape.radius = 0.18f * size;
+            shape.rotation = new Vector3(-90f, 0f, 0f);       // the cone along +y, not +z
+            // dim each: twenty of them overlap in the core, and the sum is what glows -- steady to within a
+            // percent, sampled over twelve seconds in the Temple (22 Oct)
+            var colour = ps.colorOverLifetime;
+            colour.enabled = true;
+            var grad = new Gradient();
+            grad.SetKeys(new[] { new GradientColorKey(new Color(0.75f, 0.62f, 0.36f), 0f), new GradientColorKey(new Color(0.72f, 0.34f, 0.09f), 0.45f),
+                                 new GradientColorKey(new Color(0.35f, 0.08f, 0.01f), 1f) },
+                         new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.15f), new GradientAlphaKey(0.65f, 0.6f), new GradientAlphaKey(0f, 1f) });
+            colour.color = grad;
+            var shrink = ps.sizeOverLifetime;
+            shrink.enabled = true;
+            shrink.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, 0.3f));
+            var noise = ps.noise;
+            noise.enabled = true;
+            noise.strength = 0.3f * size;
+            noise.frequency = 1.1f;
+            noise.scrollSpeed = 0.5f;
+            noise.damping = true;
+            var r = go.GetComponent<ParticleSystemRenderer>();
+            r.sharedMaterial = Mote;
+            r.renderMode = ParticleSystemRenderMode.Billboard;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            r.maxParticleSize = 2f;
+            return ps;
         }
 
         // --- glowing lines (LineRenderers in world space, flat on a surface facing <normal>), baked by BakeGlows
@@ -516,18 +558,6 @@ namespace MageCast.EditorTools
                 float t = i / (float)segments * Mathf.PI * 2f;
                 l.SetPosition(i, centre + (a * Mathf.Cos(t) + b * Mathf.Sin(t)) * radius);
             }
-            return l;
-        }
-
-        /// <summary>A rune drawn as the game draws it (its template's corners), <paramref name="half"/> metres from middle to edge.</summary>
-        public static LineRenderer Glyph(string name, Transform parent, string rune, Vector3 centre, Vector3 right, Vector3 up, float half,
-                                         Color colour, float width, Vector3 normal)
-        {
-            Vector2[] corners = GestureTemplates.Corners(rune);
-            LineRenderer l = NewLine(name, parent, colour, width, normal, false);
-            l.positionCount = corners.Length;
-            for (int i = 0; i < corners.Length; i++)
-                l.SetPosition(i, centre + (right * corners[i].x + up * corners[i].y) * half);
             return l;
         }
 

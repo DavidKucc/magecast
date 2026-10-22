@@ -184,8 +184,12 @@ namespace MageCast.EditorTools
             BuildTower(t);
 
             // --- the bridge: tower roof corner down to the altar corner, and the pillar holding it up
-            Ramp("Bridge", t, bridgeMat, new Vector3(3.4f, Ledge, 3.4f),
-                 new Vector3(Tower.xMin + 0.9f, Storey, Tower.yMin + 0.9f), 2.4f, 0.45f);
+            // It ends where it lands rather than running on past: a ramp this shallow (7 degrees) crossing the
+            // roof's plane put the two in nearly one place along the crossing, and they striped through each
+            // other there (22 Oct). And it lands a centimetre under the roof and a centimetre over the altar,
+            // so where it does run under or over them it is never level with them.
+            Ramp("Bridge", t, bridgeMat, new Vector3(3.4f, Ledge + 0.01f, 3.4f),
+                 new Vector3(Tower.xMin + 0.9f, Storey - 0.01f, Tower.yMin + 0.9f), 2.4f, 0.45f, 0f);
             Box("Bridge_Pillar", t, stoneMat, new Vector3(8f, 1.45f, 8f), new Vector3(1.1f, 2.9f, 1.1f), 45f);
 
             // --- the inner ring, between the altar and the towers
@@ -607,8 +611,12 @@ namespace MageCast.EditorTools
             Box("Floor", parent, m, new Vector3(r.center.x, -thick * 0.5f, r.center.y), new Vector3(r.width, thick, r.height));
         }
 
-        /// <summary>A sloped slab whose walking surface runs from <paramref name="low"/> to <paramref name="high"/>.</summary>
-        internal static void Ramp(string name, Transform parent, Material m, Vector3 low, Vector3 high, float width, float thick)
+        /// <summary>
+        /// A sloped slab whose walking surface runs from <paramref name="low"/> to <paramref name="high"/>, running on
+        /// <paramref name="overrun"/> metres past both (half each end) into what it meets.
+        /// </summary>
+        internal static void Ramp(string name, Transform parent, Material m, Vector3 low, Vector3 high, float width, float thick,
+                                  float overrun = 0.3f)
         {
             Vector3 along = high - low;
             Quaternion rot = Quaternion.LookRotation(along.normalized, Vector3.up);
@@ -617,7 +625,7 @@ namespace MageCast.EditorTools
             g.transform.SetParent(parent, false);
             g.transform.localRotation = rot;
             g.transform.localPosition = (low + high) * 0.5f - rot * Vector3.up * (thick * 0.5f);
-            g.transform.localScale = new Vector3(width, thick, along.magnitude + 0.3f);
+            g.transform.localScale = new Vector3(width, thick, along.magnitude + overrun);
             g.GetComponent<Renderer>().sharedMaterial = m;
             ArenaKit.Prepare(g);
         }

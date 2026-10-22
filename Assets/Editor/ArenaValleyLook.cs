@@ -75,7 +75,7 @@ namespace MageCast.EditorTools
             t.localPosition = keep.localPosition;
             t.localRotation = keep.localRotation;
 
-            // a ring of runes on the perch, and the floor it is cut into lights up when struck
+            // a double ring on the perch, and the floor it is cut into lights it up when struck
             Transform floor = keep.Find("Keep_Floor");
             float top = KeepFloor - Proud + 0.015f;
             var lines = new List<LineRenderer>
@@ -83,16 +83,6 @@ namespace MageCast.EditorTools
                 Circle("Ring", t, t.TransformPoint(new Vector3(0f, top, 0f)), Vector3.up, 3.2f, Arcane, 0.07f),
                 Circle("Ring_Inner", t, t.TransformPoint(new Vector3(0f, top, 0f)), Vector3.up, 2.95f, Arcane, 0.035f),
             };
-            string[] order = { "Fire", "Ice", "Lightning", "Air" };
-            for (int i = 0; i < 4; i++)
-            {
-                float a = (45f + 90f * i) * Mathf.Deg2Rad;
-                Vector3 at = t.TransformPoint(new Vector3(Mathf.Cos(a) * 2.2f, top + 0.001f, Mathf.Sin(a) * 2.2f));
-                Vector3 outward = (at - t.position);
-                outward.y = 0f;
-                outward.Normalize();
-                lines.Add(Glyph("Rune", t, RuneOf(order[i]), at, -Vector3.Cross(Vector3.up, outward), outward, 0.42f, ColourOf(order[i]), 0.07f, Vector3.up));
-            }
             if (floor != null) Runes(floor.gameObject, Arcane * 0.8f, 0f, lines.ToArray());
 
             // the crystal turning high over it: seen from anywhere in the valley

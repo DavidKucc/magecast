@@ -134,23 +134,10 @@ namespace MageCast.EditorTools
             }
         }
 
-        /// <summary>A banner in an element's colour with its rune in gold, hung on a pilaster's face (at z, facing -z).</summary>
+        /// <summary>A banner in an element's colour, hung on a pilaster's face (at z, facing -z).</summary>
         static void Banner(Transform w, Vector3 at, string element)
         {
-            Transform b = Group("Banner_" + element, w);
-            b.localPosition = at;
-            Deco("Rod", b, metal, new Vector3(0f, 5.05f, -0.02f), new Vector3(1.3f, 0.08f, 0.08f));
-            Deco("Cloth", b, cloths[element], new Vector3(0f, 3.75f, 0f), new Vector3(1.05f, 2.55f, 0.04f));
-            // the swallowtail: two small pieces at the bottom
-            // a little thinner than the cloth they hang from, so the faces where they overlap are not one plane
-            Deco("Tail_L", b, cloths[element], new Vector3(-0.3f, 2.35f, 0f), new Vector3(0.42f, 0.32f, 0.024f));
-            Deco("Tail_R", b, cloths[element], new Vector3(0.3f, 2.35f, 0f), new Vector3(0.42f, 0.32f, 0.024f));
-            Vector3 face = b.TransformPoint(new Vector3(0f, 3.85f, -0.035f));
-            LineRenderer rune = Glyph("Rune", b, RuneOf(element), face, b.right, b.up, 0.62f, Gold, 0.07f, -b.forward);
-            RuneGlow g = b.gameObject.AddComponent<RuneGlow>();
-            g.rest = Gold * 0.9f;
-            g.breath = 0.15f;
-            g.lines = new[] { rune };
+            ArenaKit.Banner(w, at, element, cloths[element], metal);
         }
 
         /// <summary>A crystal lantern on a bracket, its glow on the wall (wall face at z, facing -z).</summary>
@@ -174,7 +161,6 @@ namespace MageCast.EditorTools
                 Box("Buttress", t, core, new Vector3(c.x * CoreHalf, (CoreHigh + 0.3f) * 0.5f, c.y * CoreHalf), new Vector3(1.2f, CoreHigh + 0.3f, 1.2f));
 
             var lines = new List<LineRenderer>();
-            string[] faces = { "Barrier", "Earth", "Barrier", "Earth" };
             for (int side = 0; side < 4; side++)
             {
                 Transform f = Group("Face_" + side, t);
@@ -184,8 +170,7 @@ namespace MageCast.EditorTools
                 Vector3 onFace = f.TransformPoint(new Vector3(0f, 0f, -CoreHalf - 0.025f));
                 lines.Add(Line("Band_Low", f, new[] { onFace + f.right * -5.6f + Vector3.up * 1.1f, onFace + f.right * 5.6f + Vector3.up * 1.1f }, Arcane, 0.07f, normal));
                 lines.Add(Line("Band_High", f, new[] { onFace + f.right * -5.6f + Vector3.up * 3.95f, onFace + f.right * 5.6f + Vector3.up * 3.95f }, Arcane, 0.07f, normal));
-                lines.Add(Glyph("Rune", f, RuneOf(faces[side]), onFace + Vector3.up * 2.5f, f.right, Vector3.up, 1.1f, Arcane, 0.11f, normal));
-                // a ring round the rune
+                // a ring on each face (no rune symbol in it: not wanted in the maps, 22 Oct)
                 lines.Add(Circle("Ring", f, onFace + Vector3.up * 2.5f, normal, 1.3f, Arcane, 0.05f));
             }
             RuneGlow glow = coreBox.gameObject.AddComponent<RuneGlow>();
@@ -244,13 +229,10 @@ namespace MageCast.EditorTools
             GameObject padDisc = Cylinder("Disc", p, disc, new Vector3(0f, 0.015f, 0f), 2.4f, 0.03f);
             Object.DestroyImmediate(padDisc.GetComponent<Collider>());
             Vector3 c = p.position + Vector3.up * 0.05f;
-            Vector3 toward = new Vector3(-at.x, 0f, -at.z).normalized;
-            Vector3 side = Vector3.Cross(Vector3.up, toward);
             var lines = new List<LineRenderer>
             {
                 Circle("Ring", p, c, Vector3.up, 1.1f, Air, 0.08f),
                 Circle("Ring_Inner", p, c, Vector3.up, 0.8f, Air, 0.04f),
-                Glyph("Rune", p, GestureTemplates.Ehwaz, c, side, toward, 0.5f, Air, 0.07f, Vector3.up)
             };
             HaloQuad("Glow", p, new Vector3(0f, 0.055f, 0f), Quaternion.Euler(90f, 0f, 0f), 3.2f, Halo("Air", Air * 0.35f));
             Effect("Air_Fx", p, Vector3.zero, AoE + "Air/Particles/VFX_Air_Area_01.prefab", 0.35f, 0f,
@@ -288,7 +270,7 @@ namespace MageCast.EditorTools
                 Box("Capital", p, trim, new Vector3(0f, WallHeight - 0.22f + Proud, 0f), new Vector3(2.0f, 0.45f, 2.0f));
                 GameObject bowl = Cylinder("Bowl", p, metal, new Vector3(0f, WallHeight + 0.18f, 0f), 1.45f, 0.18f);
                 Object.DestroyImmediate(bowl.GetComponent<Collider>());
-                Effect("Flame", p, new Vector3(0f, WallHeight + 0.3f, 0f), Anime + "Shared/Particles/VFX_Fire.prefab", 2.6f, 18f);
+                Flame(p, new Vector3(0f, WallHeight + 0.24f, 0f), 1.15f);
                 Billboard("Glow", p, new Vector3(0f, WallHeight + 0.9f, 0f), 4.5f, new Color(1f, 0.55f, 0.2f) * 0.4f);
 
                 var lines = new List<LineRenderer>();
@@ -300,7 +282,6 @@ namespace MageCast.EditorTools
                     Vector3 face = p.position + normal * 0.775f;
                     lines.Add(Line("Edge_L", p, new[] { face - right * 0.5f + Vector3.up * 1.05f, face - right * 0.5f + Vector3.up * 5.3f }, colour, 0.05f, normal));
                     lines.Add(Line("Edge_R", p, new[] { face + right * 0.5f + Vector3.up * 1.05f, face + right * 0.5f + Vector3.up * 5.3f }, colour, 0.05f, normal));
-                    lines.Add(Glyph("Rune", p, RuneOf(elements[i]), face + Vector3.up * 3.2f, right, Vector3.up, 0.42f, colour, 0.07f, normal));
                 }
                 RuneGlow g = box.gameObject.AddComponent<RuneGlow>();
                 g.rest = colour * 0.85f;
@@ -337,7 +318,6 @@ namespace MageCast.EditorTools
                         Vector3 face = s.position + normal * (s.localScale.z * 0.5f + 0.025f);
                         Vector3 at = new Vector3(face.x, 0f, face.z);
                         lines.Add(Line("Band", look, new[] { at - s.right * 2.6f + Vector3.up * 2.75f, at + s.right * 2.6f + Vector3.up * 2.75f }, colour, 0.05f, normal));
-                        lines.Add(Glyph("Rune", look, RuneOf(slabRunes[q]), at + Vector3.up * 1.6f, s.right, Vector3.up, 0.6f, colour, 0.08f, normal));
                         lines.Add(Circle("Ring", look, at + Vector3.up * 1.6f, normal, 0.78f, colour, 0.04f));
                     }
                     RuneGlow g = s.gameObject.AddComponent<RuneGlow>();
@@ -366,6 +346,7 @@ namespace MageCast.EditorTools
 
         // ------------------------------------------------------------------ the floor
 
+        /// <summary>A double ring on the floor round the core (once with the six element runes on it).</summary>
         static void FloorRunes(Transform t)
         {
             Vector3 c = new Vector3(0f, 0.012f, 0f);
@@ -376,24 +357,6 @@ namespace MageCast.EditorTools
             rg.breathPeriod = 5f;
             rg.lines = new[] { Circle("Outer", ring, c, Vector3.up, 10.95f, Arcane, 0.07f),
                                Circle("Inner", ring, c, Vector3.up, 10.25f, Arcane, 0.04f) };
-
-            string[] order = { "Fire", "Air", "Ice", "Earth", "Lightning", "Barrier" };
-            for (int i = 0; i < 6; i++)
-            {
-                float a = (15f + 60f * i) * Mathf.Deg2Rad;
-                Vector3 at = new Vector3(Mathf.Cos(a) * 10.6f, 0.015f, Mathf.Sin(a) * 10.6f);
-                Vector3 outward = new Vector3(at.x, 0f, at.z).normalized;
-                Vector3 side = Vector3.Cross(Vector3.up, outward);
-                Color colour = ColourOf(order[i]);
-                Transform g = Group("Rune_" + order[i], t);
-                g.position = at;
-                LineRenderer rune = Glyph("Rune", g, RuneOf(order[i]), at, -side, outward, 0.62f, colour, 0.1f, Vector3.up);
-                HaloQuad("Glow", g, new Vector3(0f, -0.004f, 0f), Quaternion.Euler(90f, 0f, 0f), 3f, Halo(order[i] + "_Floor", colour * 0.3f));
-                RuneGlow glow = g.gameObject.AddComponent<RuneGlow>();
-                glow.rest = colour * 0.9f;
-                glow.phase = i / 6f;
-                glow.lines = new[] { rune };
-            }
         }
 
         // ------------------------------------------------------------------ beyond the walls

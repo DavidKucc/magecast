@@ -239,7 +239,7 @@ namespace MageCast.EditorTools
                 Deco("Bar", l, iron, new Vector3(c.x * 0.16f, 0.27f, c.y * 0.16f), new Vector3(0.04f, 0.42f, 0.04f));
             Deco("Roof", l, iron, new Vector3(0f, 0.52f, 0f), new Vector3(0.46f, 0.08f, 0.46f));
             Deco("Finial", l, iron, new Vector3(0f, 0.62f, 0f), new Vector3(0.12f, 0.12f, 0.12f));
-            Effect("Flame", l, new Vector3(0f, 0.08f, 0f), Anime + "Shared/Particles/VFX_Fire.prefab", 0.42f, 9f);
+            Flame(l, new Vector3(0f, 0.07f, 0f), 0.2f);
             Billboard("Glow", l, new Vector3(0f, 0.28f, 0f), 1.3f, new Color(1f, 0.62f, 0.28f) * 0.32f);
         }
 
@@ -260,7 +260,7 @@ namespace MageCast.EditorTools
             Deco("Roof", t, statue, new Vector3(0f, 4.32f, 0f), new Vector3(1.5f, 0.14f, 1.5f));
             Deco("Roof_Top", t, statue, new Vector3(0f, 4.46f, 0f), new Vector3(0.95f, 0.14f, 0.95f));
             Crystal("Finial", t, iron, new Vector3(0f, 4.53f + 0.17f, 0f), new Vector3(0.2f, 0.34f, 0.2f));
-            Effect("Flame", t, new Vector3(0f, 3.52f, 0f), Anime + "Shared/Particles/VFX_Fire.prefab", 0.7f, 11f);
+            Flame(t, new Vector3(0f, 3.52f, 0f), 0.36f);
             Billboard("Glow", t, new Vector3(0f, 3.85f, 0f), 2.4f, new Color(1f, 0.62f, 0.28f) * 0.35f);
         }
 

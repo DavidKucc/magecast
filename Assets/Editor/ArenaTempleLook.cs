@@ -123,45 +123,29 @@ namespace MageCast.EditorTools
 
         static void Altar(Transform t, Transform centre)
         {
-            Transform altar = centre.Find("Altar"), obelisk = centre.Find("Obelisk");
+            Transform altar = centre.Find("Altar");
 
             // a carved band under the top edge; no collider, so the top stays what it was
             Band("Band", t, trim, Ledge - 0.24f, AltarHalf, AltarHalf, 0.26f, 0.12f);
             Band("Plinth", t, trim, 0.12f, AltarHalf, AltarHalf, 0.24f, 0.1f);
 
-            // a rune on each face, left of the stair that climbs it (the stairs run from x -0.5 to 3.5 on each face)
+            // a ring on each face, left of the stair that climbs it (the stairs run from x -0.5 to 3.5 on each face)
             var lines = new List<LineRenderer>();
-            string[] faces = { "Barrier", "Earth", "Barrier", "Earth" };
             for (int side = 0; side < 4; side++)
             {
                 Quaternion q = Quaternion.Euler(0f, 90f * side, 0f);
                 Vector3 normal = q * Vector3.forward, along = q * Vector3.right;
                 Vector3 face = normal * (AltarHalf + 0.025f);
                 Vector3 at = face + along * -2.25f + Vector3.up * 1.15f;
-                // read from in front of the face, whose right is -along
-                lines.Add(Glyph("Rune", t, RuneOf(faces[side]), at, -along, Vector3.up, 0.55f, Arcane, 0.08f, normal));
                 lines.Add(Circle("Ring", t, at, normal, 0.78f, Arcane, 0.04f));
+                lines.Add(Circle("Ring_Inner", t, at, normal, 0.6f, Arcane, 0.025f));
                 lines.Add(Line("Band", t, new[] { face + along * -3.85f + Vector3.up * 0.4f, face + along * -0.65f + Vector3.up * 0.4f }, Arcane, 0.05f, normal));
             }
             Runes(altar.gameObject, Arcane * 0.85f, 0f, lines.ToArray());
 
-            // the obelisk: gold bands, three runes up each face between them, a gold tip
+            // the obelisk: gold bands and a gold tip
             foreach (float h in new[] { 1.2f, 2.8f, 4.4f })
                 Band("Obelisk_Band", t, gold, Ledge + h, 0.7f, 0.7f, 0.14f, 0.06f);
-            var ob = new List<LineRenderer>();
-            string[] order = { "Fire", "Ice", "Lightning", "Air", "Earth", "Barrier" };
-            for (int side = 0; side < 4; side++)
-            {
-                Quaternion q = Quaternion.Euler(0f, 90f * side, 0f);
-                Vector3 normal = q * Vector3.forward, along = q * Vector3.right;
-                for (int k = 0; k < 3; k++)
-                {
-                    string e = order[(side * 3 + k) % order.Length];
-                    Vector3 at = normal * 0.725f + Vector3.up * (Ledge + 2.0f + k * 1.6f);
-                    ob.Add(Glyph("Rune", t, RuneOf(e), at, -along, Vector3.up, 0.32f, ColourOf(e), 0.055f, normal));
-                }
-            }
-            Runes(obelisk.gameObject, Arcane * 0.8f, 0.3f, ob.ToArray());
             GameObject tip = Crystal("Tip", t, gold, new Vector3(0f, Ledge + 6f - 0.08f, 0f), new Vector3(1.98f, 1.6f, 1.98f));
             tip.transform.localRotation = Quaternion.Euler(0f, 45f, 0f);
             tip.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
@@ -180,23 +164,11 @@ namespace MageCast.EditorTools
             bob.period = 5f;
             bob.spin = 20f;
 
-            // a ring of runes on the floor round the altar, where the ley lines leave it
+            // a double ring on the floor round the altar, where the ley lines leave it
             Transform ring = Group("Ring", t);
-            var rl = new List<LineRenderer>
-            {
-                Circle("Outer", ring, new Vector3(0f, 0.015f, 0f), Vector3.up, 7.6f, Arcane, 0.07f),
-                Circle("Inner", ring, new Vector3(0f, 0.015f, 0f), Vector3.up, 7.25f, Arcane, 0.035f),
-            };
-            for (int i = 0; i < 4; i++)
-            {
-                float a = (45f + 90f * i) * Mathf.Deg2Rad;
-                Vector3 at = new Vector3(Mathf.Cos(a) * 7.42f, 0.016f, Mathf.Sin(a) * 7.42f);
-                Vector3 outward = new Vector3(at.x, 0f, at.z).normalized;
-                Color c = ColourOf(order[i]);
-                rl.Add(Glyph("Rune", ring, RuneOf(order[i]), at, -Vector3.Cross(Vector3.up, outward), outward, 0.5f, c, 0.08f, Vector3.up));
-                HaloQuad("Glow", ring, at + Vector3.up * -0.004f, Quaternion.Euler(90f, 0f, 0f), 2.6f, Halo(order[i] + "_Floor", c * 0.28f));
-            }
-            RuneGlow rg = Runes(ring.gameObject, Arcane * 0.7f, 0.5f, rl.ToArray());
+            RuneGlow rg = Runes(ring.gameObject, Arcane * 0.7f, 0.5f,
+                                Circle("Outer", ring, new Vector3(0f, 0.015f, 0f), Vector3.up, 7.6f, Arcane, 0.07f),
+                                Circle("Inner", ring, new Vector3(0f, 0.015f, 0f), Vector3.up, 7.25f, Arcane, 0.035f));
             rg.breath = 0.3f;
             rg.breathPeriod = 5f;
         }
@@ -205,7 +177,7 @@ namespace MageCast.EditorTools
 
         static void Quarter(Transform t, Transform quarter, Transform shellWall, int q)
         {
-            // the ley line, from the foot of the altar stair to the wall, and the great rune it runs into
+            // the ley line, from the foot of the altar stair to the wall, and the great ring it runs into
             var ley = new List<LineRenderer>();
             float from = AltarHalf + 2.3f, to = Half - 0.75f;
             foreach (float x in new[] { -0.14f, 0.14f })
@@ -216,10 +188,8 @@ namespace MageCast.EditorTools
 
             string e = SideRune[q];
             Color c = ColourOf(e);
-            // seen from inside, looking at the wall along +z, its right is +x
-            Vector3 normal = t.TransformDirection(Vector3.back), right = t.TransformDirection(Vector3.right);
+            Vector3 normal = t.TransformDirection(Vector3.back);
             Vector3 centre = W(t, 0f, 3.9f, Half - 0.03f);
-            ley.Add(Glyph("Wall_Rune", t, RuneOf(e), centre, right, Vector3.up, 1.25f, c, 0.12f, normal));
             ley.Add(Circle("Wall_Ring", t, centre, normal, 1.75f, c, 0.06f));
             ley.Add(Circle("Wall_Ring_Inner", t, centre, normal, 1.58f, c, 0.03f));
             HaloQuad("Wall_Glow", t, new Vector3(0f, 3.9f, Half - 0.025f), Quaternion.identity, 5.5f, Halo(e + "_Wall", c * 0.22f));

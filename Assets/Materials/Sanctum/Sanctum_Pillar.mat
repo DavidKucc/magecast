@@ -34,10 +34,12 @@ Material:
     - _Grime: 0.3
     - _PatchScale: 7
     - _Scale: 2
+    - _TopPatch: 0
     m_Colors:
     - _Color: {r: 0.68, g: 0.6409, b: 0.58225, a: 1}
     - _EdgeColor: {r: 0.85, g: 0.75225, b: 0.55675, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _Tint2: {r: 0.62390006, g: 0.60435003, b: 0.663, a: 1}
     - _TopColor: {r: 0.68, g: 0.66045, b: 0.58225, a: 1}
+    - _TopColor2: {r: 0.68, g: 0.66045, b: 0.58225, a: 1}
   m_BuildTextureStacks: []
