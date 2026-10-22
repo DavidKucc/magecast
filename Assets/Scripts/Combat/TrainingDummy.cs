@@ -117,6 +117,11 @@ namespace MageCast.Combat
         void OnDied()
         {
             deadSince = Time.time;
+            // in the kill feed like anyone else: training is where you first look for it
+            if (!health.HasAuthority) return;
+            PlayerNet killer = PlayerNet.Find(health.LastAttacker);
+            KillFeed.Report(killer != null ? killer.DisplayName : "", killer != null ? killer.Team.Value : Teams.None,
+                            "Dummy", Teams.None, health.LastCause, killer != null && killer == PlayerNet.Local, false);
         }
 
         void Update()

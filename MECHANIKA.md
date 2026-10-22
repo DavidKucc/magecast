@@ -552,7 +552,9 @@ soupeře nad hlavou vidíš, jen když ho vidíš (ne přes zeď).
   výsledkem na konci zápasu,
 - **vpravo nahoře** kdo koho zabil a čím: zabiják, runa kouzla v barvě prvku (u hoření, magmatu a nárazu
   do zdi navíc BURN / MAGMA / SLAM), oběť; tvoje zabití se zlatým okrajem, tvoje smrt s červeným. Server
-  posílá příčinu s každým zabitím (`Health.LastCause`); bez útočníka a příčiny „went down“.
+  posílá příčinu s každým zabitím (`Health.LastCause`); bez útočníka a příčiny „went down“. Každý řádek
+  vydrží 6 s. Patří sem i panáci v tréninku („David ᚲ Dummy“), jinak by tam, kde se hra zkouší nejdřív,
+  nebylo vidět nic.
 - Nápis s tréninkovými klávesami (PRACTICE F1–F8) z obrazovky zmizel; klávesy pro záznam fungují dál.
 
 **Zápas:** první na nastavený počet zabití (výchozí 5) vyhrává. Všem se ukáže vítěz a skóre, 6 s se
