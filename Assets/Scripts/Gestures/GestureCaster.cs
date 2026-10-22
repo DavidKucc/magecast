@@ -1661,8 +1661,7 @@ namespace MageCast.Gestures
         /// it cools down), its name, its tier on a badge with pips, and what it is doing: READY, the
         /// seconds left, LOCKED, QUEUED, and LINE / WALL when it is going on the floor. A tier III drains
         /// along the bottom of the card. With nothing in hand, what just happened (SENT, FIZZLE, NOT
-        /// READY) slides in as a banner and fades. In training, the calibration aids under it: the
-        /// last reading and the practice keys.
+        /// READY) slides in as a banner and fades. In training, the last reading of a rune under it.
         /// </summary>
         void OnGUI()
         {
@@ -1838,39 +1837,19 @@ namespace MageCast.Gestures
             MenuArt.GlowText(new Rect(r.x + 24f, r.y, w, r.height), headline, bannerStyle, new Color(c.r, c.g, c.b, a), 0.5f * a);
         }
 
-        /// <summary>Training only: the last reading of a rune, and the practice keys.</summary>
+        /// <summary>
+        /// Training only: the last reading of a rune. (The practice keys -- F1-F5, F8 to name the rune being
+        /// practised for the cast log, F7 to swap the reader -- still work, but are no longer spelled out
+        /// on the screen: 22 Oct, not wanted there.)
+        /// </summary>
         void Diagnostics(float x, float y)
         {
-            if (Time.time - lastResultTime <= 2.5f && lastResult.Length > 0)
-            {
-                float w = cardSmall.CalcSize(new GUIContent(lastResult)).x + 20f;
-                Rect r = new Rect(x, y, w, 22f);
-                MenuArt.RoundRect(r, new Color(0f, 0f, 0f, 0.45f), 11f);
-                cardSmall.normal.textColor = new Color(1f, 1f, 1f, 0.75f);
-                GUI.Label(new Rect(r.x + 10f, r.y, w, r.height), lastResult, cardSmall);
-            }
-            y += 30f;
-
-            // the practice keys, the chosen target lit
-            float kx = x;
-            cardSmall.normal.textColor = new Color(MenuArt.Gold.r, MenuArt.Gold.g, MenuArt.Gold.b, 0.85f);
-            GUI.Label(new Rect(kx, y, 80f, 18f), "PRACTICE", cardSmall);
-            kx += 66f;
-            string[] keys = { "F1", "F2", "F3", "F4", "F5", "F8" };
-            string[] runes = { GestureTemplates.Uruz, GestureTemplates.Kenaz, GestureTemplates.Laguz, GestureTemplates.Sowulo, GestureTemplates.Ehwaz, GestureTemplates.Thurisaz };
-            string[] names = { "barrier", "fire", "ice", "lightning", "air", "earth" };
-            for (int i = 0; i < keys.Length; i++)
-            {
-                bool lit = practiceTarget == runes[i];
-                kx = Key(kx, y, keys[i], lit) + 3f;
-                cardSmall.normal.textColor = lit ? MenuArt.Gold : new Color(1f, 1f, 1f, 0.6f);
-                float nw = cardSmall.CalcSize(new GUIContent(names[i])).x;
-                GUI.Label(new Rect(kx, y, nw + 4f, 18f), names[i], cardSmall);
-                kx += nw + 10f;
-            }
-            kx = Key(kx + 4f, y, "F7") + 3f;
-            cardSmall.normal.textColor = new Color(1f, 1f, 1f, 0.6f);
-            GUI.Label(new Rect(kx, y, 200f, 18f), "reader: " + (segmentRecognition ? "lines + angles" : "$P"), cardSmall);
+            if (Time.time - lastResultTime > 2.5f || lastResult.Length == 0) return;
+            float w = cardSmall.CalcSize(new GUIContent(lastResult)).x + 20f;
+            Rect r = new Rect(x, y, w, 22f);
+            MenuArt.RoundRect(r, new Color(0f, 0f, 0f, 0.45f), 11f);
+            cardSmall.normal.textColor = new Color(1f, 1f, 1f, 0.75f);
+            GUI.Label(new Rect(r.x + 10f, r.y, w, r.height), lastResult, cardSmall);
         }
     }
 }

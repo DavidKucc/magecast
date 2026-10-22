@@ -100,6 +100,7 @@ namespace MageCast
             "S kouzlem v ruce jen jdeš (70 % rychlosti) a nedá se sprintovat.\n\n" +
             "<b>Ostatní</b>\n" +
             "Esc - menu (nastavení, nápověda, odchod)\n" +
+            "Tab (drž) - tabulka hráčů: zabití, smrti, K/D. Kdo koho čím zabil, je vidět vpravo nahoře.\n" +
             "F6 - schová / ukáže panel kouzel dole\n" +
             "V tréninku: F1-F5 a F8 cvičný cíl pro záznam, F7 přepne rozpoznávání run (čáry a úhly / starý $P)";
 

@@ -39,6 +39,23 @@ namespace MageCast.Gestures
         float sizeScale = 1f;
 
         Spell spell;               // surface behaviour; null for anything that has none
+
+        /// <summary>The element, for the kill feed.</summary>
+        DamageCause Cause
+        {
+            get
+            {
+                switch (spell != null ? spell.gesture : null)
+                {
+                    case GestureTemplates.Kenaz: return DamageCause.Fire;
+                    case GestureTemplates.Laguz: return DamageCause.Ice;
+                    case GestureTemplates.Sowulo: return DamageCause.Lightning;
+                    case GestureTemplates.Ehwaz: return DamageCause.Air;
+                    case GestureTemplates.Thurisaz: return DamageCause.Earth;
+                    default: return DamageCause.Unknown;
+                }
+            }
+        }
         int bouncesLeft;
 
         /// <summary>
@@ -508,7 +525,7 @@ namespace MageCast.Gestures
 
         void HitPerson(Health hp, PlayerMotor motor, Vector3 heading, float amount)
         {
-            if (hp != null && amount > 0f) hp.TakeDamage(amount, attacker);
+            if (hp != null && amount > 0f) hp.TakeDamage(amount, attacker, Cause);
 
             // Lightning into somebody standing on ice runs through the ice as well: everyone else on
             // it takes the charge. Them too -- they are touching it.
@@ -580,7 +597,7 @@ namespace MageCast.Gestures
                 if (next != null)
                 {
                     ChargeArc.Spawn(Centre(hp), Centre(next));
-                    if (authoritative) next.TakeDamage(damage * SpellTiers.ChainShare, attacker);
+                    if (authoritative) next.TakeDamage(damage * SpellTiers.ChainShare, attacker, Cause);
                 }
             }
             // lightning III: the shock patch appears right under whoever it hit
@@ -653,7 +670,7 @@ namespace MageCast.Gestures
                 if (hp == null || hp.IsDead || !done.Add(hp)) continue;
                 float d;
                 if (!Exposed(origin, hp.transform, c, out d) || d >= reach) continue;
-                hp.TakeDamage(damage * SpellTiers.SplashShare * (1f - d / reach), attacker);
+                hp.TakeDamage(damage * SpellTiers.SplashShare * (1f - d / reach), attacker, Cause);
             }
         }
 
@@ -711,7 +728,7 @@ namespace MageCast.Gestures
             {
                 Health h = c.GetComponentInParent<Health>();
                 if (h == null || h == exclude || h.IsDead || !done.Add(h)) continue;
-                h.TakeDamage(damage * SpellTiers.ExplosionShare, attacker);
+                h.TakeDamage(damage * SpellTiers.ExplosionShare, attacker, Cause);
             }
         }
 
@@ -1108,7 +1125,7 @@ namespace MageCast.Gestures
 
                 float near = 1f - d / reach;
                 if (hp != null && hp != direct && damage > 0f)
-                    hp.TakeDamage(damage * SpellTiers.QuakeShare * (0.4f + 0.6f * near), attacker);
+                    hp.TakeDamage(damage * SpellTiers.QuakeShare * (0.4f + 0.6f * near), attacker, Cause);
                 if (motor == null) continue;
 
                 Vector3 away = root.position - at;

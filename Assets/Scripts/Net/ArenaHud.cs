@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using MageCast.Combat;
 using Unity.Netcode;
 using UnityEngine;
@@ -7,23 +6,15 @@ namespace MageCast
 {
     /// <summary>
     /// Everything on screen that is about the match rather than about your own casting: the room
-    /// code, who is in, the score, names over heads, who killed whom, the respawn wait -- and the Esc
-    /// menu, which is the only way out of a game.
+    /// code, the score (Scoreboard -- a strip across the top, the whole table on Tab), names over heads,
+    /// who killed whom and with what (KillFeed, top right), the respawn wait -- and the Esc menu, which
+    /// is the only way out of a game.
     ///
-    /// OnGUI, like the rest of the HUD: placeholder until there is an art direction, and nothing here
-    /// is worth building a canvas for that would only be thrown away.
+    /// OnGUI, like the rest of the HUD: nothing here is worth building a canvas for.
     /// </summary>
     public class ArenaHud : MonoBehaviour
     {
-        struct Kill
-        {
-            public string Text;
-            public float At;
-        }
-
-        static readonly List<Kill> feed = new List<Kill>();
-
-        GUIStyle big, bigLeft, bigRight, mid, small, nameTag, button;
+        GUIStyle big, mid, small, nameTag, button;
         bool copied;
         float copiedAt;
 
@@ -59,14 +50,15 @@ namespace MageCast
             Shadowed(new Rect(0f, Screen.height * 0.3f + 104f, Screen.width, 26f),
                      (Lobby.Active ? "back to the lobby in " : "next match in ") + Mathf.CeilToInt(winnerUntil - Time.time),
                      small, new Color(1f, 1f, 1f, 0.75f));
+            // how everyone did, under the result
+            Scoreboard.Table(Screen.width * 0.5f, Screen.height * 0.3f + 166f);
         }
 
-        public static void ReportKill(string killer, string victim)
+        /// <summary>Whether there is a match to keep score of: not training alone, not waiting for an opponent.</summary>
+        static bool Scoring(NetSession session)
         {
-            feed.Add(new Kill {
-                Text = string.IsNullOrEmpty(killer) ? victim + " went down" : killer + "  >  " + victim,
-                At = Time.time });
-            if (feed.Count > 5) feed.RemoveAt(0);
+            if (session == null || PlayerNet.All.Count == 0) return false;
+            return !(session.Current == NetSession.Mode.Training && MatchDirector.BotCount == 0);
         }
 
         void OnDisable()
@@ -122,8 +114,6 @@ namespace MageCast
         {
             if (big != null) return;
             big = new GUIStyle(GUI.skin.label) { fontSize = 26, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-            bigLeft = new GUIStyle(big) { alignment = TextAnchor.MiddleLeft };
-            bigRight = new GUIStyle(big) { alignment = TextAnchor.MiddleRight };
             mid = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
             small = new GUIStyle(GUI.skin.label) { fontSize = 13, alignment = TextAnchor.MiddleCenter };
             nameTag = new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, clipping = TextClipping.Overflow };
@@ -138,9 +128,12 @@ namespace MageCast
 
             NameTags();
             TopBar(session, nm);
-            KillFeed();
+            KillFeed.Draw();
             DeathOverlay();
             Winner();
+            // the whole table while Tab is held
+            if (!GameInput.MenuOpen && Time.time >= winnerUntil && Input.GetKey(KeyCode.Tab) && Scoring(session))
+                Scoreboard.Table(Screen.width * 0.5f, Screen.height * 0.12f);
             if (GameInput.MenuOpen && HelpScreen.Draw()) return;
             if (GameInput.MenuOpen) { Menu(session, nm); BuildInfo.DrawCorner(); }
             else ClickToPlay();
@@ -174,32 +167,9 @@ namespace MageCast
             // where the Relay server is: a far one is the first thing to suspect when the ping is high
             if (!string.IsNullOrEmpty(session.RelayRegion)) ping += (ping.Length > 0 ? "   " : "") + "(" + session.RelayRegion + ")";
 
-            if (Lobby.TeamGame)
-            {
-                // the two sides' kills, each in its colour, and the target
-                Lobby lobby = Lobby.Instance;
-                Box(new Rect(cx - 210f, 6f, 420f, 34f));
-                Shadowed(new Rect(cx - 200f, 8f, 170f, 30f), Teams.Names[1].ToUpperInvariant() + "  " + lobby.Score(1),
-                         bigRight, Teams.Colour(1));
-                Shadowed(new Rect(cx - 30f, 8f, 60f, 30f), ":", big, Color.white);
-                Shadowed(new Rect(cx + 30f, 8f, 170f, 30f), lobby.Score(2) + "  " + Teams.Names[2].ToUpperInvariant(),
-                         bigLeft, Teams.Colour(2));
-                Shadowed(new Rect(cx - 300f, 42f, 600f, 20f), "first team to " + MatchDirector.Target + " kills"
-                         + (ping.Length > 0 ? "      " + ping : ""), small, new Color(1f, 1f, 1f, 0.75f));
-                return;
-            }
-
-            // score: every player, kills and deaths
-            var line = new System.Text.StringBuilder();
-            foreach (PlayerNet p in PlayerNet.All)
-            {
-                if (line.Length > 0) line.Append("      ");
-                line.Append(p.DisplayName).Append("  ").Append(p.Kills.Value).Append(" / ").Append(p.Deaths.Value);
-            }
-
-            Box(new Rect(cx - 300f, 6f, 600f, 30f));
-            Shadowed(new Rect(cx - 300f, 8f, 600f, 26f), line + "      (to " + MatchDirector.Target + ")"
-                     + (ping.Length > 0 ? "   " + ping : ""), mid, Color.white);
+            // the two sides' kills on plates in their colours, or a chip per player, best first
+            if (Lobby.TeamGame) Scoreboard.TeamStrip(ping);
+            else Scoreboard.Strip(ping);
         }
 
         void NameTags()
@@ -221,20 +191,6 @@ namespace MageCast
                 if (!ally && !Sight.Sees(p.transform)) continue;
                 Shadowed(new Rect(s.x - 100f, Screen.height - s.y - 12f, 200f, 24f), p.DisplayName, nameTag,
                          Teams.Colour(p.Team.Value));
-            }
-        }
-
-        void KillFeed()
-        {
-            // centred under the score: the top corners belong to your spell readout and the rune sheet
-            float y = 82f;
-            for (int i = feed.Count - 1; i >= 0; i--)
-            {
-                float age = Time.time - feed[i].At;
-                if (age > 6f) continue;
-                float a = age < 5f ? 1f : 1f - (age - 5f);
-                Shadowed(new Rect(Screen.width * 0.5f - 200f, y, 400f, 22f), feed[i].Text, mid, new Color(1f, 0.85f, 0.8f, a));
-                y += 22f;
             }
         }
 
@@ -308,6 +264,7 @@ namespace MageCast
 
             float w = 320f, h = 48f, x = Screen.width * 0.5f - w * 0.5f;
             float y = Mathf.Max(90f, Screen.height * 0.5f - 210f);
+            float top = y;
 
             Shadowed(new Rect(0f, y - 60f, Screen.width, 40f), "PAUSED", big, Color.white);
             Shadowed(new Rect(0f, y - 26f, Screen.width, 24f),
@@ -395,22 +352,14 @@ namespace MageCast
 
             Accuracy();
 
-            if (nm != null)
+            // who is in and how they are doing: beside the menu where there is room (a team game's sides one
+            // above the other if they do not fit next to each other). On a small screen not at all -- under the
+            // menu it ran off the bottom; the strip at the top and Tab show it there.
+            if (nm != null && Scoring(session))
             {
-                // who is in, with kills and deaths -- by side in a team game
-                for (int side = Lobby.TeamGame ? 1 : 0; side <= (Lobby.TeamGame ? 2 : 0); side++)
-                {
-                    string who = "";
-                    foreach (PlayerNet p in PlayerNet.All)
-                    {
-                        if (side != Teams.None && p.Team.Value != side) continue;
-                        who += (who.Length > 0 ? ",   " : "") + p.DisplayName + " " + p.Kills.Value + "/" + p.Deaths.Value;
-                    }
-                    string label = side == Teams.None ? "in the game: " : Teams.Names[side] + ": ";
-                    Shadowed(new Rect(0f, y, Screen.width, 22f), label + who, small,
-                             side == Teams.None ? Color.white : Teams.Colour(side));
-                    y += 22f;
-                }
+                float beside = x + w + 30f, room = Screen.width - beside - 20f;
+                if (room >= Scoreboard.Width()) Scoreboard.Table(beside + Scoreboard.Width() * 0.5f, top - 60f);
+                else if (room >= Scoreboard.Width(true)) Scoreboard.Table(beside + Scoreboard.Width(true) * 0.5f, top - 60f, true);
             }
         }
 

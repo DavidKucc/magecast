@@ -3,6 +3,19 @@ using UnityEngine;
 
 namespace MageCast.Combat
 {
+    /// <summary>What dealt damage, for the kill feed: a spell's element, or the way it hurt.</summary>
+    public enum DamageCause : byte
+    {
+        Unknown,
+        Fire, Ice, Lightning, Air, Earth,
+        /// <summary>fire's burn, on a body or a burning patch</summary>
+        Burn,
+        /// <summary>earth into fire</summary>
+        Magma,
+        /// <summary>an air shove ending in a wall</summary>
+        Slam,
+    }
+
     /// <summary>
     /// Hit points. Deliberately plain: no armour, no resistances, no damage types.
     ///
@@ -44,6 +57,9 @@ namespace MageCast.Combat
         /// <summary>Who dealt the last damage, as a network client id. Server only.</summary>
         public ulong LastAttacker { get; private set; }
 
+        /// <summary>What it was: the kill feed shows it. Server only.</summary>
+        public DamageCause LastCause { get; private set; }
+
         /// <summary>True where this machine decides what happens to the number: the server, or offline.</summary>
         public bool HasAuthority { get { return !Networked || IsServer; } }
 
@@ -73,11 +89,17 @@ namespace MageCast.Combat
 
         public void TakeDamage(float amount, ulong attacker)
         {
+            TakeDamage(amount, attacker, DamageCause.Unknown);
+        }
+
+        public void TakeDamage(float amount, ulong attacker, DamageCause cause)
+        {
             if (!HasAuthority || amount <= 0f || IsDead) return;
             // a teammate's spell, whatever form it took -- the one place every kind of damage passes
             if (MageCast.Teams.Spares(attacker, this)) return;
 
             LastAttacker = attacker;
+            LastCause = cause;
             Set(Mathf.Max(0f, Current - amount));
         }
 
@@ -91,6 +113,7 @@ namespace MageCast.Combat
         {
             if (!HasAuthority) return;
             LastAttacker = NoAttacker;
+            LastCause = DamageCause.Unknown;
             Set(maxHealth);
         }
 

@@ -282,7 +282,7 @@ namespace MageCast
             else
             {
                 Combat.Health hp = GetComponent<Combat.Health>();
-                if (hp != null) hp.TakeDamage(Gestures.SpellTiers.SlamDamage, offlineSlammer);
+                if (hp != null) hp.TakeDamage(Gestures.SpellTiers.SlamDamage, offlineSlammer, Combat.DamageCause.Slam);
             }
         }
 

@@ -470,7 +470,7 @@ namespace MageCast
         {
             // only a slam that follows a real air shove, so a client cannot hurt itself on cue for nothing
             if (Time.time - lastShovedAt > Gestures.SpellTiers.SlamWindow + 0.5f) return;
-            health.TakeDamage(Gestures.SpellTiers.SlamDamage, lastShovedBy);
+            health.TakeDamage(Gestures.SpellTiers.SlamDamage, lastShovedBy, DamageCause.Slam);
             lastShovedAt = -99f;
         }
         public void SendSlow(float multiplier, float duration) { if (IsServer) SlowClientRpc(multiplier, duration, ToOwner()); }
@@ -521,19 +521,24 @@ namespace MageCast
 
             Deaths.Value++;
             PlayerNet killer = Find(health.LastAttacker);
-            if (killer != null && killer != this)
+            bool scored = killer != null && killer != this;
+            if (scored)
             {
                 killer.Kills.Value++;
                 MatchDirector.Scored(killer);
             }
-            KillFeedClientRpc(killer != null && killer != this ? killer.DisplayName : "", DisplayName);
+            KillFeedClientRpc(scored ? killer.DisplayName : "", scored ? killer.Team.Value : Teams.None, scored ? killer.NetworkObjectId : 0UL,
+                              DisplayName, Team.Value, NetworkObjectId, (byte)health.LastCause);
             StartCoroutine(RespawnLater());
         }
 
+        /// <summary>Who killed whom and with what, on every screen; who they are, so yours stand out.</summary>
         [ClientRpc]
-        void KillFeedClientRpc(string killer, string victim)
+        void KillFeedClientRpc(string killer, int killerTeam, ulong killerId, string victim, int victimTeam, ulong victimId, byte cause)
         {
-            ArenaHud.ReportKill(killer, victim);
+            ulong me = Local != null ? Local.NetworkObjectId : ulong.MaxValue;
+            KillFeed.Report(killer, killerTeam, victim, victimTeam, (DamageCause)cause,
+                                killer.Length > 0 && killerId == me, victimId == me);
         }
 
         IEnumerator RespawnLater()

@@ -523,7 +523,7 @@ namespace MageCast.Gestures
             foreach (Target t in Occupants())
             {
                 if (!t.Touching) continue;
-                if (t.Health != null && authoritative) t.Health.TakeDamage(damage, byWhom);
+                if (t.Health != null && authoritative) t.Health.TakeDamage(damage, byWhom, DamageCause.Lightning);
                 hit.Add(t.Root.position + Vector3.up * 1f);
             }
             return hit;
@@ -578,7 +578,8 @@ namespace MageCast.Gestures
                 {
                     case GroundEffect.Burn:
                     case GroundEffect.Magma:
-                        if (authoritative && t.Health != null) t.Health.TakeDamage(strength * TickInterval, attacker);
+                        if (authoritative && t.Health != null)
+                            t.Health.TakeDamage(strength * TickInterval, attacker, effect == GroundEffect.Magma ? DamageCause.Magma : DamageCause.Burn);
                         break;
 
                     case GroundEffect.Mud:

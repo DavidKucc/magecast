@@ -541,15 +541,26 @@ Plocha na zemi je jedna — pošle ji hostitel všem.
 
 **Smrt:** na nule padneš (animace pádu podle směru, odkud nejspíš přišla rána) a tělo leží bez kolize
 až do respawnu. Za 3 s jsi zpátky na spawnu, který žádný živý soupeř nevidí, a z takových co nejdál od
-ostatních. Nahoře se počítá skóre zabití / smrtí. Vlastní oheň nebo vlastní výboj v ledu tě zabít může,
-ale soupeři to nepřipíše. Jméno soupeře nad hlavou vidíš, jen když ho vidíš (ne přes zeď).
+ostatních. Vlastní oheň nebo vlastní výboj v ledu tě zabít může, ale soupeři to nepřipíše. Jméno
+soupeře nad hlavou vidíš, jen když ho vidíš (ne přes zeď).
+
+**Skóre a zabití na obrazovce** (od 22. 10., `Scoreboard`, `KillFeed`):
+- **nahoře uprostřed** pruh hráčů od nejlepšího: pořadí, jméno, zabití / smrti, ty zlatě (víc než pět
+  hráčů: první čtyři a ty); v týmové hře skóre obou týmů na deskách v jejich barvách,
+- **Tab (drž)** celá tabulka: hráč, zabití, smrti, K/D (s nulou smrtí K/D = zabití), boti se štítkem BOT,
+  mrtví DOWN; v týmové hře každý tým pod svým skóre. Tabulka je i v Esc menu (vedle, kde je místo) a pod
+  výsledkem na konci zápasu,
+- **vpravo nahoře** kdo koho zabil a čím: zabiják, runa kouzla v barvě prvku (u hoření, magmatu a nárazu
+  do zdi navíc BURN / MAGMA / SLAM), oběť; tvoje zabití se zlatým okrajem, tvoje smrt s červeným. Server
+  posílá příčinu s každým zabitím (`Health.LastCause`); bez útočníka a příčiny „went down“.
+- Nápis s tréninkovými klávesami (PRACTICE F1–F8) z obrazovky zmizel; klávesy pro záznam fungují dál.
 
 **Zápas:** první na nastavený počet zabití (výchozí 5) vyhrává. Všem se ukáže vítěz a skóre, 6 s se
 nikdo nehýbe, pak se všichni vrátí do lobby (bez lobby — jen když se aréna pustí přímo — se skóre vynuluje
 a začne nový zápas). Hostitel může zápas ukončit dřív v Esc menu: *Back to the lobby*. V tréninku zápasy nejsou.
 
 **Týmy** (režim *Teams*, Modří proti Červeným, max 3 na tým): počítají se killy celého týmu (výchozí 10),
-nahoře je skóre obou týmů v jejich barvách. Modří začínají na spawnech A, Červení na B; respawn je na
+nahoře je skóre obou týmů na deskách v jejich barvách. Modří začínají na spawnech A, Červení na B; respawn je na
 spawnu vlastní strany, který žádný soupeř nevidí (jen když hlídá všechny tři, kdekoli). Pravidlo mezi
 spoluhráči je jedno: **kouzlo spoluhráče ti nikdy neublíží ani tě neodstrčí**. Střely spoluhráčem proletí
 (nezastaví se o něj, nezpomalí ho, neshodí mu runu), jeho oheň, výbuch, splash ani výboj ho nezraní, jeho

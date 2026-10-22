@@ -66,7 +66,7 @@ namespace MageCast.Gestures
             }
             if (!authoritative || Time.time < nextTick) return;
             nextTick += Tick;
-            health.TakeDamage(perSecond * Tick, attacker);
+            health.TakeDamage(perSecond * Tick, attacker, DamageCause.Burn);
         }
 
         void OnDestroy()
