@@ -78,6 +78,13 @@ malou abecedu, ne pět náhodných čmáranic.
 | **Thurisaz** (trn, obr) | stonek s trnem `þ` | země | 20 | oblouk (~1 s na 10 m) | hozená **přes kryt**, dopadne na crosshair, otřes kolem dopadu |
 | **Uruz** (síla, vytrvalost) | brána `∩` se šikmou střechou | bariéra | — | — | zavře směr na 8 s, dokud ji zásahy neprorazí |
 
+**Poškození ×1,5** (od 23. 10., `Health.DamageScale`). Čísla v tabulkách jsou základ. Všechno, co ubírá
+životy (zásah, splash, hoření, magma, náraz do zdi, výboj bleskem do ledu), se při dopadu násobí 1,5.
+Souboje byly moc dlouhé: čistý oheň nebo led (24 i s hořením) potřeboval na 100 životů pět zásahů, teď
+tři. Poměry mezi kouzly zůstávají. Bariéra vydrží stejně jako dřív, protože má vlastní výdrž, ne životy. Léčivý pramen léčí pořád stejně. Nápověda ve hře ukazuje už vynásobená čísla.
+Měřeno na 6 botech na Crossing (skill 60 %, každý běh ~3,6 min). Při ×1 bylo 5,5 smrti/min a od prvního
+zásahu do smrti v průměru 42 s (medián 43 s). Při ×1,5 je to 7,0 smrti/min a průměr 31 s (medián 27 s).
+
 **Vzduch nedává poškození, nikdy.** Kdyby dával, stal by se kouzlem na všechno. Takhle sám nikdy
 nevyhraje, ale je u všech dobrých momentů — je to kouzlo, kterým soupeře **doručíš do svého ohně**.
 

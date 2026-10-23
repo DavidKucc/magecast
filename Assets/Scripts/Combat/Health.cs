@@ -35,6 +35,15 @@ namespace MageCast.Combat
 
         [SerializeField] float maxHealth = 100f;
 
+        /// <summary>
+        /// Every kind of damage times this, here where all of it passes: hits, splash, burning, magma,
+        /// slams, the lightning charge. Since 23 Oct fights were too long -- a clean fire or ice (24 with
+        /// its burn) took five hits for 100 -- and x1.5 makes it three. What each spell does against
+        /// another stays the same, and a barrier lasts as long as it did (its wear is its own, not health).
+        /// The server's number is the one that counts. Not a constant, so a bot run can compare two.
+        /// </summary>
+        public static float DamageScale = 1.5f;
+
         readonly NetworkVariable<float> networked = new NetworkVariable<float>(-1f);
         float local;
 
@@ -100,7 +109,7 @@ namespace MageCast.Combat
 
             LastAttacker = attacker;
             LastCause = cause;
-            Set(Mathf.Max(0f, Current - amount));
+            Set(Mathf.Max(0f, Current - amount * DamageScale));
         }
 
         public void Heal(float amount)
