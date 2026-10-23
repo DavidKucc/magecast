@@ -174,6 +174,9 @@ namespace MageCast
 
             manager.OnClientDisconnectCallback += OnClientDisconnect;
             manager.OnTransportFailure += OnTransportFailure;
+
+            // a hosted room's place in the list of open games
+            if (GetComponent<PublicRoom>() == null) gameObject.AddComponent<PublicRoom>();
         }
 
         void OnDestroy()
@@ -264,7 +267,12 @@ namespace MageCast
                 Current = mode;
                 JoinCode = mode == Mode.Host ? code : null;
                 Say(mode == Mode.Host ? "room " + code + " is open" : "training");
-                if (mode == Mode.Host) OpenLobby(); else LoadArena();
+                if (mode == Mode.Host)
+                {
+                    OpenLobby();
+                    if (PublicRoom.Instance != null) PublicRoom.Instance.Open(code);
+                }
+                else LoadArena();
             }
             catch (Exception e)
             {
@@ -374,6 +382,12 @@ namespace MageCast
             manager.SceneManager.LoadScene(LobbyScene, LoadSceneMode.Single);
         }
 
+        /// <summary>Signed in to Unity services, for anything that needs them besides a room (the list of open games).</summary>
+        public Task SignedIn()
+        {
+            return SignIn();
+        }
+
         async Task SignIn()
         {
             if (!servicesReady)
@@ -416,6 +430,7 @@ namespace MageCast
 
         void Leave(string reason)
         {
+            if (PublicRoom.Instance != null) PublicRoom.Instance.Close();
             if (manager.IsListening) manager.Shutdown();
             Current = Mode.None;
             JoinCode = null;
@@ -423,7 +438,8 @@ namespace MageCast
             GameInput.MenuOpen = false;
             GameInput.LocalDead = false;
             GameInput.MatchOverUntil = -1f;
-            if (!string.IsNullOrEmpty(reason)) Say(reason);
+            // a reason is worth reading on the menu; without one, "room ... is open" must not stay up there
+            if (!string.IsNullOrEmpty(reason)) Say(reason); else Status = "";
             if (SceneManager.GetActiveScene().name != MenuScene) SceneManager.LoadScene(MenuScene);
         }
 

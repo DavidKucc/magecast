@@ -162,6 +162,14 @@ namespace MageCast
             }
             if (copied && Time.time - copiedAt < 2f)
                 Shadowed(new Rect(right - 400f, by, 160f, 24f), "copied", rowTag, ReadyGreen);
+
+            // the host: whether strangers can find the room as well, or only friends with the code
+            NetworkManager nm = NetworkManager.Singleton;
+            if (nm == null || !nm.IsServer) return;
+            string listing = PublicRoom.Up ? "in the list of open games - anyone can join"
+                           : PublicRoom.Problem ?? (PublicRoom.Listed ? "going into the list of open games..." : "private - only with the code");
+            Shadowed(new Rect(right - 520f, by + 28f, 520f, 20f), listing, rowTag,
+                     PublicRoom.Up ? ReadyGreen : PublicRoom.Problem != null ? new Color(1f, 0.7f, 0.5f) : new Color(1f, 1f, 1f, 0.6f));
         }
 
         /// <summary>Somebody else changed the settings: say so, since it also took your ready away.</summary>

@@ -112,7 +112,8 @@ namespace MageCast
 
         static readonly string Rules =
             "<b>Lobby</b>\n" +
-            "Online hra začíná v lobby: hostitel pošle kód, hráči se připojí. Hostitel vybírá mapu, režim a počet " +
+            "Online hra začíná v lobby. Otevřenou hru (výchozí) kdokoli najde ve Find a game a připojí se jedním kliknutím; " +
+            "soukromou jen ten, komu hostitel pošle kód. Hostitel vybírá mapu, režim a počet " +
             "killů a přidává boty; každý si vybere tým a dá Ready. Hostitel spustí zápas, až jsou všichni ready. " +
             "Když hostitel změní nastavení, ready se všem zruší. Po zápase se všichni vrátí do lobby.\n\n" +
             "<b>Zápas</b>\n" +

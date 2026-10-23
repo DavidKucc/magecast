@@ -3,7 +3,8 @@ using UnityEngine;
 namespace MageCast
 {
     /// <summary>
-    /// The first screen: a name, training, host a game, join one by code.
+    /// The first screen: a name, training, host a game, find one in the list of open games (RoomBrowser),
+    /// join one by code.
     ///
     /// Drawn over a live backdrop (MenuBackdrop): the map you would train on drifting behind it, embers
     /// that shy away from the cursor, and a canvas to draw runes on with the mouse. The controls answer
@@ -61,6 +62,23 @@ namespace MageCast
         /// <summary>Came from an invite link with no name: the name box is pointed at until it is filled.</summary>
         bool askName;
 
+        /// <summary>
+        /// A room picked from Find a game. Joining without a name made you "Player 2" for everyone, so with
+        /// none yet the list closes, the code goes in its box and the name box is pointed at.
+        /// </summary>
+        void JoinListed(NetSession session, string roomCode)
+        {
+            code = roomCode;
+            if (NetSession.SafeName(NetSession.PlayerName).Length == 0)
+            {
+                RoomBrowser.Hide();
+                askName = true;
+                return;
+            }
+            RoomBrowser.Hide();
+            session.JoinOnline(roomCode);
+        }
+
         /// <summary>For the web page (unityInstance.SendMessage("Menu", "JoinFromPage", code)).</summary>
         public void JoinFromPage(string roomCode)
         {
@@ -95,7 +113,8 @@ namespace MageCast
         /// <summary>The column's height, in the menu's own units, for what is open right now.</summary>
         float ContentHeight()
         {
-            float h = 222f + 88f + 158f + 152f + 98f + 42f + 50f;
+            if (RoomBrowser.Open) return 222f + RoomBrowser.Height + 50f;
+            float h = 222f + 88f + 158f + 152f + 26f + 70f + 98f + 42f + 50f;
             if (showSettings) h += GameSettings.Height + 24f;
             if (showLan) h += 46f;
             return h;
@@ -157,16 +176,31 @@ namespace MageCast
             y = Title(x, y, w, s);
 
             GUI.enabled = !busy;
-            y = NameField(x, y, w);
-            y = Maps(x, y, w);
+            if (RoomBrowser.Open)
+            {
+                string chosen = RoomBrowser.Draw(x, y, w, out y);
+                if (chosen != null) JoinListed(session, chosen);
+            }
+            else
+            {
+                y = NameField(x, y, w);
+                y = Maps(x, y, w);
 
-            if (MenuArt.Button(new Rect(x, y, w, 58f), "Training", bigButton, true)) session.StartTraining(true);
-            y += 58f + 12f;
-            if (MenuArt.Button(new Rect(x, y, w, 58f), "Host a game", bigButton)) session.HostOnline();
-            y += 58f + 22f;
+                if (MenuArt.Button(new Rect(x, y, w, 58f), "Training", bigButton, true)) session.StartTraining(true);
+                y += 58f + 12f;
+                if (MenuArt.Button(new Rect(x, y, w, 58f), "Host a game", bigButton)) session.HostOnline();
+                y += 58f;
+                // whether a hosted game goes into everyone's Find a game, or is reached only by its code
+                if (MenuArt.Link(new Rect(x, y, w, 24f), PublicRoom.Listed ? "open: anyone can join from Find a game   (click: private)"
+                                                                           : "private: only with the code   (click: open to anyone)", link))
+                    PublicRoom.Listed = !PublicRoom.Listed;
+                y += 26f + 12f;
+                if (MenuArt.Button(new Rect(x, y, w, 58f), "Find a game", bigButton)) RoomBrowser.Show();
+                y += 58f + 22f;
 
-            y = JoinRow(session, x, y, w);
-            y = Links(session, x, y, w);
+                y = JoinRow(session, x, y, w);
+                y = Links(session, x, y, w);
+            }
 
             GUI.enabled = true;
 
@@ -181,7 +215,7 @@ namespace MageCast
             MenuArt.EndFrame();
 
             // Enter in the code box joins, since that is what everyone will try first
-            if (!busy && e.type == EventType.KeyDown && (e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter)
+            if (!busy && !RoomBrowser.Open && e.type == EventType.KeyDown && (e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter)
                 && code.Trim().Length > 0)
             {
                 session.JoinOnline(code);

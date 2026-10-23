@@ -529,7 +529,7 @@ Původní $P (mračno bodů) zůstává v tréninku na `F7` pro porovnání.
 
 ## Hra ve více lidech
 
-**Menu:** jméno, *Training*, *Host a game*, *Join* s kódem. Trénink je ta samá hra, jen bez soupeře —
+**Menu:** jméno, *Training*, *Host a game*, *Find a game* (seznam otevřených her), *Join* s kódem. Trénink je ta samá hra, jen bez soupeře —
 všechno jde stejnou cestou jako online, takže co funguje v tréninku, funguje i ve dvou.
 
 **Připojení kódem.** Hostitel klikne *Host a game* a otevře se **lobby** s kódem místnosti (Copy code,
@@ -537,6 +537,21 @@ na webu i Copy invite link). Kdo kód zadá v menu, objeví se v lobby. Jde to p
 nemusí otevírat porty ani znát cizí IP. Když hostitel odejde (*Close room*), hra končí i pro ostatní.
 V místnosti je nejvýš 6 hráčů včetně botů (mapy mají 6 spawnů, 3 na stranu); přijde-li člověk do plné
 místnosti, jeden bot mu uvolní místo.
+
+**Seznam otevřených her** (od 23. 10., `PublicRoom` a `RoomBrowser`, služba Unity Lobby):
+- **Hostitel.** Hra se po *Host a game* sama zapíše do seznamu. Pod *Host a game* je přepínač: *open*
+  (kdokoli ji najde) nebo *private* (jen s kódem jako dřív). V lobby hostitel vidí, jestli je hra v seznamu.
+- **Kdo hledá.** *Find a game* ukáže hostitele, mapu, režim, jestli se čeká v lobby nebo hraje, kolik je
+  lidí ze 6 a kolik botů. *Join* je totéž, jako zadat kód. Bez jména se seznam zavře, kód se vyplní a
+  bliká pole na jméno. Plná hra má místo *Join* nápis *Full*. Hra z jiného buildu má poznámku *other
+  version*, připojit jde, ale nemusí to projít.
+- **Udržování.** Hostitel je jediný, kdo do záznamu píše. Každé 2 s pošle změny (mapa, režim, počet lidí,
+  zápas) a každých 12 s se ozve, že žije. Po *Close room* nebo odchodu záznam smaže. Když hostitel prostě
+  zavře záložku a smazat nestihne, služba ho přestane ukazovat sama: změřeno 23. 10., zmizel do minuty.
+- **Cena.** Unity Lobby je zdarma do 10 GiB přenosu měsíčně. Záznam má pár set bajtů, takže je to
+  prakticky zadarmo. Relay je zdarma do průměrně 50 hráčů online za měsíc.
+- **Ověřeno.** Hostitel v editoru, web ve druhém okně: hra v seznamu, připojení ze seznamu, počet 2/6
+  se propsal, po zavření místnosti seznam prázdný a host se vrátil do menu se zprávou.
 
 **Lobby** (scéna `Lobby`, kreslí ji `LobbyScreen`, stav drží síťový objekt `Lobby`):
 - **hostitel = leader.** Jen on vybírá **mapu** (karty s náhledem), **režim** (*Free for all* / *Teams*) a
