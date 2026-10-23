@@ -307,7 +307,7 @@ namespace MageCast
 
             // The leader can end the match early and take everyone back to the lobby -- to change the map
             // or the sides without closing the room.
-            if (nm != null && nm.IsServer && Lobby.Active && Lobby.Instance.Playing.Value)
+            if (Lobby.Active && Lobby.Instance.LocalLeads && Lobby.Instance.Playing.Value)
             {
                 if (GUI.Button(new Rect(x, y, w, h), "Back to the lobby (ends the match)", button))
                 {

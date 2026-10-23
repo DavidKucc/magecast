@@ -37,8 +37,10 @@ namespace MageCast
 
     /// <summary>
     /// The room before (and between) matches, and what the match is: which map, which mode, how many
-    /// kills win it, who is on which side, who is ready. The host is the leader -- only they change the
-    /// settings, add bots and start; everyone else picks a side and says they are ready.
+    /// kills win it, who is on which side, who is ready. One person leads -- only they change the
+    /// settings, add bots and start; everyone else picks a side and says they are ready. In a room a player
+    /// hosts, that is the host. On a server with nobody playing on it (NetSession.Mode.Server) it is the
+    /// first person in, and when they leave, the next one.
     ///
     /// One networked object for the whole online session. The host spawns it as the room opens and it is
     /// never tied to a scene, so it rides from the lobby into the arena and back: the arena reads the
@@ -75,6 +77,19 @@ namespace MageCast
         public readonly NetworkVariable<int> BlueScore = new NetworkVariable<int>(0);
         public readonly NetworkVariable<int> RedScore = new NetworkVariable<int>(0);
 
+        /// <summary>The connection of whoever leads the room, or NoLeader in an empty server's room.</summary>
+        public readonly NetworkVariable<ulong> Leader = new NetworkVariable<ulong>(NoLeader);
+        public const ulong NoLeader = ulong.MaxValue;
+
+        /// <summary>This machine's player leads the room.</summary>
+        public bool LocalLeads
+        {
+            get { return NetworkManager != null && NetworkManager.IsClient && Leader.Value == NetworkManager.LocalClientId; }
+        }
+
+        /// <summary>The leader is the one hosting -- shown as HOST rather than LEADER.</summary>
+        public bool LeaderHosts { get { return Leader.Value == NetworkManager.ServerClientId; } }
+
         public GameMode Mode { get { return (GameMode)ModeIndex.Value; } }
 
         /// <summary>An online session is running, with its lobby.</summary>
@@ -97,9 +112,11 @@ namespace MageCast
                 NetworkManager.OnClientConnectedCallback += Joined;
                 NetworkManager.OnClientDisconnectCallback += Left;
                 Map.Value = NetSession.SelectedArena;
+                if (IsHost) Leader.Value = NetworkManager.LocalClientId;
                 foreach (ulong id in NetworkManager.ConnectedClientsIds) Joined(id);
             }
-            IntroduceServerRpc(new FixedString32Bytes(NetSession.SafeName(NetSession.PlayerName)));
+            // a server nobody plays on is no member of its own room
+            if (IsClient) IntroduceServerRpc(new FixedString32Bytes(NetSession.SafeName(NetSession.PlayerName)));
         }
 
         public override void OnNetworkDespawn()
@@ -183,7 +200,7 @@ namespace MageCast
             for (int i = 0; i < Members.Count; i++)
             {
                 LobbyMember m = Members[i];
-                if (m.IsBot || m.ClientId == NetworkManager.ServerClientId || m.Ready) continue;
+                if (m.IsBot || m.ClientId == Leader.Value || m.Ready) continue;
                 why = "waiting for " + NameOf(m) + " to be ready";
                 return false;
             }
@@ -202,6 +219,7 @@ namespace MageCast
         public void Admit(ulong clientId)
         {
             if (!IsServer || IndexOfClient(clientId) >= 0) return;
+            if (clientId == NetworkManager.ServerClientId && !IsHost) return;
 
             // a room full of bots makes way for a person
             if (Members.Count >= MaxPlayers)
@@ -209,6 +227,7 @@ namespace MageCast
                     if (Members[i].IsBot) { RemoveBot(Members[i].BotNumber); break; }
 
             Members.Add(new LobbyMember { ClientId = clientId, Team = SmallerTeam() });
+            if (Leader.Value == NoLeader) Leader.Value = clientId;
             Debug.Log("[Lobby] " + clientId + " joined, " + Members.Count + " in the room");
         }
 
@@ -217,6 +236,32 @@ namespace MageCast
             if (!IsServer) return;
             int i = IndexOfClient(clientId);
             if (i >= 0) Members.RemoveAt(i);
+            if (Leader.Value != clientId) return;
+
+            // the next person in leads; on a server left with nobody, the room starts over empty
+            Leader.Value = NoLeader;
+            for (int k = 0; k < Members.Count; k++)
+                if (!Members[k].IsBot) { Leader.Value = Members[k].ClientId; break; }
+            if (Leader.Value == NoLeader && !IsHost) Empty();
+            else Debug.Log("[Lobby] " + Leader.Value + " leads now");
+        }
+
+        /// <summary>
+        /// Server, nobody left in the room: no match goes on for bots alone, and the next person finds the
+        /// room as new -- none of the last group's bots, the default settings.
+        /// </summary>
+        void Empty()
+        {
+            for (int i = Members.Count - 1; i >= 0; i--)
+                if (Members[i].IsBot) Members.RemoveAt(i);
+            ModeIndex.Value = (int)GameMode.FreeForAll;
+            KillsToWin.Value = 5;
+            if (Playing.Value)
+            {
+                Playing.Value = false;
+                NetworkManager.SceneManager.LoadScene(NetSession.LobbyScene, LoadSceneMode.Single);
+            }
+            Debug.Log("[Lobby] everyone has left, the room is empty again");
         }
 
         int SmallerTeam()
@@ -273,11 +318,18 @@ namespace MageCast
             Members[i] = m;
         }
 
-        // ---------------------------------------------------------------- what only the leader may do (server)
+        // ---------------------------------------------------------------- what only the leader may do
+        //
+        // Called on the server, they act. Called anywhere else they go to the server, which acts only if
+        // they came from the leader -- in a hosted room the leader is the server and they never travel;
+        // on a dedicated server they always do.
+
+        bool FromLeader(ServerRpcParams p) { return p.Receive.SenderClientId == Leader.Value; }
 
         public void SetMap(int map)
         {
-            if (!IsServer || Playing.Value) return;
+            if (!IsServer) { SetMapServerRpc(map); return; }
+            if (Playing.Value) return;
             map = Mathf.Clamp(map, 0, NetSession.ArenaScenes.Length - 1);
             if (Map.Value == map) return;
             Map.Value = map;
@@ -285,9 +337,13 @@ namespace MageCast
             Unready();
         }
 
+        [ServerRpc(RequireOwnership = false)]
+        void SetMapServerRpc(int map, ServerRpcParams p = default) { if (FromLeader(p)) SetMap(map); }
+
         public void SetMode(GameMode mode)
         {
-            if (!IsServer || Playing.Value || Mode == mode) return;
+            if (!IsServer) { SetModeServerRpc((int)mode); return; }
+            if (Playing.Value || Mode == mode) return;
             ModeIndex.Value = (int)mode;
             // the usual length of each: a free-for-all to 5, a team game (two or three a side) to 10
             KillsToWin.Value = mode == GameMode.Teams ? 10 : 5;
@@ -295,25 +351,48 @@ namespace MageCast
             Unready();
         }
 
+        [ServerRpc(RequireOwnership = false)]
+        void SetModeServerRpc(int mode, ServerRpcParams p = default)
+        {
+            if (FromLeader(p) && (mode == 0 || mode == 1)) SetMode((GameMode)mode);
+        }
+
         public void SetKillsToWin(int kills)
         {
-            if (!IsServer || Playing.Value || KillsToWin.Value == kills) return;
+            if (!IsServer) { SetKillsToWinServerRpc(kills); return; }
+            if (Playing.Value || KillsToWin.Value == kills) return;
             KillsToWin.Value = Mathf.Clamp(kills, 1, 99);
             Unready();
         }
 
+        [ServerRpc(RequireOwnership = false)]
+        void SetKillsToWinServerRpc(int kills, ServerRpcParams p = default) { if (FromLeader(p)) SetKillsToWin(kills); }
+
+        float skillSentAt = -1f;
+
         public void SetBotSkill(float skill)
         {
-            if (!IsServer) return;
+            if (!IsServer)
+            {
+                // a slider being dragged: not a message every frame
+                if (Mathf.Abs(BotSkill.Value - skill) <= 0.005f || Time.unscaledTime - skillSentAt < 0.15f) return;
+                skillSentAt = Time.unscaledTime;
+                SetBotSkillServerRpc(skill);
+                return;
+            }
             skill = Mathf.Clamp01(skill);
             if (Mathf.Abs(BotSkill.Value - skill) > 0.005f) BotSkill.Value = skill;
             BotBrain.Skill = skill;
         }
 
+        [ServerRpc(RequireOwnership = false)]
+        void SetBotSkillServerRpc(float skill, ServerRpcParams p = default) { if (FromLeader(p)) SetBotSkill(skill); }
+
         /// <summary>A bot, on the given side (or the smaller one).</summary>
         public void AddBot(int team = 0)
         {
-            if (!IsServer || Playing.Value || Members.Count >= MaxPlayers) return;
+            if (!IsServer) { AddBotServerRpc(team); return; }
+            if (Playing.Value || Members.Count >= MaxPlayers) return;
             if (team != 1 && team != 2) team = SmallerTeam();
             if (Mode == GameMode.Teams && Count(team) >= Teams.PerTeam) return;
 
@@ -323,9 +402,12 @@ namespace MageCast
                                           Name = new FixedString32Bytes("Bot " + number), Team = team, Ready = true });
         }
 
+        [ServerRpc(RequireOwnership = false)]
+        void AddBotServerRpc(int team, ServerRpcParams p = default) { if (FromLeader(p)) AddBot(team); }
+
         public void RemoveBot(int number)
         {
-            if (!IsServer) return;
+            if (!IsServer) { RemoveBotServerRpc(number); return; }
             int i = IndexOfBot(number);
             if (i >= 0) Members.RemoveAt(i);
 
@@ -336,10 +418,14 @@ namespace MageCast
                     p.NetworkObject.Despawn(true);
         }
 
+        [ServerRpc(RequireOwnership = false)]
+        void RemoveBotServerRpc(int number, ServerRpcParams p = default) { if (FromLeader(p) && !Playing.Value) RemoveBot(number); }
+
         /// <summary>A bot over to the other side.</summary>
         public void SwapBot(int number)
         {
-            if (!IsServer || Playing.Value) return;
+            if (!IsServer) { SwapBotServerRpc(number); return; }
+            if (Playing.Value) return;
             int i = IndexOfBot(number);
             if (i < 0) return;
             LobbyMember m = Members[i];
@@ -348,6 +434,9 @@ namespace MageCast
             m.Team = other;
             Members[i] = m;
         }
+
+        [ServerRpc(RequireOwnership = false)]
+        void SwapBotServerRpc(int number, ServerRpcParams p = default) { if (FromLeader(p)) SwapBot(number); }
 
         /// <summary>
         /// Into a team game with more than three on one side: the extra ones over to the other, bots
@@ -382,8 +471,9 @@ namespace MageCast
         /// <summary>Everyone into the arena.</summary>
         public void StartMatch()
         {
+            if (!IsServer) { StartMatchServerRpc(); return; }
             string why;
-            if (!IsServer || !CanStart(out why)) return;
+            if (!CanStart(out why)) return;
 
             Playing.Value = true;
             BlueScore.Value = 0;
@@ -396,14 +486,21 @@ namespace MageCast
             NetworkManager.SceneManager.LoadScene(NetSession.ArenaScenes[Map.Value], LoadSceneMode.Single);
         }
 
+        [ServerRpc(RequireOwnership = false)]
+        void StartMatchServerRpc(ServerRpcParams p = default) { if (FromLeader(p)) StartMatch(); }
+
         /// <summary>Everyone back to the lobby: the match is over, or the leader ended it.</summary>
         public void BackToLobby()
         {
-            if (!IsServer || !Playing.Value) return;
+            if (!IsServer) { BackToLobbyServerRpc(); return; }
+            if (!Playing.Value) return;
             Playing.Value = false;
             Unready();
             NetworkManager.SceneManager.LoadScene(NetSession.LobbyScene, LoadSceneMode.Single);
         }
+
+        [ServerRpc(RequireOwnership = false)]
+        void BackToLobbyServerRpc(ServerRpcParams p = default) { if (FromLeader(p)) BackToLobby(); }
 
         /// <summary>Server: a kill for a side.</summary>
         public void AddScore(int team)

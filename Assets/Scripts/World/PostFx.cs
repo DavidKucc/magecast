@@ -29,6 +29,8 @@ namespace MageCast.World
 
         static void Dress(Camera cam)
         {
+            // a server with no window (-batchmode) draws nothing to put effects on
+            if (Application.isBatchMode) return;
             if (cam == null || cam.GetComponent<ThirdPersonCamera>() == null) return;
             if (cam.GetComponent<PostProcessLayer>() != null) return;
             PostFx fx = Resources.Load<PostFx>("PostFx");

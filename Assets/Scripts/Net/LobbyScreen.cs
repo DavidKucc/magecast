@@ -78,7 +78,8 @@ namespace MageCast
             NetSession session = NetSession.Instance;
             NetworkManager nm = NetworkManager.Singleton;
             Lobby lobby = Lobby.Instance;
-            bool leader = nm != null && nm.IsServer;
+            // the room's leader: the host in a hosted room, the first one in on a server
+            bool leader = lobby != null && lobby.IsSpawned && lobby.LocalLeads;
 
             Background(lobby);
             BuildInfo.DrawCorner();
@@ -190,7 +191,7 @@ namespace MageCast
 
         float Settings(Lobby lobby, bool leader, float x, float y, float w)
         {
-            Shadowed(new Rect(x, y, w, 22f), "MAP" + (leader ? "" : "   (the host chooses)"), header, Gold);
+            Shadowed(new Rect(x, y, w, 22f), "MAP" + (leader ? "" : lobby.LeaderHosts ? "   (the host chooses)" : "   (the leader chooses)"), header, Gold);
             y += 26f;
 
             int maps = NetSession.ArenaScenes.Length;
@@ -347,7 +348,7 @@ namespace MageCast
 
         void Row(Lobby lobby, bool leader, ulong me, LobbyMember m, float x, float y, float w)
         {
-            bool host = !m.IsBot && m.ClientId == NetworkManager.ServerClientId;
+            bool leads = !m.IsBot && m.ClientId == lobby.Leader.Value;
             bool isMe = !m.IsBot && m.ClientId == me;
             Color nameColour = isMe ? Gold : Color.white;
             float tagW = 150f;
@@ -375,7 +376,7 @@ namespace MageCast
             string tag;
             Color tagColour;
             if (m.IsBot) { tag = "BOT"; tagColour = new Color(1f, 1f, 1f, 0.55f); }
-            else if (host) { tag = "HOST"; tagColour = Gold; }
+            else if (leads) { tag = lobby.LeaderHosts ? "HOST" : "LEADER"; tagColour = Gold; }
             else if (m.Ready) { tag = "READY"; tagColour = ReadyGreen; }
             else { tag = "not ready"; tagColour = new Color(1f, 1f, 1f, 0.45f); }
             Shadowed(new Rect(x + w - tagW, y, tagW, 32f), tag, rowTag, tagColour);
@@ -388,7 +389,8 @@ namespace MageCast
             float y = Screen.height - 70f;
             Box(new Rect(0f, y - 10f, Screen.width, 80f), 0.5f);
 
-            if (GUI.Button(new Rect(x, y, 150f, 50f), leader ? "Close room" : "Leave", button) && session != null)
+            bool runs = NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer;
+            if (GUI.Button(new Rect(x, y, 150f, 50f), runs ? "Close room" : "Leave", button) && session != null)
                 session.Leave();
             if (GUI.Button(new Rect(x + 160f, y, 130f, 24f), "How to play", smallButton)) HelpScreen.Open = true;
             if (GUI.Button(new Rect(x + 160f, y + 26f, 130f, 24f), showSettings ? "hide settings" : "Settings", smallButton))
@@ -417,7 +419,7 @@ namespace MageCast
                 GUI.backgroundColor = ready ? ReadyGreen : Color.white;
                 if (GUI.Button(main, ready ? "READY" : "I'M READY", bigButton)) lobby.SetReady(!ready);
                 GUI.backgroundColor = Color.white;
-                say = ready ? "waiting for the host to start  (click again to take it back)"
+                say = ready ? "waiting for the " + (lobby.LeaderHosts ? "host" : "leader") + " to start  (click again to take it back)"
                             : lobby.Mode == Lobby.GameMode.Teams ? "pick a side, then say you are ready" : "say you are ready";
                 if (ready) sayColour = ReadyGreen;
             }

@@ -61,11 +61,14 @@ namespace MageCast
             if (Instance == this) Instance = null;
         }
 
-        /// <summary>Puts the room with this Relay code up in the list. Signed in already: the room was just made.</summary>
-        public async void Open(string relayCode)
+        /// <summary>
+        /// Puts the room with this Relay code up in the list -- if the host left it open, or <paramref name="always"/>
+        /// (a server). Signed in already: the room was just made.
+        /// </summary>
+        public async void Open(string relayCode, bool always = false)
         {
             Problem = null;
-            if (!Listed || entryId != null || busy) return;
+            if ((!Listed && !always) || entryId != null || busy) return;
             busy = true;
             code = relayCode;
             try
@@ -197,6 +200,8 @@ namespace MageCast
 
         static string RoomName()
         {
+            // a server is listed by its own name (-room), not by the name of whoever last played on that PC
+            if (!string.IsNullOrEmpty(NetSession.RoomTitle)) return NetSession.RoomTitle.Trim();
             string name = NetSession.SafeName(NetSession.PlayerName);
             return name.Length > 0 ? name : "Mage";
         }

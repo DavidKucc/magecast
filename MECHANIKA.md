@@ -553,6 +553,45 @@ místnosti, jeden bot mu uvolní místo.
 - **Ověřeno.** Hostitel v editoru, web ve druhém okně: hra v seznamu, připojení ze seznamu, počet 2/6
   se propsal, po zavření místnosti seznam prázdný a host se vrátil do menu se zprávou.
 
+**Server na vlastním PC** (od 23. 10., `NetSession.Mode.Server`, `Tools/Arena/Build Server`):
+- **Co to je.** Ta samá hra spuštěná bez okna a bez vlastního hráče (`-batchmode -nographics -server`). Drží
+  jednu místnost, která je vždy ve *Find a game* pod jménem z `-room` (výchozí „Mage Cast server“).
+  Připojuje se k ní stejně jako ke hře hráče: ze seznamu nebo kódem. Spojení jde přes Relay, takže se nic
+  nenastavuje na routeru a funguje i web.
+- **Kdo velí** (`Lobby.Leader`). V místnosti hráče velí hostitel (štítek HOST). Na serveru velí první, kdo
+  přijde (štítek LEADER). Když odejde, vedení převezme další. Vedoucí vybírá mapu, režim a killy, přidává
+  boty a spouští zápas. Jeho kliknutí jdou na server zprávou a server je provede, jen když přišly od
+  vedoucího. V Esc menu má vedoucí *Back to the lobby* a místo *Close room* jen *Leave*.
+- **Když všichni odejdou**, i uprostřed zápasu: server se vrátí do lobby, odebere boty, nastaví *Free for
+  all* do 5 a čeká na dalšího.
+- **Výpadek:** když server ztratí spojení s Relay, za 10 s založí novou místnost s novým kódem. Když spadne
+  celý, `start-server.bat` ho za 10 s pustí znovu.
+- **Běží na 60 snímků/s** (`Application.targetFrameRate`), aby zbytečně netočil jádrem. Post-processing
+  se bez okna nezapíná. Zásahy počítá podle kostí, které se animují i bez kamery (`AlwaysAnimate`).
+- **Stavba a spuštění:**
+  1. *Tools/Arena/Build Server* postaví `Builds/Server/MageCastServer.exe` a vedle něj `start-server.bat`
+     a `stop-server.bat`. Staví se hned po webu ze stejného kódu, protože si bere razítko posledního web
+     buildu. Jinak by ho seznam ukazoval jako *other version*.
+  2. Pustí se dvojklikem na `start-server.bat`. Jméno místnosti je v souboru na řádku `set ROOM=`.
+  3. Co server dělá, jde do `server.log`; předchozí běh zůstane v `server-previous.log`.
+  4. Zastavuje se `stop-server.bat`.
+- **Ověřeno v editoru** (server bez hráče, dva weboví hráči):
+  - server je v seznamu jako 0/6;
+  - první hráč je LEADER: přidal bota, změnil mapu, spustil zápas na serveru a vrátil všechny do lobby;
+  - druhý hráč viděl „the leader chooses“ a po odchodu prvního se stal vedoucím;
+  - po odchodu obou byla místnost prázdná, bez botů a dál v seznamu.
+- **Ověřeno naostro** (`start-server.bat`, server bez okna):
+  - naběhl za pár sekund a zapsal se do seznamu jako „Mage Cast server“ bez poznámky *other version*;
+  - web se připojil, přidal dva boty a odehrál zápas: boti útočí, zabíjejí se a skóre se počítá;
+  - po odchodu hráče se místnost vyprázdnila;
+  - `stop-server.bat` zastavil server i spouštěcí smyčku;
+  - v logu žádná výjimka.
+- **Nároky** (PC s 20 vlákny): prázdný server 133 MB paměti a 5 % jednoho jádra; zápas s hráčem a dvěma
+  boty 202 MB a asi třetina jednoho jádra.
+- **Pozor:** server se spouští plnou cestou (`"%~dp0MageCastServer.exe"`). Windows jde nastavit tak, aby
+  programy z aktuální složky jménem nespouštěl (`NoDefaultCurrentDirectoryInExePath`), a pak server hned
+  skončil, aniž by zapsal log.
+
 **Lobby** (scéna `Lobby`, kreslí ji `LobbyScreen`, stav drží síťový objekt `Lobby`):
 - **hostitel = leader.** Jen on vybírá **mapu** (karty s náhledem), **režim** (*Free for all* / *Teams*) a
   **počet killů k výhře** (5 / 10 / 15 / 20; režim nastaví výchozí 5, resp. 10), přidává a odebírá boty

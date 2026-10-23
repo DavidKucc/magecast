@@ -21,6 +21,11 @@ namespace MageCast
     ///
     /// Training is the same game hosted on this machine alone -- not a separate offline mode. Every
     /// spell goes down exactly the path it takes in a real match, so what works in training works online.
+    ///
+    /// A server (-server on the command line, see Builds/Server/start-server.bat) is a room with nobody
+    /// playing on the machine that runs it: no window, no character of its own, always in the list of open
+    /// games. Players lead it in turn (Lobby.Leader). It goes on when they leave, and opens a new room by
+    /// itself if the connection to Relay is lost.
     /// </summary>
     [RequireComponent(typeof(NetworkManager), typeof(UnityTransport))]
     public class NetSession : MonoBehaviour
@@ -75,7 +80,16 @@ namespace MageCast
             }
         }
 
-        public enum Mode { None, Training, Host, Client }
+        public enum Mode { None, Training, Host, Client, Server }
+
+        /// <summary>This copy is a server for as long as it runs (-server): it keeps a room open, whatever happens.</summary>
+        public static bool ServerOnly { get; private set; }
+
+        /// <summary>The room's name in the list of open games when it is not a player's (-room "...").</summary>
+        public static string RoomTitle { get; private set; }
+
+        /// <summary>A server's frames: smooth enough for the spells' flight, without spinning a core for nothing.</summary>
+        const int ServerFrameRate = 60;
 
         public static NetSession Instance { get; private set; }
 
@@ -215,6 +229,15 @@ namespace MageCast
             HostRelay(Mode.Host);
         }
 
+        /// <summary>A room on Relay that this machine runs without playing in it -- see ServerOnly.</summary>
+        public void StartServer()
+        {
+            ServerOnly = true;
+            Application.targetFrameRate = ServerFrameRate;
+            QualitySettings.vSyncCount = 0;
+            HostRelay(Mode.Server);
+        }
+
         /// <summary>Where this room's Relay server is, e.g. "europe-central2" -- shown next to the ping.</summary>
         public string RelayRegion { get; private set; }
 
@@ -255,22 +278,26 @@ namespace MageCast
 
                 Say(mode == Mode.Training ? "setting up training..." : "opening a room...");
                 string region = await PickRegion();
-                Allocation allocation = await RelayService.Instance.CreateAllocationAsync(MaxGuests, region);
+                // a server plays no part in its room: every place in it is for somebody connecting
+                Allocation allocation = await RelayService.Instance.CreateAllocationAsync(mode == Mode.Server ? Lobby.MaxPlayers : MaxGuests, region);
                 RelayRegion = allocation.Region;
                 Debug.Log("[Net] room opened in relay region " + allocation.Region + " (asked for " + (region ?? "the default") + ")");
                 string code = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
 
                 transport.UseWebSockets = true;
                 transport.SetRelayServerData(new RelayServerData(allocation, RelayConnection));
-                if (!manager.StartHost()) { Fail("could not start hosting"); return; }
+                bool started = mode == Mode.Server ? manager.StartServer() : manager.StartHost();
+                if (!started) { Fail("could not start hosting"); return; }
 
                 Current = mode;
-                JoinCode = mode == Mode.Host ? code : null;
-                Say(mode == Mode.Host ? "room " + code + " is open" : "training");
-                if (mode == Mode.Host)
+                bool room = mode == Mode.Host || mode == Mode.Server;
+                JoinCode = room ? code : null;
+                Say(room ? "room " + code + " is open" : "training");
+                if (room)
                 {
                     OpenLobby();
-                    if (PublicRoom.Instance != null) PublicRoom.Instance.Open(code);
+                    // a server is there to be found; a player's room only if they left it open
+                    if (PublicRoom.Instance != null) PublicRoom.Instance.Open(code, mode == Mode.Server);
                 }
                 else LoadArena();
             }
@@ -441,6 +468,25 @@ namespace MageCast
             // a reason is worth reading on the menu; without one, "room ... is open" must not stay up there
             if (!string.IsNullOrEmpty(reason)) Say(reason); else Status = "";
             if (SceneManager.GetActiveScene().name != MenuScene) SceneManager.LoadScene(MenuScene);
+            if (ServerOnly) RestartLater();
+        }
+
+        bool restarting;
+
+        /// <summary>A server that lost its room opens a new one -- after a pause, so a dead connection is not hammered.</summary>
+        void RestartLater()
+        {
+            if (!restarting) StartCoroutine(Restart());
+        }
+
+        System.Collections.IEnumerator Restart()
+        {
+            restarting = true;
+            Debug.Log("[Net] the server opens a new room in 10 s");
+            yield return new WaitForSecondsRealtime(10f);
+            while (Busy || manager.IsListening || manager.ShutdownInProgress) yield return new WaitForSecondsRealtime(1f);
+            restarting = false;
+            StartServer();
         }
 
         void OnClientDisconnect(ulong clientId)
@@ -474,13 +520,16 @@ namespace MageCast
             Debug.LogWarning("[Net] " + text);
             if (manager.IsListening) manager.Shutdown();
             Current = Mode.None;
+            // no internet yet, Relay down: a server tries again until it gets a room
+            if (ServerOnly) RestartLater();
         }
 
         // ---------------------------------------------------------------- command line
 
         /// <summary>
         /// For starting a copy straight into a game without clicking: -training, -host, -join CODE,
-        /// -lanhost [port], -lanjoin ADDRESS [port], -name NAME. Handled once, from the menu.
+        /// -lanhost [port], -lanjoin ADDRESS [port], -name NAME, -server [-room "NAME"]. Handled once, from
+        /// the menu.
         /// </summary>
         public void HandleCommandLine()
         {
@@ -489,7 +538,10 @@ namespace MageCast
 
             string[] args = Environment.GetCommandLineArgs();
             for (int i = 0; i + 1 < args.Length; i++)
+            {
                 if (args[i].ToLowerInvariant() == "-name") PlayerName = args[i + 1];
+                if (args[i].ToLowerInvariant() == "-room") RoomTitle = args[i + 1];
+            }
 
             for (int i = 0; i < args.Length; i++)
             {
@@ -497,6 +549,7 @@ namespace MageCast
                 string next = i + 1 < args.Length ? args[i + 1] : null;
                 ushort port;
 
+                if (a == "-server") { StartServer(); return; }
                 if (a == "-training") { StartTraining(true); return; }
                 else if (a == "-host") { HostOnline(); return; }
                 else if (a == "-join" && next != null) { JoinOnline(next); return; }
