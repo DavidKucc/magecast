@@ -37,6 +37,12 @@ namespace MageCast.Combat
         void Awake()
         {
             Health = GetComponent<Health>();
+            // The bones are what gets hit, so they must move even when no camera here sees the body. Left
+            // to the default (CullUpdateTransforms), a body out of the host's view kept its last pose:
+            // somebody who died in view and came back out of it was hit as if still lying on the floor
+            // -- head 0.6 m up instead of 1.6 -- until the host looked their way (23 Oct).
+            Animator body = GetComponentInChildren<Animator>();
+            if (body != null) body.cullingMode = AnimatorCullingMode.AlwaysAnimate;
         }
 
         void OnEnable() { all.Add(this); }

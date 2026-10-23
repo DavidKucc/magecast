@@ -347,7 +347,8 @@ namespace MageCast.Gestures
                 Vector3 to = transform.position + heading * distance;
                 foreach (Hurtbox body in Hurtbox.All)
                 {
-                    if (body == null || body.Health == null || body.Health.IsDead) continue;
+                    // the dead too: see Impact
+                    if (body == null || body.Health == null) continue;
                     Transform bt = body.transform;
                     if (owner != null && (bt == owner || bt.IsChildOf(owner))) continue;
                     if (MageCast.Teams.Spares(owner, body)) continue;
@@ -473,6 +474,20 @@ namespace MageCast.Gestures
                 if (authoritative)
                     iceWall.Hit(IsFire, owner != null ? owner.GetComponent<PlayerNet>() : null, attacker);
                 if (IsEarth) Quake(at - heading * 0.3f, null);
+                End();
+                return true;
+            }
+
+            // Somebody who has just died stays on their feet, staggering, for about a second and a half
+            // before they fall. Spells already on their way used to fly straight through them, and with
+            // several people shooting at one it looked like the hits were going missing (23 Oct). A body
+            // stops a spell, dead or alive; the dead one takes nothing from it -- no damage, no burning,
+            // no shove -- and it is no hit.
+            if (hp != null && hp.IsDead)
+            {
+                Flash(at, 1.4f, 2.5f);
+                if (IsFire && tier >= 3) Explode(at, hp);
+                if (IsEarth) Quake(at, hp);
                 End();
                 return true;
             }

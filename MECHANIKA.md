@@ -174,6 +174,31 @@ kapslí: stojí v klidu otočené k tobě, trefují se stejným hitboxem z kost�
 pro oheň — paže visí u těla), při zásahu krátce zbělají, po zabití padnou smrtelnou animací a za 3 s
 vstanou. Boti je ignorují (cílí jen na hráče). Bez balíku postav (klon z repozitáře) zůstanou kapslemi.
 
+**Prověrka zásahů (23. 10.; hlášení: „občas střela proletí nepřítelem, hlavně když na něj letí víc věcí
+najednou“).** Co se změřilo:
+- **Tvar hitboxu:** pokrývá vidět tělo. Z 3200 náhodných bodů povrchu postav (stojí, běží, kreslí)
+  koule 0,3 m minula 4, o 2–6 cm u chodidel.
+- **Salva:** 96 střel ze 24 stran najednou na stojící tělo zasáhlo všech 96. Souběh střel nic nerozbíjí.
+- **Velikost střel:** jádro střel je vidět zhruba 0,5–0,6 m velké, tedy jako zásahová koule.
+- **Hlídač v souboji 6 botů:** sledoval každou střelu, která vletěla do těla a letěla dál. Za 205 s a 260
+  střel neprolétla žádná živým nepřítelem, ale tři proletěly mrtvým.
+
+Našly se dvě chyby:
+1. **Mrtvé tělo propouštělo kouzla.** Zabitý ještě asi 1,6 s stojí a vrávorá, padá až mezi 1,6 a
+   2,3 s. Kód ho od první chvíle bral jako vzduch, takže všechno, co k němu ještě letělo, jím viditelně
+   proletělo. Čím víc lidí střílí na jednoho, tím častěji. Teď **tělo zastaví kouzlo, ať je živé, nebo
+   mrtvé**. Mrtvému nic neudělá (žádné poškození, hoření ani odhoz) a zásah se nepočítá. Oheň III
+   vybuchne a země udělá otřes, jako by dopadla. Projít mrtvým tělem jde dál (nemá kolizní kapsli).
+2. **Kostra mimo záběr hostitele zamrzla.** Animátor postav měl výchozí `CullUpdateTransforms`, takže
+   na stroji, který rozhoduje zásahy (server), se kosti nehýbaly u těla, které žádná kamera neviděla.
+   Kdo umřel na očích a vstal mimo ně, měl hitbox pořád v póze mrtvého na zemi (hlava 0,6 m místo
+   1,6 m), dokud se hostitel neotočil. Střely druhých hráčů a botů na něj letěly nad ním. Teď
+   `AlwaysAnimate` (nastaví `Hurtbox`). Ověřeno: po respawnu mimo záběr hlava 1,66 m.
+
+Co zbývá: zpoždění sítě. Host rozhoduje zásah podle toho, kde cíl je teď. Hráč připojený přes síť ale
+vidí cíl o ping a vyhlazování pohybu pozadu (neměřeno), takže na běžící cíl musí mířit trochu víc
+dopředu. Zpětná kompenzace (lag compensation) zatím není.
+
 ## Když kouzlo netrefí člověka
 
 Jedno gesto dává několik efektů — rozhoduje, **do čeho kouzlo dopadne**. Nic nového se neučí: oheň pálí,

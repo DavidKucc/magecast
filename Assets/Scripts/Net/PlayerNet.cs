@@ -585,7 +585,8 @@ namespace MageCast
 
         /// <summary>
         /// A dead player falls where they stood (PlayerAnimation plays the death) and lies there until
-        /// the respawn -- but without a collider, so the body neither soaks up shots nor blocks a doorway.
+        /// the respawn -- but without a collider, so the body does not block a doorway. Spells still stop on
+        /// it (they hit the bones, Hurtbox) and do nothing to it: see Projectile.Impact.
         /// </summary>
         void ApplyAlive(bool alive)
         {
