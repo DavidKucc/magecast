@@ -195,6 +195,29 @@ Našly se dvě chyby:
    1,6 m), dokud se hostitel neotočil. Střely druhých hráčů a botů na něj letěly nad ním. Teď
    `AlwaysAnimate` (nastaví `Hurtbox`). Ověřeno: po respawnu mimo záběr hlava 1,66 m.
 
+**Druhá prověrka (25. 10.; hlášení: „u botů v chaosu občas něco proletí skrz“).** Našly se další dvě chyby:
+3. **Zadrhnutý snímek.** Zásah do těla se počítal po bodech na dráze, kterou střela urazí za snímek, a bodů
+   bylo nejvýš 24. Když hra na chvíli zadrhne (první výbuch, úklid paměti, web pod zátěží), snímek trvá až
+   třetinu sekundy a blesk za něj uletí až 17 m. Body pak byly od sebe dál, než je tělo široké.
+   - Testem 600 drah, které tělo prokazatelně protínají, starý výpočet minul: 0,3 % při kroku 0,9 m,
+     3,2 % při 10 m a 11,2 % při 17 m.
+   - Teď se každá část těla počítá přesně jako kapsle proti celé dráze koule: kde se jí poprvé dotkne
+     (`Hurtbox.FirstContact`). Výsledek je 0 minutých drah při jakékoli délce kroku a žádný falešný zásah.
+4. **Panák: nohy nešly trefit, když střela přišla z dálky.** Rychlé předvyřazení počítalo střed těla od
+   počátku objektu, a ten má panák v pase, ne u nohou. Dráhy u holení proto zahodilo (2,9 % drah). Teď se
+   počítá od trupu.
+
+Ověřeno v chaosu: 6 botů, 182 s, 145 umělých zadrhnutí po 60–300 ms, 97 kroků střely delších než 2 m.
+Hlídač kontroloval celou dráhu mezi snímky, ne jen místa, kde je střela vidět. Výsledek: 0 průletů živým
+nepřítelem, mrtvým i spoluhráčem. Kontrola, že hlídač funguje: se třemi boty v jednom týmu zachytil
+průlet spoluhráčem při kroku 5,9 m.
+
+Co vypadá jako průlet, ale je pravidlo:
+- v týmové hře střely **spoluhráčem proletí**;
+- nad **updraftem** se střela zvedne a přeletí;
+- **bot uhne**: úkrok na poslední chvíli, koule mine o kousek a její záře přes tělo vypadá jako zásah;
+- **na serveru** (ne ve vlastní hře) jsou i boti vzdálení, takže se projeví zpoždění sítě.
+
 Co zbývá: zpoždění sítě. Host rozhoduje zásah podle toho, kde cíl je teď. Hráč připojený přes síť ale
 vidí cíl o ping a vyhlazování pohybu pozadu (neměřeno), takže na běžící cíl musí mířit trochu víc
 dopředu. Zpětná kompenzace (lag compensation) zatím není.

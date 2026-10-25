@@ -144,60 +144,87 @@ namespace MageCast.Combat
             t = 0f;
             point = normal = Vector3.zero;
 
-            // quick reject: nowhere near the body at all
-            Vector3 middle = transform.position + Vector3.up * 0.9f;
+            // Quick reject: nowhere near the body at all. Measured from the trunk itself, not from the
+            // object's origin -- a player's is at the soles, but a dummy's is at its waist, and from there a
+            // shot at its shins counted as nowhere near (25 Oct).
+            Vector3 middle = parts.Count > 0 ? Centre : transform.position + Vector3.up * 0.9f;
             if (DistanceToSegment(middle, a, b) > 1.6f + radius) return false;
 
-            // walked along the way in short steps: a spell covers at most ~0.7 m a frame
-            float length = Vector3.Distance(a, b);
-            int samples = Mathf.Clamp(Mathf.CeilToInt(length / 0.08f), 1, 24);
-            for (int i = 0; i <= samples; i++)
-            {
-                float s = i / (float)samples;
-                Vector3 p = Vector3.Lerp(a, b, s);
-                Vector3 on;
-                float reach;
-                if (Touches(p, radius, out on, out reach))
-                {
-                    t = s;
-                    Vector3 away = p - on;
-                    normal = away.sqrMagnitude > 1e-6f ? away.normalized : (a - b).normalized;
-                    point = on + normal * reach;
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        /// <summary>Whether a ball at <paramref name="p"/> overlaps any part; the nearest part's axis point.</summary>
-        bool Touches(Vector3 p, float radius, out Vector3 on, out float reach)
-        {
-            on = p;
-            reach = 0f;
+            // Every part exactly, as a capsule against the ball's whole way: the first point of the way where
+            // the ball is within reach of the part's axis. It used to be walked in at most 24 steps, and
+            // one long frame -- a hitch with everybody shooting, up to a third of a second, 17 m of
+            // lightning -- left gaps wider than an arm between them, so a shot could go clean through
+            // somebody between two steps (25 Oct).
+            float first = float.MaxValue;
+            Vector3 from = Vector3.zero, to = Vector3.zero;
+            float partRadius = 0f;
             if (parts.Count == 0)
             {
                 Vector3 foot = transform.position + Vector3.up * 0.25f, head = transform.position + Vector3.up * 1.5f;
-                on = ClosestOnSegment(p, foot, head);
-                reach = 0.25f;
-                return (p - on).sqrMagnitude <= (reach + radius) * (reach + radius);
+                float s = FirstContact(a, b, foot, head, 0.25f + radius);
+                if (s >= 0f) { first = s; from = foot; to = head; partRadius = 0.25f; }
             }
-            float best = float.MaxValue;
-            bool hit = false;
             foreach (Part part in parts)
             {
-                Vector3 from = part.From.position;
-                Vector3 to = part.To.position + (part.Beyond != Vector3.zero ? part.To.rotation * part.Beyond : Vector3.zero);
-                Vector3 c = ClosestOnSegment(p, from, to);
-                float gap = (p - c).magnitude - part.Radius;
-                if (gap <= radius && gap < best)
-                {
-                    best = gap;
-                    on = c;
-                    reach = part.Radius;
-                    hit = true;
-                }
+                Vector3 p0 = part.From.position;
+                Vector3 p1 = part.To.position + (part.Beyond != Vector3.zero ? part.To.rotation * part.Beyond : Vector3.zero);
+                float s = FirstContact(a, b, p0, p1, part.Radius + radius);
+                if (s < 0f || s >= first) continue;
+                first = s;
+                from = p0;
+                to = p1;
+                partRadius = part.Radius;
             }
-            return hit;
+            if (first == float.MaxValue) return false;
+
+            t = first;
+            Vector3 p = Vector3.Lerp(a, b, t);
+            Vector3 away = p - ClosestOnSegment(p, from, to);
+            normal = away.sqrMagnitude > 1e-6f ? away.normalized : (a - b).normalized;
+            point = p - away + normal * partRadius;
+            return true;
+        }
+
+        /// <summary>
+        /// Where along a..b (0..1) a ball first comes within <paramref name="reach"/> of the segment p0..p1, or
+        /// -1 if it never does. The distance from a point moving along a line to a segment falls and then
+        /// rises, so the first moment within reach lies before the closest approach and is found by halving.
+        /// </summary>
+        static float FirstContact(Vector3 a, Vector3 b, Vector3 p0, Vector3 p1, float reach)
+        {
+            float reach2 = reach * reach;
+            if ((a - ClosestOnSegment(a, p0, p1)).sqrMagnitude <= reach2) return 0f;
+            float closest = ClosestOnPath(a, b, p0, p1);
+            Vector3 at = Vector3.Lerp(a, b, closest);
+            if ((at - ClosestOnSegment(at, p0, p1)).sqrMagnitude > reach2) return -1f;
+
+            float lo = 0f, hi = closest;
+            for (int i = 0; i < 20; i++)
+            {
+                float mid = (lo + hi) * 0.5f;
+                Vector3 m = Vector3.Lerp(a, b, mid);
+                if ((m - ClosestOnSegment(m, p0, p1)).sqrMagnitude <= reach2) hi = mid;
+                else lo = mid;
+            }
+            return hi;
+        }
+
+        /// <summary>The point of a..b (0..1) closest to the segment p0..p1 (Ericson, Real-Time Collision Detection 5.1.9).</summary>
+        static float ClosestOnPath(Vector3 a, Vector3 b, Vector3 p0, Vector3 p1)
+        {
+            Vector3 d1 = b - a, d2 = p1 - p0, r = a - p0;
+            float aa = Vector3.Dot(d1, d1), e = Vector3.Dot(d2, d2), f = Vector3.Dot(d2, r);
+            const float Tiny = 1e-8f;
+            if (aa <= Tiny) return 0f;
+            float c = Vector3.Dot(d1, r);
+            if (e <= Tiny) return Mathf.Clamp01(-c / aa);
+            float bd = Vector3.Dot(d1, d2);
+            float denom = aa * e - bd * bd;
+            float s = denom > Tiny ? Mathf.Clamp01((bd * f - c * e) / denom) : 0f;
+            float t = (bd * s + f) / e;
+            if (t < 0f) s = Mathf.Clamp01(-c / aa);
+            else if (t > 1f) s = Mathf.Clamp01((bd - c) / aa);
+            return s;
         }
 
         static Vector3 ClosestOnSegment(Vector3 p, Vector3 a, Vector3 b)
