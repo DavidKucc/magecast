@@ -104,7 +104,7 @@ MonoBehaviour:
   rig: {fileID: 6957053920365754605}
   cam: {fileID: 0}
   weight: 1
-  minDistance: 2.5
+  lookAhead: 6
   maxDistance: 200
   smoothing: 14
 --- !u!114 &5391284393597812176

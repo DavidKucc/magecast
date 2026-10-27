@@ -30,10 +30,12 @@ namespace MageCast
         [SerializeField, Range(0f, 1f)] float weight = 1f;
 
         /// <summary>
-        /// Nothing closer than this counts as something to look at. Without it, brushing a wall puts
-        /// the aim point inside the character's own chest and the neck folds up.
+        /// Nothing closer than this in front of the head counts as something to look at. The camera sits
+        /// over a shoulder, so a point on a wall right in front of the character lies well off to one
+        /// side of the head, and it turned to stare at it (27 Oct). From this far on, looking at the
+        /// crosshair and looking ahead are within a few degrees of each other.
         /// </summary>
-        [SerializeField] float minDistance = 2.5f;
+        [SerializeField] float lookAhead = 6f;
 
         [SerializeField] float maxDistance = 200f;
 
@@ -79,7 +81,9 @@ namespace MageCast
                                              QueryTriggerInteraction.Ignore)
                              ? hit.distance : maxDistance;
 
-            Vector3 wanted = origin + forward * Mathf.Max(distance, minDistance);
+            // measured from the head, not the camera: how far the camera is behind it changes with every wall
+            float headAlong = Vector3.Dot(transform.position + Vector3.up * 1.6f - origin, forward);
+            Vector3 wanted = origin + forward * Mathf.Max(distance, headAlong + lookAhead);
 
             if (!started) { shown = wanted; started = true; }
             else shown = Vector3.Lerp(shown, wanted, 1f - Mathf.Exp(-smoothing * Time.deltaTime));

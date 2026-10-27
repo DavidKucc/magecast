@@ -113,6 +113,7 @@ namespace MageCast
         {
             if (animator == null) animator = GetComponentInChildren<Animator>();
             motor = GetComponent<PlayerMotor>();
+            capsule = GetComponent<CharacterController>();
             net = GetComponent<PlayerNet>();
             caster = GetComponent<Gestures.GestureCaster>();
             health = GetComponent<Combat.Health>();
@@ -306,13 +307,47 @@ namespace MageCast
                 body.SetPositionAndRotation(climbBase, climbFacing);
                 return;
             }
-            if (bodyRelease >= 1f) return;
+            float lift = EdgeLift();
+            if (bodyRelease >= 1f) { body.localPosition = bodyHome + Vector3.up * lift; return; }
             bodyRelease = Mathf.Min(1f, bodyRelease + Time.deltaTime / 0.15f);
-            Vector3 home = transform.TransformPoint(bodyHome);
+            Vector3 home = transform.TransformPoint(bodyHome + Vector3.up * lift);
             Quaternion homeRot = transform.rotation * bodyHomeRot;
             float k = Mathf.SmoothStep(0f, 1f, bodyRelease);
             body.SetPositionAndRotation(Vector3.Lerp(releaseFrom, home, k), Quaternion.Slerp(releaseFromRot, homeRot, k));
-            if (bodyRelease >= 1f) { body.localPosition = bodyHome; body.localRotation = bodyHomeRot; }
+            if (bodyRelease >= 1f) { body.localPosition = bodyHome + Vector3.up * lift; body.localRotation = bodyHomeRot; }
+        }
+
+        // ---- standing on an edge
+        // The controller is a capsule with a round bottom of 0.4 m radius. Half over the edge of a wall it
+        // rests on the corner with that round bottom, and the whole body sinks below the top it stands on
+        // -- up to 0.3 m, the feet in the stone (27 Oct). The body is lifted back to the top it is
+        // standing on; the capsule, and so everything about moving and being hit, stays where it is.
+        const float EdgeLiftMax = 0.4f;
+        const float EdgeLiftSpeed = 2f;       // m/s, so stepping off and on an edge does not snap
+        float shownLift;
+        CharacterController capsule;
+        static readonly RaycastHit[] underfoot = new RaycastHit[16];
+
+        float EdgeLift()
+        {
+            float want = 0f;
+            // the capsule's own round bottom, skin included: on the very rim it rests on a corner 0.38 m out
+            float r = capsule != null ? capsule.radius + capsule.skinWidth : 0.43f;
+            Vector3 from = transform.position + Vector3.up * 0.8f;
+            int n = Physics.SphereCastNonAlloc(from, r, Vector3.down, underfoot, 0.8f - r + 0.1f, ~0, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < n; i++)
+            {
+                RaycastHit h = underfoot[i];
+                // what the feet are on: the map, not this body, nobody else's, nor a spell's wall
+                if (h.distance <= 0f || h.collider.transform.IsChildOf(transform)) continue;
+                if (h.collider.GetComponentInParent<PlayerMotor>() != null) continue;
+                // something under the capsule pushes up; a wall beside it only brushes its side
+                if (h.normal.y < 0.15f) continue;
+                float top = h.point.y - transform.position.y;
+                if (top > want && top < EdgeLiftMax) want = top;
+            }
+            shownLift = Mathf.MoveTowards(shownLift, want, EdgeLiftSpeed * Time.deltaTime);
+            return shownLift;
         }
 
         static Vector2 Rotate(Vector2 v, float degrees)
