@@ -58,7 +58,8 @@ namespace MageCast.EditorTools
 
         /// <summary>
         /// How fast she moves with a spell in hand, as a share of the jog. Must match
-        /// GestureCaster.HoldSpeed, which applies it to the motor; here it sets the walk's playback.
+        /// GestureCaster.HoldSpeed, which applies it to the motor; here it is the effort at which the legs
+        /// reach the full jog.
         /// </summary>
         const float HoldPace = 0.7f;
 
@@ -221,7 +222,12 @@ namespace MageCast.EditorTools
 
             SetLooping(idle, true);   // stood in for as long as nobody touches a key
             SetLooping(draw, true);   // held while the glyph is being drawn, however long that takes
-            sendAttack = TrimToStrike(sendAttack, "SendAttack");
+            // The throw: the pack's 1H Magic Attack 02 -- the hand comes up beside the head, draws back and
+            // throws forward across the body -- cut to start on the hand up. The one before (Attack 01, in
+            // the cast folder) flings both arms out wide; held as the spell-in-hand pose it read as a
+            // T-pose, and it threw nothing (27 Oct). Attack 01 stays the fallback.
+            AnimationClip throwClip = TrimFromHandUp(PackClip("Standing 1H Magic Attack 02"), "SendAttack");
+            sendAttack = throwClip != null ? throwClip : TrimToStrike(sendAttack, "SendAttack");
 
             // The barrier goes up with a block -- raise, then lower -- rather than a thrown spell.
             AnimationClip blockStart = PackClip("Standing Block Start");
@@ -231,11 +237,6 @@ namespace MageCast.EditorTools
             if (blockStart != null) sendShield = blockStart;
             else sendShield = TrimToStrike(sendShield, "SendShield");
 
-            // A spell in hand: she walks instead of jogging.
-            AnimationClip walkF = PackClip("Standing Walk Forward"), walkB = PackClip("Standing Walk Back");
-            AnimationClip walkL = PackClip("Standing Walk Left"), walkR = PackClip("Standing Walk Right");
-            foreach (AnimationClip w in new[] { walkF, walkB, walkL, walkR }) SetLooping(w, true);
-            bool canWalk = walkF != null && walkB != null && walkL != null && walkR != null;
 
             // Only the idle is genuinely required -- it is what every other role falls back to. The rest
             // degrade instead of aborting, so the project still builds and runs while the library is
@@ -279,7 +280,8 @@ namespace MageCast.EditorTools
             ctrl.AddParameter("Send", AnimatorControllerParameterType.Trigger);
             ctrl.AddParameter("Defensive", AnimatorControllerParameterType.Bool);
             ctrl.AddParameter("LeftHand", AnimatorControllerParameterType.Bool);   // mirrors the send
-            ctrl.AddParameter("Hold", AnimatorControllerParameterType.Float);      // 1 = a spell in hand: walk
+            ctrl.AddParameter("Hold", AnimatorControllerParameterType.Float);      // 1 = a spell in hand
+            ctrl.AddParameter("Ready", AnimatorControllerParameterType.Bool);      // a spell in hand, not drawing: arm up
             ctrl.AddParameter("JumpRun", AnimatorControllerParameterType.Bool);    // took off sprinting
             ctrl.AddParameter("Dead", AnimatorControllerParameterType.Bool);
             ctrl.AddParameter("FallSpeed", AnimatorControllerParameterType.Float);  // m/s down, held after landing
@@ -314,8 +316,8 @@ namespace MageCast.EditorTools
             // Feeding it raw m/s would put a full-speed backpedal at 2.4 and drag idle back in at 40%,
             // which is the same bug in a different costume.
             //
-            // And an outer blend on Hold on top of that: with a spell in hand she walks (the pack's walk,
-            // at HoldPace of the jog), and letting go of the spell blends back into the free tree.
+            // And an outer blend on Hold on top of that: with a spell in hand she moves at HoldPace of the
+            // jog, and letting go of the spell blends back into the free tree.
             BlendTree outer;
             var locomotion = ctrl.CreateBlendTreeInController("Locomotion", out outer, 0);
             outer.blendType = BlendTreeType.Simple1D;
@@ -328,18 +330,18 @@ namespace MageCast.EditorTools
             tree.blendParameter = "Speed";
             tree.useAutomaticThresholds = false;
 
-            if (canWalk)
-            {
-                BlendTree walk = BuildMoveTree(ctrl, "Walk", JogSpeed * HoldPace, idle, walkF, walkB, walkL, walkR);
-                BlendTree held = outer.CreateBlendTreeChild(1f);
-                held.name = "Holding";
-                held.blendType = BlendTreeType.Simple1D;
-                held.blendParameter = "Speed";
-                held.useAutomaticThresholds = false;
-                held.AddChild(idle, 0f);
-                held.AddChild(walk, HoldPace);
-            }
-            else Debug.LogWarning("[Animator] no walk clips in " + PackFolder + " - holding a spell keeps the jog");
+            // With a spell in hand the legs keep the jog -- the same clips at the same rate -- and only reach
+            // it at HoldPace of the effort. It used to be the pack's walk, but the body moves at 3.5 m/s
+            // with a spell in hand (2.95 sideways), a jogger's pace, and a walk authored for 1.3 m/s played
+            // 1.3 times over still covered barely half of that: sideways especially, she skated (27 Oct).
+            // The spell shows in the arms instead -- the cast layer's Ready, the arm up.
+            BlendTree held = outer.CreateBlendTreeChild(1f);
+            held.name = "Holding";
+            held.blendType = BlendTreeType.Simple1D;
+            held.blendParameter = "Speed";
+            held.useAutomaticThresholds = false;
+            held.AddChild(idle, 0f);
+            held.AddChild(jog, HoldPace);
 
             float footfall = loco.RunFwd != null ? FootDownPhase(loco.RunFwd) : -1f;
             if (footfall >= 0f)
@@ -517,6 +519,26 @@ namespace MageCast.EditorTools
 
             var sDraw = castSm.AddState("Draw"); sDraw.motion = draw;
             castSm.defaultState = sDraw;
+
+            // A spell in hand and nothing being drawn: the throwing arm up, wound up -- the throw's own first
+            // frame, held still. So the arm is up whether she stands or runs, and when the spell goes the
+            // throw carries straight on from where the arm already is, instead of starting from an arm
+            // hanging at her side (27 Oct).
+            var sReady = castSm.AddState("Ready");
+            sReady.motion = sendAttack;
+            sReady.speed = 0f;
+            sReady.mirrorParameterActive = true;
+            sReady.mirrorParameter = "LeftHand";
+            var toReady = sDraw.AddTransition(sReady);
+            toReady.AddCondition(AnimatorConditionMode.If, 0f, "Ready");
+            toReady.AddCondition(AnimatorConditionMode.IfNot, 0f, "Drawing");
+            toReady.hasExitTime = false; toReady.duration = 0.15f;
+            var backToDraw = sReady.AddTransition(sDraw);
+            backToDraw.AddCondition(AnimatorConditionMode.If, 0f, "Drawing");
+            backToDraw.hasExitTime = false; backToDraw.duration = 0.15f;
+            var dropped = sReady.AddTransition(sDraw);
+            dropped.AddCondition(AnimatorConditionMode.IfNot, 0f, "Ready");
+            dropped.hasExitTime = false; dropped.duration = 0.2f;
 
             BuildSend(castSm, sDraw, "SendAttack", sendAttack, false);
             AnimatorState shield = BuildSend(castSm, sDraw, "SendShield", sendShield, true);
@@ -1731,6 +1753,78 @@ namespace MageCast.EditorTools
         /// throw or the push of a barrier going up. Measured because "Standing 1H Magic Attack 01" says
         /// nothing about where in its 2.3 seconds the interesting frame is.
         /// </summary>
+        /// <summary>
+        /// Cuts a throw so it starts with the throwing hand up, ready: from the highest the right hand gets in
+        /// the half second before it whips forward fastest, to a little after the throw. Its first frame is
+        /// what the Ready state holds while a spell is in hand, so sending carries on from the very pose the
+        /// arm is already in. Measured, as MeasureStrike is: the file's own timings say nothing.
+        /// </summary>
+        static AnimationClip TrimFromHandUp(AnimationClip clip, string roleName)
+        {
+            if (clip == null) return null;
+            if (clip.name == roleName) return clip;                 // already cut on an earlier run
+
+            string path = AssetDatabase.GetAssetPath(clip);
+            var imp = AssetImporter.GetAtPath(path) as ModelImporter;
+            if (imp == null) return null;
+            ModelImporterClipAnimation[] clips = imp.clipAnimations;
+            if (clips == null || clips.Length == 0) clips = imp.defaultClipAnimations;
+            if (clips.Length == 0) return null;
+
+            GameObject probe = SpawnProbe();
+            if (probe == null) return null;
+            Animator animator = probe.GetComponent<Animator>();
+            Transform hips = animator.GetBoneTransform(HumanBodyBones.Hips);
+            Transform hand = animator.GetBoneTransform(HumanBodyBones.RightHand);
+            if (hips == null || hand == null) { Object.DestroyImmediate(probe); return null; }
+
+            // the hand in the hips' own frame (yaw only): up, and forward
+            const float Step = 1f / 60f;
+            int n = Mathf.CeilToInt(clip.length / Step);
+            var up = new float[n + 1];
+            var ahead = new float[n + 1];
+            AnimationMode.StartAnimationMode();
+            for (int i = 0; i <= n; i++)
+            {
+                AnimationMode.SampleAnimationClip(probe, clip, Mathf.Min(clip.length, i * Step));
+                Vector3 facing = hips.forward; facing.y = 0f; facing.Normalize();
+                Vector3 d = hand.position - hips.position;
+                up[i] = d.y;
+                ahead[i] = Vector3.Dot(d, facing);
+            }
+            AnimationMode.StopAnimationMode();
+            Object.DestroyImmediate(probe);
+
+            int strike = 1;
+            for (int i = 1; i <= n; i++)
+                if (ahead[i] - ahead[i - 1] > ahead[strike] - ahead[strike - 1]) strike = i;
+            int ready = strike;
+            for (int i = Mathf.Max(0, strike - Mathf.RoundToInt(0.5f / Step)); i <= strike; i++)
+                if (up[i] > up[ready]) ready = i;
+
+            float fps = clip.frameRate > 1f ? clip.frameRate : 30f;
+            float originalLength = clip.length;
+            var cut = clips[0];
+            cut.name = roleName;
+            cut.firstFrame = clips[0].firstFrame + Mathf.Round(ready * Step * fps);
+            cut.lastFrame = Mathf.Min(clips[0].lastFrame, clips[0].firstFrame + Mathf.Round((strike * Step + SendTail) * fps));
+            cut.loopTime = false;
+            cut.loopPose = false;
+            imp.clipAnimations = new[] { cut };
+            imp.SaveAndReimport();
+
+            AnimationClip result = null;
+            foreach (Object o in AssetDatabase.LoadAllAssetsAtPath(path))
+            {
+                AnimationClip c = o as AnimationClip;
+                if (c != null && c.name == roleName) result = c;
+            }
+            Debug.Log(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                "[Animator] {0}: hand up at {1:F2}s, thrown at {2:F2}s, of {3:F2}s; cut to {4:F2}s",
+                roleName, ready * Step, strike * Step, originalLength, result != null ? result.length : 0f));
+            return result;
+        }
+
         static float MeasureStrike(AnimationClip clip)
         {
             GameObject probe = SpawnProbe();

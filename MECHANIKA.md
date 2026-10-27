@@ -47,8 +47,22 @@ Kreslí a posílá se **levým tlačítkem**, ruší **pravým**:
 Míření je pořád jedno a to samé: z kamery jde paprsek dopředu a kde trefí, tam kouzlo letí.
 
 (Do 14. 10. se kouzlo zahazovalo podržením levého 0,45 s, a proto i každé odeslání čekalo na puštění
-tlačítka.) Dokud kouzlo držíš, **jen jdeš** (70 % rychlosti, animace chůze) a **nejde sprint** — buď
-máš připravené kouzlo, nebo jsi rychlý, ne obojí.
+tlačítka.) Dokud kouzlo držíš, **jdeš pomaleji** (70 % rychlosti) a **nejde sprint** — buď máš
+připravené kouzlo, nebo jsi rychlý, ne obojí.
+
+**Jak to vypadá** (od 27. 10.):
+- **Kouzlo v ruce** = **ruka nahoře**: vrhací ruka zvednutá u hlavy, připravená k hodu, ať stojíš, nebo
+  běžíš. Je to stav `Ready` ve vrstvě kouzlení, tedy zastavený první snímek hodu.
+- **Hod** je *Standing 1H Magic Attack 02*: ruka jde od hlavy dozadu a švihne dopředu přes tělo. Klip je
+  změřením střižený tak, aby začínal přesně na ruce nahoře (`TrimFromHandUp`: ruka nejvýš 0,35 s, hod
+  0,55 s, střih 0,97 s), takže hod navazuje na pózu, ve které ruka už je. Dosavadní *Attack 01* rozhazoval
+  obě ruce do stran a jako držená póza vypadal jako T-póza.
+- **Nohy s kouzlem v ruce** běží na stejných běžeckých klipech a ve stejném rytmu jako bez kouzla. Dřív to
+  byla zrychlená chůze z Pro Magic Packu, jenže s kouzlem se pohybuješ rychlostí běhu (3,5 m/s dopředu,
+  2,95 m/s do strany) a klip chůze, nahraný pro 1,3 m/s, pokryl jen 57 % cesty. Do strany to klouzalo
+  nejvíc. Teď nohy pokryjí 81 %.
+- Bez kouzla nohy pokryjí 57 % cesty. To je záměr: `paceOverAnimation` 1,5 a `StridePlayback` 0,85, aby
+  nohy necvakaly jak hodinky. Kdyby měly sedět přesně, musely by běžet asi 1,75× rychleji.
 
 Bariéra se staví gestem bloku (zvednout ruce, spustit), skok z běhu vpřed má vlastní animaci skoku z
 běhu.
