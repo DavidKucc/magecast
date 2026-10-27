@@ -152,6 +152,7 @@ namespace MageCast
             }
             Vector2 velocity = remote ? RemoteLocalVelocity() : motor.LocalPlanarVelocity;
             float speed = velocity.magnitude;
+            standing = speed < StandingSpeed;
             if (remote) SetDrawing(net.Drawing.Value);
 
             // Effort, not metres per second: 1 means "as fast as she goes in this direction", so a
@@ -325,12 +326,21 @@ namespace MageCast
         const float EdgeLiftMax = 0.4f;
         const float EdgeLiftSpeed = 2f;       // m/s, so stepping off and on an edge does not snap
         float shownLift;
+        bool standing = true;
+
+        /// <summary>
+        /// Only standing still. On the move the capsule is never on an edge for long, and lifting there
+        /// lifted the body ahead of every stair -- the capsule touches the step's edge before it climbs
+        /// it -- and then dropped it once it had, a bob at each step.
+        /// </summary>
+        const float StandingSpeed = 0.3f;
         CharacterController capsule;
         static readonly RaycastHit[] underfoot = new RaycastHit[16];
 
         float EdgeLift()
         {
             float want = 0f;
+            if (!standing) return shownLift = Mathf.MoveTowards(shownLift, 0f, EdgeLiftSpeed * Time.deltaTime);
             // the capsule's own round bottom, skin included: on the very rim it rests on a corner 0.38 m out
             float r = capsule != null ? capsule.radius + capsule.skinWidth : 0.43f;
             Vector3 from = transform.position + Vector3.up * 0.8f;
