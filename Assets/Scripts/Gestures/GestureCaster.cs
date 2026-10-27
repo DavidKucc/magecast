@@ -1530,7 +1530,7 @@ namespace MageCast.Gestures
         }
 
         /// <summary>The camera sits over the left shoulder, so spells go from the left hand.</summary>
-        public bool LeftHanded { get { return cam != null && cam.LeftShoulder; } }
+        bool LeftHanded { get { return cam != null && cam.LeftShoulder; } }
 
         /// <summary>
         /// Where a spell leaves from: the throwing hand, on the side the camera looks past -- the right

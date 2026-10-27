@@ -40,7 +40,6 @@ namespace MageCast
         static readonly int AirborneHash = Animator.StringToHash("Airborne");
         static readonly int JumpBackHash = Animator.StringToHash("JumpBack");
         static readonly int HoldHash = Animator.StringToHash("Hold");
-        static readonly int ReadyHash = Animator.StringToHash("Ready");
         static readonly int JumpRunHash = Animator.StringToHash("JumpRun");
         static readonly int ClimbHash = Animator.StringToHash("Climb");
         static readonly int ClimbSpeedHash = Animator.StringToHash("ClimbSpeed");
@@ -186,12 +185,8 @@ namespace MageCast
 
             animator.SetFloat(SpeedHash, shownSpeed);
 
-            // a spell in hand: she moves at its pace, and its arm is up (the cast layer's Ready)
+            // a spell in hand: she walks
             bool holding = remote ? net.Holding.Value : caster != null && caster.HeldSpell != null;
-            bool ready = holding && !drawing;
-            animator.SetBool(ReadyHash, ready);
-            // the arm that will throw it is up already: the one on the camera's side, as the throw's is
-            if (ready && !remote && caster != null) animator.SetBool(LeftHandHash, caster.LeftHanded);
             shownHold = Mathf.MoveTowards(shownHold, holding ? 1f : 0f, HoldBlendSpeed * Time.deltaTime);
             animator.SetFloat(HoldHash, shownHold);
             animator.SetFloat(DirXHash, shownDir.x);
@@ -226,7 +221,7 @@ namespace MageCast
 
             if (castLayer < 0) return;
 
-            bool wantCast = drawing || ready || Time.time < sendUntil;
+            bool wantCast = drawing || Time.time < sendUntil;
             float weight = Mathf.Lerp(animator.GetLayerWeight(castLayer), wantCast ? 1f : 0f,
                                       1f - Mathf.Exp(-castLayerFade * Time.deltaTime));
             animator.SetLayerWeight(castLayer, weight);
