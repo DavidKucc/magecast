@@ -1,0 +1,586 @@
+<title>Příručka Mage Cast</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a reference manual. A sticky contents rail on the left (wide screens), one reading column,
+   wide tables scroll inside their own frame. Night-and-gold like the game's menus, element colours
+   only where they name an element. */
+:root {
+  --bg: #f4f5f9;
+  --panel: #ffffff;
+  --ink: #1b2033;
+  --muted: #5b6178;
+  --rule: #dde0ea;
+  --accent: #946512;
+  --accent-soft: #f3e7cc;
+  --code-bg: #eceef5;
+  --fire: #c4500f;
+  --ice: #1f7fb0;
+  --light: #6a55d6;
+  --air: #2f8a6c;
+  --earth: #8a5a26;
+  --barrier: #9a7410;
+  --font-display: "Marcellus", "Cinzel", Georgia, serif;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1120; --panel: #151a2e; --ink: #e7e5dd; --muted: #a2a6ba; --rule: #262c45;
+    --accent: #f0c461; --accent-soft: #2b2a2a; --code-bg: #1b2138;
+    --fire: #ff8a45; --ice: #8cd9ff; --light: #bfb3ff; --air: #a8eed6; --earth: #d9a466; --barrier: #ffd966;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1120; --panel: #151a2e; --ink: #e7e5dd; --muted: #a2a6ba; --rule: #262c45;
+  --accent: #f0c461; --accent-soft: #2b2a2a; --code-bg: #1b2138;
+  --fire: #ff8a45; --ice: #8cd9ff; --light: #bfb3ff; --air: #a8eed6; --earth: #d9a466; --barrier: #ffd966;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 64px;
+}
+.layout { display: grid; grid-template-columns: 1fr; gap: 40px; max-width: 1180px; margin: 0 auto; }
+@media (min-width: 1000px) { .layout { grid-template-columns: 230px minmax(0, 1fr); } }
+
+/* contents rail */
+nav.toc { padding-top: 32px; }
+@media (min-width: 1000px) {
+  nav.toc { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; max-height: 100vh; overflow-y: auto; padding-bottom: 24px; }
+}
+nav.toc h2 { font-family: var(--font-display); font-weight: 400; font-size: 15px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+nav.toc a { display: block; padding: 3px 10px; border-left: 2px solid transparent; color: var(--ink); text-decoration: none; font-size: 14.5px; }
+nav.toc a:hover, nav.toc a:focus-visible { border-left-color: var(--accent); color: var(--accent); outline: none; }
+@media (max-width: 999px) {
+  nav.toc ol { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+}
+
+main { min-width: 0; padding-top: 32px; }
+header.title { padding-bottom: 20px; border-bottom: 1px solid var(--rule); margin-bottom: 8px; }
+.eyebrow { font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(34px, 5vw, 48px); line-height: 1.1; margin: 6px 0 12px; text-wrap: balance; }
+.lede { font-size: 18.5px; color: var(--muted); max-width: 68ch; margin: 0; }
+.meta { font-size: 13.5px; color: var(--muted); margin-top: 12px; }
+
+section { padding-top: 36px; }
+h2 { font-family: var(--font-display); font-weight: 400; font-size: 29px; line-height: 1.2; margin: 0 0 12px; text-wrap: balance; scroll-margin-top: 16px; }
+h3 { font-size: 18px; margin: 26px 0 8px; text-wrap: balance; }
+p, ul, ol.steps { max-width: 72ch; }
+p { margin: 0 0 12px; }
+ul { margin: 0 0 14px; padding-left: 22px; }
+li { margin: 3px 0; }
+code { font-family: var(--font-mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+kbd { font-family: var(--font-mono); font-size: .82em; border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--panel); white-space: nowrap; }
+strong { font-weight: 700; }
+a { color: var(--accent); }
+
+.note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 10px 14px; border-radius: 0 6px 6px 0; max-width: 72ch; margin: 12px 0 16px; }
+
+/* tables */
+.table-wrap { overflow-x: auto; margin: 10px 0 18px; border: 1px solid var(--rule); border-radius: 8px; background: var(--panel); }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 700; white-space: nowrap; background: var(--code-bg); }
+tr:last-child td { border-bottom: 0; }
+td.num { text-align: right; white-space: nowrap; }
+
+/* element names */
+.el { font-weight: 700; white-space: nowrap; }
+.el.fire { color: var(--fire); } .el.ice { color: var(--ice); } .el.light { color: var(--light); }
+.el.air { color: var(--air); } .el.earth { color: var(--earth); } .el.barrier { color: var(--barrier); }
+
+/* rune cards */
+.runes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin: 12px 0 18px; }
+.rune { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 12px; display: grid; gap: 6px; justify-items: center; text-align: center; }
+.rune svg { width: 76px; height: 76px; }
+.rune svg polyline { fill: none; stroke: currentColor; stroke-width: 0.13; stroke-linecap: round; stroke-linejoin: round; }
+.rune svg circle { fill: currentColor; }
+.rune .name { font-family: var(--font-display); font-size: 17px; }
+.rune .sub { font-size: 13px; color: var(--muted); line-height: 1.35; }
+
+.steps { counter-reset: s; list-style: none; padding: 0; margin: 0 0 16px; display: grid; gap: 8px; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; align-items: start; }
+.steps li::before { content: counter(s); font-family: var(--font-display); font-size: 18px; color: var(--accent); text-align: right; }
+
+.formula { font-family: var(--font-mono); font-size: 14px; background: var(--code-bg); border-radius: 6px; padding: 10px 14px; overflow-x: auto; max-width: 72ch; margin: 8px 0 14px; white-space: pre; }
+
+.two { display: grid; grid-template-columns: 1fr; gap: 0 28px; }
+@media (min-width: 760px) { .two { grid-template-columns: 1fr 1fr; } }
+.two > div { min-width: 0; }
+
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="layout">
+<nav class="toc" aria-label="Obsah">
+  <h2>Obsah</h2>
+  <ol>
+    <li><a href="#prehled">Hra v kostce</a></li>
+    <li><a href="#ovladani">Ovládání</a></li>
+    <li><a href="#rozhrani">Menu a rozhraní</a></li>
+    <li><a href="#rezimy">Režimy a zápas</a></li>
+    <li><a href="#kouzleni">Jak vzniká kouzlo</a></li>
+    <li><a href="#runy">Kreslení a rozpoznávání run</a></li>
+    <li><a href="#kouzla">Kouzla a čísla</a></li>
+    <li><a href="#tiery">Tiery</a></li>
+    <li><a href="#dopad">Podle toho, kam dopadne</a></li>
+    <li><a href="#plochy">Plochy na zemi</a></li>
+    <li><a href="#kombinace">Kombinace</a></li>
+    <li><a href="#formy">Stěna, čára, voda, bariéra</a></li>
+    <li><a href="#zasahy">Zásahy a poškození</a></li>
+    <li><a href="#pohyb">Pohyb</a></li>
+    <li><a href="#mapy">Mapy</a></li>
+    <li><a href="#boti">Boti</a></li>
+    <li><a href="#sit">Síť a architektura</a></li>
+    <li><a href="#nastroje">Kód a nástroje</a></li>
+    <li><a href="#otevrene">Otevřené otázky</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="title">
+  <div class="eyebrow">Přehled pro vývojáře</div>
+  <h1>Příručka Mage Cast</h1>
+  <p class="lede">Multiplayerová PvP aréna ze třetí osoby, kde se kouzla nesesílají klávesou, ale kreslí myší jako runy. Tady je všechno podstatné na jednom místě: rozhraní, režimy, kouzla s čísly, tiery, kombinace, plochy a to, jak hra čte nakreslenou runu.</p>
+  <p class="meta">Stav k 28. 10. 2026 (build 2026-10-27 18:14). Čísla pocházejí z kódu (<code>SpellTiers</code>, <code>GestureCaster</code>, <code>RuneSegments</code>) a z měření v <code>MECHANIKA.md</code>, kde je podrobný deník změn.</p>
+</header>
+
+<section id="prehled">
+  <h2>Hra v kostce</h2>
+  <p><strong>Hlavní pravidlo: kreslení tě dělá zranitelným.</strong> Během kreslení stojí kamera, jdeš na 60 % rychlosti a nemůžeš sprintovat ani skákat. Delší runa znamená delší okno, kdy jsi napůl slepý. Balanc se proto dělá délkou gesta, ne jen čísly. Kreslená runa se navíc ukazuje nad hlavou, takže soupeř vidí, co chystáš, a může na to reagovat.</p>
+  <ul>
+    <li><strong>Engine:</strong> Unity 2022.3.30f1, Netcode for GameObjects 1.15.1, Unity Transport 2.7.4.</li>
+    <li><strong>Služby:</strong> Unity Relay (spojení přes kód, websockety <code>wss</code> všude), Unity Lobby (seznam otevřených her), Authentication (anonymní přihlášení).</li>
+    <li><strong>Platformy:</strong> web (WebGL na GitHub Pages), Windows exe, dedikovaný server bez okna.</li>
+    <li><strong>Velikost zápasu:</strong> nejvýš 6 hráčů včetně botů (mapy mají 6 spawnů, 3 na stranu).</li>
+    <li><strong>Postava:</strong> 100 životů, respawn za 3 s.</li>
+  </ul>
+</section>
+
+<section id="ovladani">
+  <h2>Ovládání</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Vstup</th><th>Co dělá</th></tr></thead>
+    <tbody>
+      <tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td>chůze (klus)</td></tr>
+      <tr><td><kbd>Shift</kbd></td><td>sprint, stojí staminu (žlutý pruh nad životy)</td></tr>
+      <tr><td><kbd>Mezerník</kbd></td><td>skok; proti hraně a se směrem k ní šplhání</td></tr>
+      <tr><td>levé tlačítko (držet)</td><td>kreslení runy; po puštění je kouzlo v ruce</td></tr>
+      <tr><td>levé tlačítko (klik)</td><td>odeslání drženého kouzla tam, kam míří crosshair</td></tr>
+      <tr><td>pravé tlačítko</td><td>při kreslení zruší runu; s kouzlem v ruce ho zahodí (DROPPED)</td></tr>
+      <tr><td>kolečko (klik)</td><td>kamera přes druhé rameno, kouzla letí z druhé ruky</td></tr>
+      <tr><td><kbd>Tab</kbd> (držet)</td><td>tabulka hráčů: zabití, smrti, K/D</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>menu (nastavení, nápověda, odchod)</td></tr>
+      <tr><td><kbd>F6</kbd></td><td>schová nebo ukáže panel kouzel</td></tr>
+      <tr><td><kbd>F1</kbd>–<kbd>F5</kbd>, <kbd>F8</kbd> (trénink)</td><td>cvičný cíl pro záznam tahů</td></tr>
+      <tr><td><kbd>F7</kbd> (trénink)</td><td>přepne rozpoznávač: čáry a úhly, nebo starý $P</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="rozhrani">
+  <h2>Menu a rozhraní</h2>
+  <p>Celé rozhraní je IMGUI (<code>OnGUI</code>), kreslené přes společné prvky <code>MenuArt</code> a pozadí <code>MenuBackdrop</code>. Menu se škáluje podle výšky okna, takže se vejde i do malé záložky prohlížeče.</p>
+
+  <h3>Hlavní menu (<code>MainMenu</code>)</h3>
+  <ul>
+    <li><strong>Jméno</strong> (nejvýš 12 znaků). Bez jména se nejde připojit: menu pole rozbliká a kód nechá vyplněný.</li>
+    <li><strong>Mapa pro trénink</strong>: karty Sanctum, Temple, Crossing, Valley s náhledem; najetí ukáže mapu za menu. Online mapu vybírá vedoucí v lobby.</li>
+    <li><strong>Training</strong>: hra bez soupeře. Na webu je to Relay místnost, o které nikdo neví (prohlížeč neumí hostovat lokálně).</li>
+    <li><strong>Host a game</strong> a pod ním přepínač <em>open</em> (hra se zapíše do seznamu) / <em>private</em> (jen s kódem).</li>
+    <li><strong>Find a game</strong>: seznam otevřených her (hostitel, mapa, režim, čeká/hraje, lidi ze 6, boti, případně <em>other version</em>), tlačítko Join. Obnovuje se každých 5 s.</li>
+    <li><strong>Kód od hostitele</strong> a Join. Na webu funguje i pozvánka <code>?join=KÓD</code>.</li>
+    <li>Odkazy: <em>Settings</em> (citlivost myši, hlasitost, zvuky kouzel, „Glow and colour effects“), <em>How to play</em> (nápověda ve třech záložkách: Ovládání, Pravidla, Kouzla). V exe navíc <em>LAN / IP</em> a <em>Quit</em>.</li>
+    <li>Pozadí: plovoucí mapa, světélka a plátno, na které jde myší kreslit runy. Kliknutí na runu pod nadpisem ji předvede.</li>
+  </ul>
+
+  <h3>Lobby (<code>LobbyScreen</code>, stav v síťovém objektu <code>Lobby</code>)</h3>
+  <ul>
+    <li>Vlevo nastavení: <strong>mapa</strong>, <strong>režim</strong> (Free for all / Teams), <strong>killy k výhře</strong> (5, 10, 15, 20). Mění je jen vedoucí; ostatním se při změně zruší ready.</li>
+    <li>Vpravo hráči: jméno, tým, ready; vedoucí přidává a odebírá boty, přesouvá je mezi týmy a nastavuje jejich dovednost.</li>
+    <li>Nahoře kód místnosti, <em>Copy code</em>, na webu <em>Copy invite link</em>; hostitel vidí, jestli je hra v seznamu.</li>
+    <li>Dole <em>Leave</em> (hostitel <em>Close room</em>), nápověda, nastavení a velké tlačítko: <strong>START MATCH</strong> pro vedoucího, <strong>I'M READY</strong> pro ostatní. Na tlačítku je vidět, na co se čeká.</li>
+  </ul>
+
+  <h3>Ve hře (<code>ArenaHud</code>)</h3>
+  <ul>
+    <li><strong>Nahoře uprostřed</strong> pruh skóre (<code>Scoreboard</code>): hráči od nejlepšího se zabitími/smrtmi, v týmech skóre obou týmů. Pod ním ping a region Relay.</li>
+    <li><strong>Vpravo nahoře</strong> kill feed (<code>KillFeed</code>): kdo koho čím zabil, runa v barvě prvku, u hoření, magmatu a nárazu BURN / MAGMA / SLAM. Řádek vydrží 6 s.</li>
+    <li><strong>Tab</strong>: celá tabulka s K/D, boty a mrtvými (DOWN).</li>
+    <li><strong>Dole uprostřed</strong> panel kouzel (<code>SpellBar</code>) jako ve WoW: dlaždice s runami, ručička cooldownu s číslem, samotné GCD bez čísla, LOCKED, zlatý rámeček s tierem drženého kouzla, QUEUED.</li>
+    <li><strong>Vlevo dole</strong> životy a stamina. Crosshair má barvu drženého kouzla.</li>
+    <li><strong>Nad hlavami</strong>: runa, jak ji kdo kreslí, název kouzla s tierem, poškození, WET, FROZEN, INTERRUPTED a podobně.</li>
+    <li><strong>Esc menu</strong>: Resume, How to play, nastavení, kopie kódu (hostitel), <em>Back to the lobby</em> (vedoucí během zápasu), v tréninku boti (Add / Remove, dovednost, „bots leave me alone“), odchod. Vlevo dole panel přesnosti (<code>HitStats</code>).</li>
+  </ul>
+</section>
+
+<section id="rezimy">
+  <h2>Režimy a zápas</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Režim</th><th>Kdo hostuje</th><th>K čemu</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Training</strong></td><td>tento počítač</td><td>bez zápasu a skóre; cvičné figuríny (stejná postava jako hráči, za 3 s vstanou), boti z Esc menu</td></tr>
+      <tr><td><strong>Host a game</strong></td><td>hráč (je i vedoucí)</td><td>lobby, pak zápasy; odchodem hostitele hra končí všem</td></tr>
+      <tr><td><strong>Server</strong> (<code>-server</code>)</td><td>dedikovaný proces bez okna a hráče</td><td>trvalá místnost v seznamu; vede první příchozí (LEADER), po odchodu další</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><strong>Free for all</strong>: každý sám za sebe, výchozí výhra na 5 zabití.</li>
+    <li><strong>Teams</strong>: Modří proti Červeným, max 3 na tým, počítají se killy celého týmu (výchozí 10). Kouzlo spoluhráče ti nikdy neublíží ani tě neodstrčí; jeho střely tebou proletí. Zem zůstává zemí: jeho led ti klouže a jeho updraft tě vyhodí jako jeho samotného.</li>
+    <li><strong>Konec zápasu</strong>: vítěz a skóre všem, 6 s se nikdo nehýbe, pak zpátky do lobby.</li>
+    <li><strong>Pozdní příchozí</strong> dostane menší tým a naskočí rovnou do arény. Přijde-li člověk do plné místnosti, jeden bot mu uvolní místo.</li>
+    <li><strong>Respawn</strong> za 3 s na spawnu, který žádný živý soupeř nevidí, a z takových co nejdál od ostatních. V týmech na vlastní straně (A pro Modré, B pro Červené).</li>
+  </ul>
+</section>
+
+<section id="kouzleni">
+  <h2>Jak vzniká kouzlo</h2>
+  <ol class="steps">
+    <li><span><strong>Držíš levé a kreslíš runu.</strong> Kamera zamrzne, myš je pero, chodíš na 60 % (<code>castMoveSpeed</code>), nejde sprint ani skok. Soupeř vidí tah bíle nad tvou hlavou. Pravé tlačítko kreslení zruší.</span></li>
+    <li><span><strong>Pustíš.</strong> Rozpoznávač tah přečte (viz další kapitola). Buď <strong>fizzle</strong> (nic, další runa až za 0,5 s), nebo máš kouzlo v ruce na tieru I, II nebo III.</span></li>
+    <li><span><strong>Držíš kouzlo.</strong> Chodíš na 70 % (<code>HoldSpeed</code>) a nejde sprint. Na míření není časový limit. Tier III ale vydrží jen 4 s, pak spadne na II.</span></li>
+    <li><span><strong>Klikneš levým.</strong> Kouzlo letí z ruky na straně kamery (výchozí pravá) tam, kam míří paprsek z kamery. Pravým ho zahodíš.</span></li>
+  </ol>
+
+  <h3>Co sesílání omezuje</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Pravidlo</th><th class="num">Hodnota</th><th>Poznámka</th></tr></thead>
+    <tbody>
+      <tr><td>Cooldown prvku</td><td class="num">2,5 s</td><td>od odeslání; runa prvku na cooldownu <em>nevznikne</em> („NOT READY“), čas kreslení je ztracený</td></tr>
+      <tr><td>Globální cooldown (GCD) útočných</td><td class="num">1,5 s</td><td>po odeslání útočného kouzla žádné jiné útočné; kreslit a držet jde, obrana má vlastní GCD</td></tr>
+      <tr><td>Fronta (spell queue)</td><td class="num">0,4 s</td><td>runa dokreslená nebo klik do 0,4 s před koncem cooldownu se provede sám</td></tr>
+      <tr><td>Zámek školy</td><td class="num">3,5 s</td><td>přerušení (vzduch, šokové pole, země III) zamkne prvek, který šlo z tahu přečíst</td></tr>
+      <tr><td>Po fizzle</td><td class="num">0,5 s</td><td>další runa až potom</td></tr>
+      <tr><td>Tier III v ruce</td><td class="num">4 s</td><td>pak spadne na II (přesnost 0,84); tier II vydrží napořád</td></tr>
+      <tr><td>Zásah do těla</td><td class="num">−1 tier</td><td>kouzlo v ruce klesne o tier, tier I zmizí (LOST); plochy a hoření se nepočítají</td></tr>
+    </tbody>
+  </table></div>
+  <p>Vzduch přeruší kreslení při každém zásahu. Menu, smrt ani šplhání nic nezamykají. Během šplhání se nekreslí ani neposílá.</p>
+</section>
+
+<section id="runy">
+  <h2>Kreslení a rozpoznávání run</h2>
+  <p>Runy jsou vikingské, kreslí se <strong>jedním tahem</strong>. Rozpoznávač (<code>RuneSegments</code>) nečte tvar bod po bodu, ale <strong>po čarách</strong>: tah zjednoduší na rohy a čáry mezi nimi porovná <strong>úhlem</strong> s čarami každé runy. Nezáleží, odkud začneš (každá runa se zkouší z obou konců), zrcadlená runa je ale jiná runa. Kolečko u run zobrazuje začátek tahu v šabloně.</p>
+
+  <div class="runes">
+    <div class="rune"><svg viewBox="-1.25 -1.25 2.5 2.5" class="el fire" aria-label="Kenaz"><polyline points="0.8,-1 -0.8,0 0.8,1"/><circle cx="0.8" cy="-1" r="0.12"/></svg><div class="name">Kenaz</div><div class="sub"><span class="el fire">oheň</span> · 2 čáry</div></div>
+    <div class="rune"><svg viewBox="-1.25 -1.25 2.5 2.5" class="el ice" aria-label="Laguz"><polyline points="0.7,-0.35 -0.2,-1 -0.2,1"/><circle cx="0.7" cy="-0.35" r="0.12"/></svg><div class="name">Laguz</div><div class="sub"><span class="el ice">led</span> · 2 čáry</div></div>
+    <div class="rune"><svg viewBox="-1.25 -1.25 2.5 2.5" class="el light" aria-label="Sowulo"><polyline points="0.7,-1 -0.45,-0.3 0.45,0.3 -0.7,1"/><circle cx="0.7" cy="-1" r="0.12"/></svg><div class="name">Sowulo</div><div class="sub"><span class="el light">blesk</span> · 3 čáry</div></div>
+    <div class="rune"><svg viewBox="-1.25 -1.25 2.5 2.5" class="el air" aria-label="Ehwaz"><polyline points="-0.8,1 -0.8,-1 0,0.1 0.8,-1 0.8,1"/><circle cx="-0.8" cy="1" r="0.12"/></svg><div class="name">Ehwaz</div><div class="sub"><span class="el air">vzduch</span> · 4 čáry</div></div>
+    <div class="rune"><svg viewBox="-1.25 -1.25 2.5 2.5" class="el earth" aria-label="Thurisaz"><polyline points="-0.4,-1 -0.4,-0.45 0.55,0 -0.4,0.45 -0.4,1"/><circle cx="-0.4" cy="-1" r="0.12"/></svg><div class="name">Thurisaz</div><div class="sub"><span class="el earth">země</span> · 4 čáry</div></div>
+    <div class="rune"><svg viewBox="-1.25 -1.25 2.5 2.5" class="el barrier" aria-label="Uruz"><polyline points="-0.6,1 -0.6,-1 0.6,-0.4 0.6,1"/><circle cx="-0.6" cy="1" r="0.12"/></svg><div class="name">Uruz</div><div class="sub"><span class="el barrier">bariéra</span> · 3 čáry</div></div>
+  </div>
+
+  <h3>Postup rozpoznání</h3>
+  <ol class="steps">
+    <li><span><strong>Převzorkování</strong> tahu na 96 bodů.</span></li>
+    <li><span><strong>Zjednodušení</strong> (Ramer–Douglas–Peucker) s tolerancí 7,5 % velikosti tahu, takže to platí stejně na každé obrazovce.</span></li>
+    <li><span><strong>Úklid rohů:</strong> ohyb pod <strong>36°</strong> je pořád jedna čára; zakulacený roh (krátký kus pod 16 % délky, oba ohyby stejným směrem) je jeden roh; krátká čára na začátku nebo konci (pod 9 % délky) je cuknutí a zahodí se; prostřední čára pod 7 % je zakulacený roh.</span></li>
+    <li><span><strong>Porovnání</strong> s runami se stejným počtem čar, v obou směrech. Čára víc než <strong>35°</strong> od své čáry v runě vyřadí runu. Vyhrává nejmenší průměrná odchylka úhlů.</span></li>
+    <li><span>Když žádná runa nesedí, je to <strong>fizzle</strong>.</span></li>
+  </ol>
+
+  <h3>Přesnost a tier</h3>
+  <div class="formula">úhly    = clamp01(1 − průměrná odchylka úhlů / 50°)
+přesnost = clamp01(0,65 × úhly + 0,35 × rovnost čar − 0,5 × chyba poměru délek)
+
+tier III  přesnost ≥ 0,85
+tier II   přesnost ≥ 0,65
+tier I    jinak (runa vyšla)
+
+síla     = lerp(0,8; 1,2; přesnost)       → násobí poškození, hoření, sílu odhozu (0,7–1,3×)
+velikost = velikost glyfu / 250 px, 0,7–1,4× → poloměr střely, velikost ploch, šířka bariéry</div>
+  <ul>
+    <li><strong>Rovnost čar</strong> měří, jak moc tah mezi rohy uhýbá od přímky. <strong>Chyba poměru délek</strong> je polovina součtu rozdílů podílů délek čar proti runě.</li>
+    <li>Hotové čáry se hned kreslí <strong>narovnané</strong>, ve stopě i v runě nad hlavou.</li>
+    <li>Rozkreslenou runu hra (a soupeř) čte podle prvních čar; jen když jedna runa sedí jasně líp než ostatní. Na tom stojí zámek školy a bílý rámeček v panelu.</li>
+    <li>Změřeno na stovkách strojově „ručně“ kreslených run (<code>Tools/Arena/Rune Recognition Bench</code>): pečlivě 100 % úspěšnost, průměrně 98–100 %, odfláknutě 78–89 %. Kolečka nevyjdou nikdy, náhodné klikyháky v 6 %. Tier III dá jen pečlivá kresba.</li>
+    <li>Prahy pocházejí ze syntetického roztřesení. <code>Calibrate From Cast Log</code> čeká na asi 40 skutečných tahů na runu.</li>
+    <li>Původní rozpoznávač $P (mračno bodů, <code>PDollarRecognizer</code>) zůstává v tréninku na <kbd>F7</kbd> pro porovnání.</li>
+  </ul>
+</section>
+
+<section id="kouzla">
+  <h2>Kouzla a čísla</h2>
+  <p>Poškození v kódu je <strong>základ</strong>. Všechno, co ubírá životy (zásah, splash, hoření, magma, náraz do zdi, výboj), se při dopadu násobí <code>Health.DamageScale</code> = <strong>1,5</strong>. Ve sloupci „ve hře“ je základ × 1,5 × síla 1,0; skutečná síla tahu je 0,8–1,2.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Kouzlo</th><th>Runa</th><th class="num">Základ</th><th class="num">Ve hře</th><th class="num">Rychlost (tier I)</th><th class="num">Poloměr</th><th class="num">Let</th><th>Vlastnost</th></tr></thead>
+    <tbody>
+      <tr><td><span class="el fire">Oheň</span></td><td>Kenaz</td><td class="num">16</td><td class="num">24</td><td class="num">26 (34) m/s</td><td class="num">0,38 m</td><td class="num">4 s</td><td>běžný útok; od II hoření, plocha a jeden odraz od zdi (zbyde 80 %)</td></tr>
+      <tr><td><span class="el ice">Led</span></td><td>Laguz</td><td class="num">22</td><td class="num">33</td><td class="num">17 (24) m/s</td><td class="num">0,55 m</td><td class="num">4 s</td><td>pomalý a tlustý; zpomalí na 50 % na 1,2 s (každý tier)</td></tr>
+      <tr><td><span class="el light">Blesk</span></td><td>Sowulo</td><td class="num">12</td><td class="num">18</td><td class="num">44 (52) m/s</td><td class="num">0,18 m</td><td class="num">2,5 s</td><td>skoro se nedá uhnout; mimo člověka se uzemní, kromě ledu a vody</td></tr>
+      <tr><td><span class="el air">Vzduch</span></td><td>Ehwaz</td><td class="num">0</td><td class="num">0</td><td class="num">30 (38) m/s</td><td class="num">0,7 m</td><td class="num">3 s</td><td>odhoz 12 (× 0,7–1,3), vždy přeruší kreslení; nikdy nezraňuje</td></tr>
+      <tr><td><span class="el earth">Země</span></td><td>Thurisaz</td><td class="num">20</td><td class="num">30</td><td class="num">oblouk</td><td class="num">0,45 m</td><td class="num">5 s</td><td>hozená 40° nad přímkou, dopadne na crosshair; otřes kolem dopadu</td></tr>
+      <tr><td><span class="el barrier">Bariéra</span></td><td>Uruz</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">2,8 × 2,2 m</td><td class="num">8 s</td><td>stěna ve směru míření; tier III kopule 2,1 m na 6 s</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Kolik zásahů na 100 životů</h3>
+  <p>Při tieru II (síla ~1,1): <span class="el fire">oheň</span> s hořením 3, <span class="el ice">led</span> 3, <span class="el earth">země</span> 4, <span class="el light">blesk</span> 6. Před zavedením ×1,5 (23. 10.) to bylo 5, 5, 5 a 8.</p>
+  <h3>Odvozené poškození</h3>
+  <div class="two">
+    <div><ul>
+      <li><strong>Hoření</strong> (oheň II+): 3/s × síla na 2 s, ve hře 4,5/s.</li>
+      <li><strong>Hořící plocha</strong>: 3/s po 5 s, ve hře 4,5/s. Celá plocha dá míň než přímý zásah.</li>
+      <li><strong>Magma</strong>: 1,6× hoření, 7 s.</li>
+      <li><strong>Výbuch</strong> (oheň III): polovina zásahu všem do 2,5 m kromě zasaženého, i autorovi.</li>
+    </ul></div>
+    <div><ul>
+      <li><strong>Splash</strong> (oheň a led tieru I do mapy): do 2 m až 30 % zásahu, i autorovi.</li>
+      <li><strong>Otřes země</strong>: do 2 m (III 2,8 m) až 55 % zásahu; přímo zasažený jen přímý zásah.</li>
+      <li><strong>Blesk do ledu nebo vody</strong>: 40 × síla každému, kdo se plochy dotýká (× 1,5).</li>
+      <li><strong>Blesk do mokrého</strong>: 2× a vysuší. <strong>Náraz do zdi</strong> po odhozu: 8, ve hře 12.</li>
+    </ul></div>
+  </div>
+</section>
+
+<section id="tiery">
+  <h2>Tiery</h2>
+  <p>Tier mění hlavně to, <strong>co kouzlo dělá</strong>; poškození samo se s přesností hýbe jen 0,8–1,2×. Tier je vidět nad hlavou („FIRE III“).</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Kouzlo</th><th>I (odfláknutá)</th><th>II (průměrná)</th><th>III (pečlivá)</th></tr></thead>
+    <tbody>
+      <tr><td><span class="el fire">Oheň</span></td><td>zásah, rychlejší let, splash</td><td>+ hoření na zasaženém, hořící plocha, odraz od zdi</td><td>+ výbuch 2,5 m (polovina zásahu, i autor), bariéru opotřebí 1,5×</td></tr>
+      <tr><td><span class="el ice">Led</span></td><td>zásah se zpomalením, rychlejší let, splash</td><td>+ kluzká plocha</td><td>+ zamrznutí 0,6 s (nehne se, kreslit může)</td></tr>
+      <tr><td><span class="el light">Blesk</span></td><td>zásah, rychlejší let</td><td>+ přeskočí na nejbližší jiný cíl do 6 m za polovinu; do země elektrická plocha</td><td>+ elektrická plocha přímo pod zasaženým</td></tr>
+      <tr><td><span class="el air">Vzduch</span></td><td>odhoz, rychlejší let, náraz do zdi</td><td>+ updraft plocha; do ohně ohnivá vlna; na ledu rozklouže</td><td>+ v jakékoli ploše vzduchová bomba: po 0,4 s hodí všechny v ploše a do 1,5 m od ní do středu</td></tr>
+      <tr><td><span class="el earth">Země</span></td><td>kámen s otřesem 2 m</td><td>+ kamenná ohrada po okraji otřesu (6 s, jen na zemi); magma, bahno</td><td>+ otřes 2,8 m srazí na 0,5 s a přeruší kreslení; přímý zásah postaví ohradu kolem zasaženého</td></tr>
+      <tr><td><span class="el barrier">Bariéra</span></td><td>stěna 8 s, výdrž 72</td><td>1,35× širší, 1,15× vyšší, výdrž 126</td><td>kopule kolem tebe 6 s, chodí s tebou, tvoje kouzla pouští, výdrž 144</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>Tier I je rychlá střela</strong>: letí rychleji, ale nezanechá plochu, odraz ani kombinaci. <strong>Obtížnost tierů</strong> je dána prahy přesnosti 0,65 a 0,85 (viz rozpoznávání). Boti mají tiery podle dovednosti (tabulka u botů).</p>
+</section>
+
+<section id="dopad">
+  <h2>Podle toho, kam dopadne</h2>
+  <p>Jedno gesto dává několik efektů podle toho, do čeho kouzlo dopadne. Zem a stěnu odliší sklon povrchu: normála víc nahoru než 0,6 (asi 53° od svislé) je zem. Na zem kouzlo dopadne tam, kam míří jeho střed.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Kouzlo</th><th>Do soupeře</th><th>Do stěny</th><th>Na zem</th></tr></thead>
+    <tbody>
+      <tr><td><span class="el fire">Oheň</span></td><td>zásah (+ hoření od II)</td><td>odrazí se jednou (od II), zbyde 80 %</td><td>hořící plocha 2,5 m, 5 s</td></tr>
+      <tr><td><span class="el ice">Led</span></td><td>zásah + zpomalení</td><td>nic</td><td>kluzká plocha 3 m, 6 s</td></tr>
+      <tr><td><span class="el light">Blesk</span></td><td>zásah (+ přeskok od II)</td><td>nic, uzemní se</td><td>elektrická plocha od II; do ledu/vody výboj</td></tr>
+      <tr><td><span class="el air">Vzduch</span></td><td>odhoz, shodí rozkreslenou runu</td><td>výbuch 3 m, odfoukne od stěny</td><td>updraft 2 m, 5 s</td></tr>
+      <tr><td><span class="el earth">Země</span></td><td>zásah + otřes kolem</td><td>otřes u stěny</td><td>otřes + ohrada (od II, ne na kamenech a zdech)</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>Led nebo oheň mířený na zem do 4,5 m před sebe</strong> nevyletí, ale postaví ledovou stěnu, resp. zapálí ohnivou čáru (viz níže). U drženého kouzla svítí WALL nebo LINE a na zemi je obrys.</p>
+</section>
+
+<section id="plochy">
+  <h2>Plochy na zemi</h2>
+  <p>Každá plocha dělá jednu věc, kterou žádná jiná nedělá. Plochy žijí 4–8 s a každý hráč smí mít dole nejvýš dvě; třetí smaže nejstarší. Velikost roste s velikostí glyfu (0,7–1,4×). Plocha zasáhne i toho, kdo ji seslal.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Plocha</th><th class="num">Velikost</th><th class="num">Trvání</th><th>Co dělá</th></tr></thead>
+    <tbody>
+      <tr><td><span class="el fire">Hořící</span></td><td class="num">2,5 m</td><td class="num">5 s</td><td>jediná, která bere životy (3/s základ)</td></tr>
+      <tr><td><span class="el ice">Ledová</span></td><td class="num">3 m</td><td class="num">6 s</td><td>klouže: přilnavost 12 %, z plného běhu zastavíš za 0,9 s místo 0,1 s; mokrý na ní přimrzne na 1,5 s</td></tr>
+      <tr><td><span class="el air">Updraft</span></td><td class="num">2 m</td><td class="num">5 s</td><td>vyhodí každého jednou (9,4 m/s, asi 2 m; vlastní 13,3 m/s, až 4 m); střely nad ní do 4 m stočí nahoru</td></tr>
+      <tr><td><span class="el light">Elektrická</span></td><td class="num">2,2 m</td><td class="num">4 s</td><td>proti kouzlení: nekreslíš a kouzlo v ruce každou 1 s spadne o tier; životy nebere</td></tr>
+      <tr><td><span class="el earth">Ohrada</span></td><td class="num">2 m (III 2,8)</td><td class="num">6 s</td><td>kruh bodců ~1 m: nedá se projít, jen přeskočit; zastaví střely do ~1,1 m výšky</td></tr>
+      <tr><td><span class="el fire">Magma</span></td><td class="num">jako oheň</td><td class="num">7 s</td><td>pálí 1,6× víc než oheň</td></tr>
+      <tr><td><span class="el earth">Bahno</span></td><td class="num">jako voda</td><td class="num">8 s</td><td>chůze na 45 %</td></tr>
+      <tr><td><span class="el ice">Voda</span></td><td class="num">—</td><td class="num">—</td><td>nekluže, nepálí, vede blesk jako led</td></tr>
+    </tbody>
+  </table></div>
+  <p>Plocha kopíruje terén a končí na hraně toho, na čem leží (nevisí do vzduchu). Kombinaci stačí, když se kouzlo plochy dotkne okrajem. Kombinace počítá hostitel a ostatním pošle, jak vypadá zem.</p>
+</section>
+
+<section id="kombinace">
+  <h2>Kombinace</h2>
+  <p>Kombinace vznikají postupně: jedno kouzlo leží na zemi, druhé do něj přiletí. Žádné dvojité seslání; prodleva mezi dvěma casty je ta dovednost a soupeř má čas odejít.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Co leží</th><th>Co přiletí</th><th>Výsledek</th></tr></thead>
+    <tbody>
+      <tr><td><span class="el ice">led</span> (nebo někdo na něm)</td><td><span class="el light">blesk</span></td><td><strong>výboj</strong>: celá plocha se nabije, každý, kdo se jí dotýká, dostane 40 × síla (×1,5); vyskočený ne. Nejsilnější kombinace.</td></tr>
+      <tr><td><span class="el ice">led</span></td><td><span class="el fire">oheň</span></td><td><strong>voda</strong></td></tr>
+      <tr><td><span class="el fire">oheň</span></td><td><span class="el ice">led</span></td><td><strong>voda</strong> (led oheň uhasí)</td></tr>
+      <tr><td>voda</td><td><span class="el fire">oheň</span></td><td>oheň zhasne, voda zůstane</td></tr>
+      <tr><td>voda</td><td><span class="el ice">led</span></td><td>zase zmrzne na led</td></tr>
+      <tr><td>voda</td><td><span class="el light">blesk</span></td><td>nabije se jako led</td></tr>
+      <tr><td><span class="el fire">oheň</span></td><td><span class="el air">vzduch</span></td><td><strong>ohnivá vlna</strong>: plocha zmizí, 8 m po větru se převalí stěna plamenů, zapálí a odhodí každého v cestě; zastaví ji zeď</td></tr>
+      <tr><td><span class="el ice">led</span></td><td><span class="el air">vzduch</span></td><td>kdo stojí na ledu, odletí po něm ve směru větru</td></tr>
+      <tr><td><span class="el fire">oheň</span></td><td><span class="el earth">země</span></td><td><strong>magma</strong></td></tr>
+      <tr><td>voda</td><td><span class="el earth">země</span></td><td><strong>bahno</strong></td></tr>
+      <tr><td><span class="el ice">led</span>, <span class="el light">elektrická</span></td><td><span class="el earth">země</span></td><td>rozbije je (uzemní) a postaví kolem nich ohradu</td></tr>
+      <tr><td>jakákoli plocha</td><td><span class="el air">vzduch III</span></td><td><strong>vzduchová bomba</strong>: po 0,4 s hodí všechny v ploše a do 1,5 m od ní do středu</td></tr>
+      <tr><td>ohnivá čára</td><td><span class="el ice">led</span> (proletí)</td><td>led vyletí jako <strong>voda</strong>: zásah bez zpomalení, zasažený je mokrý 4 s</td></tr>
+    </tbody>
+  </table></div>
+  <p>Voda vzniká jen kombinací, žádná runa ji nedělá.</p>
+</section>
+
+<section id="formy">
+  <h2>Stěna, čára, voda, bariéra</h2>
+  <div class="two">
+    <div>
+      <h3>Ledová stěna</h3>
+      <ul>
+        <li>Led mířený na zem do 4,5 m od nohou (nejblíž 1,6 m, až 8 m pod tebou) vyrazí jako stěna hrotů.</li>
+        <li>Velikost: I 2,0 × 1,7 m, II 2,8 × 2,3 m, III 3,4 × 2,6 m; tloušťka 0,7 m; jen tak široká, jak je podlaha.</li>
+        <li>První zásah jakýmkoli kouzlem ji roztříští; po 6 s roztaje. Zastaví kouzla, lidi i pohled.</li>
+        <li>Stojí cooldown ledu i útočné GCD. Oheň do ní nechá vodu.</li>
+      </ul>
+      <h3>Ohnivá čára</h3>
+      <ul>
+        <li>Oheň mířený na zem do 4,5 m zapálí čáru napříč. Nic nezastaví.</li>
+        <li>Délka I 3 m, II 4,5 m, III 6 m; šířka 0,8 m, plameny 1,8 m, hoří 4 s.</li>
+        <li>Kdo jí projde, hoří jako po ohni II, a znovu každou 1 s v ní. Spojenci ani autor ne.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Mokrý (WET)</h3>
+      <ul>
+        <li>Zásah vodou: mokrý 4 s.</li>
+        <li>Blesk do mokrého 2× a vysuší (SHOCK x2).</li>
+        <li>Oheň do mokrého jen zasyčí (STEAM): nehoří a je suchý.</li>
+        <li>Mokrý na ledové ploše přimrzne na 1,5 s (FROZEN).</li>
+      </ul>
+      <h3>Bariéra</h3>
+      <ul>
+        <li>Blokuje z obou stran, i vlastní kouzla; střely se zastaví, neodráží se. Jedna na hráče.</li>
+        <li>Výdrž 90 × tier: stěna I 72, II 126, kopule 144. Stěna 8 s, kopule 6 s (poloměr 2,1 m).</li>
+        <li>Opotřebení = základní poškození × síla × násobek prvku: oheň 1,5, led 1,0, blesk 0,5, vzduch vždy 3. Při síle 1,1 asi oheň 26, led 24, blesk 7.</li>
+        <li>Nepodléhá <code>DamageScale</code>: má vlastní výdrž, ne životy.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="zasahy">
+  <h2>Zásahy a poškození</h2>
+  <ul>
+    <li><strong>Zásah se počítá proti tělu z kostí</strong> (<code>Hurtbox</code>), ne proti kolizní kapsli: trup 0,17 m, hlava 0,12 m, paže, předloktí, stehna, lýtka, chodidla jako kapsle mezi klouby. Kosti se animují i mimo kameru (<code>AlwaysAnimate</code>).</li>
+    <li><strong>Jádro střely</strong> proti člověku nejvýš 0,3 m (vzduch 0,45 m), proti mapě 0,12 m, proti bariéře a ledové stěně celá koule. Kouzlo těsně kolem sloupu proletí; člověka stačí trefit okrajem.</li>
+    <li><strong>Výpočet je přesný</strong> (<code>Hurtbox.FirstContact</code>): každá část těla jako kapsle proti celé dráze koule za snímek, takže ani zadrhnutý snímek (až 17 m blesku) tělem neprojde.</li>
+    <li><strong>Mrtvé tělo zastaví kouzlo</strong>, ale nic mu neudělá a zásah se nepočítá. Padající mrtvý stojí ještě ~1,6 s.</li>
+    <li><strong>Plochy, výbuchy a splash</strong> berou blízkost (kolizní kapsli). Výbuch u stěny slábne se vzdáleností.</li>
+    <li><strong>Asistent míření</strong> jen pro hráče: cíl do 10 m a 10° od směru letu, na volno; stočí nejvýš 0,45° na metr a 4,5° za let, obloukem na střed trupu.</li>
+    <li><strong>Příčina smrti</strong> (<code>DamageCause</code>: Fire, Ice, Lightning, Air, Earth, Burn, Magma, Slam) jde se zabitím do kill feedu. Vlastní oheň nebo výboj tě zabít může, ale soupeři se to nepřipíše.</li>
+    <li><strong>Léčení</strong> je jen léčivý pramen na Sanctum (5/s, ne do 2 s po zásahu).</li>
+  </ul>
+</section>
+
+<section id="pohyb">
+  <h2>Pohyb</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Co</th><th class="num">Hodnota</th></tr></thead>
+    <tbody>
+      <tr><td>Klus (WASD)</td><td class="num">4,95 m/s (3,3 × <code>paceOverAnimation</code> 1,5)</td></tr>
+      <tr><td>Sprint (Shift)</td><td class="num">7,2 m/s</td></tr>
+      <tr><td>Couvání / do strany</td><td class="num">× 0,6 / × 0,85</td></tr>
+      <tr><td>Při kreslení / s kouzlem v ruce</td><td class="num">60 % / 70 %, bez sprintu</td></tr>
+      <tr><td>Stamina</td><td class="num">4 s sprintu, doplnění 3,5 s po pauze 0,8 s, znovu od 30 %</td></tr>
+      <tr><td>Skok</td><td class="num">1,35 m, gravitace −22 m/s², coyote a buffer 0,12 s</td></tr>
+      <tr><td>Šplhání</td><td class="num">hrana do 1,3 m nad nohama ve skoku (~2,4–2,6 m), 0,7 s</td></tr>
+      <tr><td>Rozjezd / zastavení / otočka</td><td class="num">~0,3 s / ~0,2 s / ~0,5 s</td></tr>
+    </tbody>
+  </table></div>
+  <p>Změna směru je oblouk, ne zlom, aby se dal soupeř předvídat. Tvrdý dopad z ~3 m v pohybu je kotoul. Měří to <code>Tools/Arena/Audit Movement</code>. Nohy v animaci pokryjí asi 57 % skutečné cesty (záměrně klidnější krok).</p>
+</section>
+
+<section id="mapy">
+  <h2>Mapy</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Mapa</th><th>Scéna</th><th class="num">Rozměr</th><th>Charakter</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Sanctum</strong></td><td><code>Arena_Blockout</code></td><td class="num">—</td><td>kamenné nádvoří v soumraku; jádro 5 m se 4 skokovými plošinami a léčivým pramenem; pilíře v barvách prvků</td></tr>
+      <tr><td><strong>Temple</strong></td><td><code>Arena_Temple</code></td><td class="num">44 × 44 m</td><td>chrám v džungli: oltář s obeliskem, 4 dvoupatrové věže s mosty, propadliny 1,2 m</td></tr>
+      <tr><td><strong>Crossing</strong></td><td><code>Arena_Crossing</code></td><td class="num">48 × 40 m</td><td>nádvoří s vyschlým korytem, brod se sochou, dva mosty 2,4 m, kaple; tlumené barvy</td></tr>
+      <tr><td><strong>Valley</strong></td><td><code>Arena_Valley</code></td><td class="num">88 × 88 m</td><td>travnaté údolí pod zasněženými štíty, pevnost, 4 zřícené věže (4,8 m), balvany</td></tr>
+    </tbody>
+  </table></div>
+  <p>Výšky v mapách jsou jen z pevné sady: 1,2 m skok, 1,6 m kryt po prsa, 2,4 m hrana na vyšplhání, 4 m patro. Audit krytí hlídá, aby žádné dosažitelné místo nebylo dál než 8 m od krytu. Mapy generují stavitelé (<code>Tools/Arena/Build … Map</code>), vzhled dodává <code>ArenaKit</code> a soubory <code>Arena&lt;Mapa&gt;Look.cs</code>. Na webu Sanctum ~127 snímků/s, Valley ~108.</p>
+</section>
+
+<section id="boti">
+  <h2>Boti</h2>
+  <p>Bot hraje stejným tělem a podle stejných pravidel jako člověk (<code>BotBrain</code>): kreslí runu (trvá podle počtu čar a je vidět), může fizzlnout, platí pro něj cooldowny, GCD i zámek školy; chodí po spočítané síti (<code>BotNav</code>). Vidí ~110° před sebe a kohokoli do 3,5 m, ne přes zdi; pamatuje si 7 s; reaguje se zpožděním 0,6–0,15 s podle dovednosti. Asistent míření botům nepomáhá.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Dovednost</th><th class="num">Fizzle</th><th class="num">I</th><th class="num">II</th><th class="num">III</th></tr></thead>
+    <tbody>
+      <tr><td>0 %</td><td class="num">25 %</td><td class="num">50 %</td><td class="num">24 %</td><td class="num">0 %</td></tr>
+      <tr><td>20 %</td><td class="num">18 %</td><td class="num">44 %</td><td class="num">38 %</td><td class="num">0 %</td></tr>
+      <tr><td>40 %</td><td class="num">12 %</td><td class="num">36 %</td><td class="num">51 %</td><td class="num">2 %</td></tr>
+      <tr><td>60 %</td><td class="num">8 %</td><td class="num">29 %</td><td class="num">58 %</td><td class="num">5 %</td></tr>
+      <tr><td>80 %</td><td class="num">5 %</td><td class="num">23 %</td><td class="num">60 %</td><td class="num">13 %</td></tr>
+      <tr><td>100 %</td><td class="num">4 %</td><td class="num">16 %</td><td class="num">55 %</td><td class="num">25 %</td></tr>
+    </tbody>
+  </table></div>
+  <p>Muška: chyba napříč směrem střely 0,25 m × (1 − dovednost) + (0,02 + 0,2 × (1 − dovednost)) m na metr. Naměřené zásahy botů proti sobě: 24 % na 20 %, 33 % na 60 %, 53 % na 100 %. Kouzlo vybírají podle situace (blesk na led, vzduch na kreslícího, bariéra pod palbou), ledovou stěnu a ohnivou čáru stavějí, když jsou zranění nebo se k nim někdo blíží.</p>
+</section>
+
+<section id="sit">
+  <h2>Síť a architektura</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Co</th><th>Rozhoduje</th><th>Proč</th></tr></thead>
+    <tbody>
+      <tr><td>pohyb, míření, kreslení</td><td>každý sám za sebe</td><td>jinak by každý krok čekal na odezvu</td></tr>
+      <tr><td>zásah, poškození, plochy, kombinace</td><td>hostitel (server), jednou</td><td>zásah se počítá právě jednou</td></tr>
+      <tr><td>odhoz, zpomalení, vyhození</td><td>tvůj počítač na pokyn serveru</td><td>tělo je tvoje</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><strong>Kopie kouzel:</strong> každý stroj letí svou kopií každého kouzla, ubírá jen ta serverová. Kopie se po příjezdu posune o čas cesty po síti (<code>CatchUp</code>, nejvýš 0,4 s). Lag kompenzace zatím není.</li>
+    <li><strong>Spojení:</strong> Unity Relay přes <code>wss</code> na všech platformách, preferované regiony europe-central2, -west4, -west1, -north1.</li>
+    <li><strong>Seznam her:</strong> hostitel drží záznam v Unity Lobby (<code>PublicRoom</code>: data code/map/mode/people/bots/playing/build, změny každé 2 s, heartbeat 12 s, po odchodu smaže); hledající čte (<code>RoomBrowser</code>). Zavřená záložka zmizí sama do minuty.</li>
+    <li><strong>Vedoucí místnosti</strong> (<code>Lobby.Leader</code>): akce vedoucího jdou na server ServerRpc a server je provede, jen když přišly od vedoucího.</li>
+    <li><strong>Dedikovaný server:</strong> <code>MageCastServer.exe -batchmode -nographics -server -room "…"</code>, 60 snímků/s, po výpadku Relay za 10 s nová místnost. Spouští <code>start-server.bat</code>, zastavuje <code>stop-server.bat</code>. Prázdný 133 MB a 5 % jádra, zápas se 2 boty 202 MB a třetina jádra.</li>
+    <li><strong>Verze:</strong> razítko buildu (<code>Resources/BuildInfo.txt</code>) je vidět v rohu menu a v seznamu her; server si bere razítko posledního web buildu.</li>
+    <li><strong>Cena:</strong> Relay zdarma do průměrně 50 hráčů online měsíčně, Lobby do 10 GiB přenosu měsíčně.</li>
+  </ul>
+</section>
+
+<section id="nastroje">
+  <h2>Kód a nástroje</h2>
+  <div class="two">
+    <div>
+      <h3>Hlavní skripty</h3>
+      <ul>
+        <li><code>Gestures/GestureCaster</code>: kreslení, držení, odeslání, definice kouzel, cooldowny.</li>
+        <li><code>Gestures/RuneSegments</code>, <code>GestureTemplates</code>: rozpoznávání a tvary run.</li>
+        <li><code>Gestures/SpellTiers</code>: skoro všechna ladicí čísla.</li>
+        <li><code>Gestures/Projectile</code>: let, zásahy, odrazy, kombinace, otřes.</li>
+        <li><code>Gestures/SpellZone</code>, <code>CastShield</code>, <code>IceWall</code>, <code>FireLine</code>, <code>FireWave</code>, <code>Wet</code>, <code>StoneFence</code>.</li>
+        <li><code>Combat/Health</code> (<code>DamageScale</code>), <code>Hurtbox</code>, <code>TrainingDummy</code>.</li>
+        <li><code>Net/NetSession</code> (režimy, Relay, server), <code>Lobby</code>, <code>MatchDirector</code> (spawny, konec zápasu), <code>PlayerNet</code>, <code>BotBrain</code>.</li>
+        <li><code>Net/MainMenu</code>, <code>LobbyScreen</code>, <code>RoomBrowser</code>, <code>PublicRoom</code>, <code>ArenaHud</code>, <code>Scoreboard</code>, <code>KillFeed</code>, <code>HelpScreen</code>.</li>
+        <li><code>Player/PlayerMotor</code>, <code>PlayerAnimation</code>, <code>UpperBodyAim</code>, <code>ThirdPersonCamera</code>.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Menu Tools/Arena</h3>
+      <ul>
+        <li><strong>Stavba:</strong> Build Web, Build Server, Build Windows Test; vydání <code>publish-web.sh</code>.</li>
+        <li><strong>Mapy:</strong> Rebuild Blockout, Build Temple / Crossing / Valley Map, Build Map Previews, Build Post Fx.</li>
+        <li><strong>Audity:</strong> Audit Temple / Crossing / Valley / Layout, Audit Overlaps, Audit Movement, Audit Animation Library.</li>
+        <li><strong>Runy:</strong> Rune Recognition Bench, Test Gesture Recognizer, Test Gesture Confusion, Test Cast Quality Tiers, Test Line Angles, Test Rune Set, Calibrate From Cast Log.</li>
+        <li><strong>Postava a efekty:</strong> Rebuild Character Animator, Build Player Prefab, Assign Spell / Earth / Fire Line / Ice Wall / Water Effects.</li>
+      </ul>
+      <p>Podrobný deník všech změn a měření je v <code>MECHANIKA.md</code>. Postava a animace z Mixama a koupené balíky efektů nejsou ve veřejném repozitáři.</p>
+    </div>
+  </div>
+</section>
+
+<section id="otevrene">
+  <h2>Otevřené otázky</h2>
+  <ul>
+    <li><strong>V aréně není o co hrát.</strong> Žádný bod k držení ani nic ke sbírání; plochy dávají jen dočasné území.</li>
+    <li><strong>Blízkost přebíjí všechno.</strong> Couvání nejvýš 4,3 m/s proti sprintu 7,2 m/s, takže kdo se dostane blízko, od toho se neodejde.</li>
+    <li><strong>Slovník se hroutí na blízko.</strong> Pod 6 m není čas na delší gesto; nápad: volba rychlého a špinavého, nebo pomalého a přesného kreslení.</li>
+    <li><strong>Prahy nejsou kalibrované na skutečnou ruku.</strong> Čeká se na asi 40 skutečných tahů na runu.</li>
+    <li><strong>Lag kompenzace</strong> chybí; připojený hráč musí na běžící cíl mířit víc dopředu.</li>
+    <li><strong>Rozhodnuté, ale nepostavené:</strong> běžný zásah trhne rukou při kreslení (zatím jen vzduch shodí celou runu); minimální vzdálenost odjištění ~3 m; obrana v různých cenách.</li>
+  </ul>
+</section>
+</main>
+</div>
