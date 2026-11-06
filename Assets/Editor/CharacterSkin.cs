@@ -66,6 +66,49 @@ namespace MageCast.EditorTools
         }
 
         /// <summary>
+        /// The avatar the animation files wear (Copy From Other).
+        ///
+        /// Normally just the skin's own. A skin imported with a Scale Factor is the exception: Unity
+        /// divides the copied skeleton by that factor, so every clip was baked against a body that much
+        /// smaller than the one playing it, and the character stood 0.7 m off the floor (mage2, Nov 2026:
+        /// modelled 1.08 m tall with its origin at the hips, imported at 1.836). Such a skin gets a
+        /// standalone avatar built from its skeleton scaled up by the same factor, which the copy then
+        /// brings back to the real size. Measured: Idle's root height 1.58 before, 0.88 after, against
+        /// 0.88 in the file itself. The player keeps wearing the skin's own avatar.
+        /// </summary>
+        public static Avatar AvatarForClips(GameObject prefab)
+        {
+            Avatar own = AvatarFor(prefab);
+            if (own == null) return null;
+
+            string modelPath = AssetDatabase.GetAssetPath(own);
+            var imp = AssetImporter.GetAtPath(modelPath) as ModelImporter;
+            if (imp == null || Mathf.Abs(imp.globalScale - 1f) < 0.001f) return own;
+
+            HumanDescription description = imp.humanDescription;
+            SkeletonBone[] bones = description.skeleton;
+            for (int i = 0; i < bones.Length; i++) bones[i].position *= imp.globalScale;
+            description.skeleton = bones;
+
+            GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
+            GameObject probe = Object.Instantiate(model);     // named "<model>(Clone)", as the description expects
+            Avatar built;
+            try { built = AvatarBuilder.BuildHumanAvatar(probe, description); }
+            finally { Object.DestroyImmediate(probe); }
+            if (built == null || !built.isValid || !built.isHuman) return own;
+
+            built.name = own.name + "ForClips";
+            string path = System.IO.Path.ChangeExtension(modelPath, null) + "ClipAvatar.asset";
+            Avatar existing = AssetDatabase.LoadAssetAtPath<Avatar>(path);
+            if (existing == null) { AssetDatabase.CreateAsset(built, path); return built; }
+
+            // same asset, so the clips that already point at it keep pointing at it
+            EditorUtility.CopySerialized(built, existing);
+            Object.DestroyImmediate(built);
+            return existing;
+        }
+
+        /// <summary>
         /// The scale contract: a player is two metres, whatever the artist modelled.
         ///
         /// Applied to anything wearing the skin, including the throwaway probes the animator builder

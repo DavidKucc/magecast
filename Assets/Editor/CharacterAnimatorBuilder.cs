@@ -818,7 +818,7 @@ namespace MageCast.EditorTools
             int problems = 0;
             if (!AssetDatabase.IsValidFolder(LocomotionFolder)) return 0;
 
-            Avatar skinAvatar = CharacterSkin.AvatarFor(prefab);
+            Avatar skinAvatar = CharacterSkin.AvatarForClips(prefab);
 
             foreach (string folder in new[] { LocomotionFolder, IdleFolder, JumpFolder, CastFolder })
             {
@@ -2163,7 +2163,7 @@ namespace MageCast.EditorTools
             // bone names, same skeleton, nothing to convert. The same measurement then reads +4 cm, and
             // backing away and strafing land within 6 mm of the floor.
             GameObject skinPrefab = wearSkinAvatar ? CharacterSkin.Prefab() : null;
-            Avatar skinAvatar = skinPrefab != null ? CharacterSkin.AvatarFor(skinPrefab) : null;
+            Avatar skinAvatar = skinPrefab != null ? CharacterSkin.AvatarForClips(skinPrefab) : null;
             List<string> skinBones = skinAvatar != null ? BoneNames(skinPrefab) : null;
 
             foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { folder }))

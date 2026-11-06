@@ -48,3 +48,9 @@ crashlytics-build.properties
 # stamped by every build
 /Assets/Resources/BuildInfo.txt
 /Assets/Resources/BuildInfo.txt.meta
+
+# --- test imports from local_casting_game, and the skin set aside while testing another ---
+/Assets/TestImports/
+/Assets/TestImports.meta
+/Assets/CharactersOff/
+/Assets/CharactersOff.meta
