@@ -296,8 +296,10 @@ namespace MageCast.EditorTools
                 if (!clear) continue;
                 bool isPine = rnd.NextDouble() < 0.35;
                 float size = (isPine ? 1.2f : 1.3f) + (float)rnd.NextDouble() * 0.6f;
-                ArenaTrees.Plant(trees, isPine ? ArenaTrees.Kind.Pine : ArenaTrees.Kind.Broad, rnd.Next(4), new Vector3(p.x, -0.3f, p.y),
-                                 (float)rnd.NextDouble() * 360f, size, bark, isPine ? pine : leaves);
+                GameObject tree = ArenaTrees.Plant(trees, isPine ? ArenaTrees.Kind.Pine : ArenaTrees.Kind.Broad, rnd.Next(4), new Vector3(p.x, -0.3f, p.y),
+                                                   (float)rnd.NextDouble() * 360f, size, bark, isPine ? pine : leaves);
+                // no shadows from the trees: they fall on grass nobody stands on, and cost a pass per cascade
+                tree.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             }
 
             // grass outside the wall, in four pieces round the arena: one sheet under everything would lie over the lane
