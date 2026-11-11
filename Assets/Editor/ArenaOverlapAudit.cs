@@ -28,6 +28,7 @@ namespace MageCast.EditorTools
         {
             "Assets/Scenes/Arena_Blockout.unity", "Assets/Scenes/Arena_Temple.unity",
             "Assets/Scenes/Arena_Crossing.unity", "Assets/Scenes/Arena_Valley.unity",
+            "Assets/Scenes/Arena_Ruins.unity",
         };
 
         struct Tri

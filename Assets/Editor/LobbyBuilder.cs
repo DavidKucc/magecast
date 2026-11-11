@@ -89,29 +89,33 @@ namespace MageCast.EditorTools
             EditorSceneManager.SaveOpenScenes();
             if (!AssetDatabase.IsValidFolder(PreviewFolder)) AssetDatabase.CreateFolder("Assets/Resources", "MapPreviews");
 
-            foreach (string name in NetSession.ArenaScenes)
-            {
-                EditorSceneManager.OpenScene("Assets/Scenes/" + name + ".unity", OpenSceneMode.Single);
-
-                // the practice dummies are put away in every real match, so not in its picture either
-                // (the scene is reopened unsaved afterwards)
-                foreach (Combat.TrainingDummy d in Object.FindObjectsOfType<Combat.TrainingDummy>())
-                    foreach (Renderer r in d.GetComponentsInChildren<Renderer>()) r.enabled = false;
-
-                string path = PreviewFolder + "/" + name + ".png";
-                // Blockout's middle is one tall block: from higher up, so the floor around it shows
-                bool steep = name == "Arena_Blockout";
-                File.WriteAllBytes(path, Render(steep ? 0.7f : 0.62f, steep ? 0.85f : 0.42f));
-                AssetDatabase.ImportAsset(path);
-                TextureImporter ti = (TextureImporter)AssetImporter.GetAtPath(path);
-                ti.textureType = TextureImporterType.Default;
-                ti.mipmapEnabled = true;
-                ti.maxTextureSize = 1024;
-                ti.wrapMode = TextureWrapMode.Clamp;
-                ti.SaveAndReimport();
-                Debug.Log("[Lobby] map preview " + path);
-            }
+            foreach (string name in NetSession.ArenaScenes) BuildPreview(name);
             EditorSceneManager.OpenScene("Assets/Scenes/" + NetSession.MenuScene + ".unity", OpenSceneMode.Single);
+        }
+
+        /// <summary>One map's picture, leaving that map's scene open (unsaved: its dummies are hidden).</summary>
+        public static void BuildPreview(string name)
+        {
+            if (!AssetDatabase.IsValidFolder(PreviewFolder)) AssetDatabase.CreateFolder("Assets/Resources", "MapPreviews");
+            EditorSceneManager.OpenScene("Assets/Scenes/" + name + ".unity", OpenSceneMode.Single);
+
+            // the practice dummies are put away in every real match, so not in its picture either
+            // (the scene is left unsaved)
+            foreach (Combat.TrainingDummy d in Object.FindObjectsOfType<Combat.TrainingDummy>())
+                foreach (Renderer r in d.GetComponentsInChildren<Renderer>()) r.enabled = false;
+
+            string path = PreviewFolder + "/" + name + ".png";
+            // Blockout's middle is one tall block: from higher up, so the floor around it shows
+            bool steep = name == "Arena_Blockout";
+            File.WriteAllBytes(path, Render(steep ? 0.7f : 0.62f, steep ? 0.85f : 0.42f));
+            AssetDatabase.ImportAsset(path);
+            TextureImporter ti = (TextureImporter)AssetImporter.GetAtPath(path);
+            ti.textureType = TextureImporterType.Default;
+            ti.mipmapEnabled = true;
+            ti.maxTextureSize = 1024;
+            ti.wrapMode = TextureWrapMode.Clamp;
+            ti.SaveAndReimport();
+            Debug.Log("[Lobby] map preview " + path);
         }
 
         /// <summary>

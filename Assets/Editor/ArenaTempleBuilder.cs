@@ -558,8 +558,10 @@ namespace MageCast.EditorTools
                         {
                             if (seen[m]) continue;
                             float dy = spots[m].p.y - a.p.y;
-                            // walking needs the next cell; a drop or a climb starts a body's width from the edge
-                            bool ok = dy < -0.45f || (dy <= 0.45f ? near : dy <= upReach);
+                            // walking needs the next cell; a drop or a climb starts a body's width from the edge.
+                            // A drop from 0.1 m: off a terrace's rim onto its floor 18 cm lower the cell between
+                            // is nowhere to stand (the body touches the rim), and the floor read as cut off (Ruins).
+                            bool ok = dy < -0.1f || (dy <= 0.45f ? near : dy <= upReach);
                             if (!ok) continue;
                             // nothing solid in between at the height of the higher of the two
                             // at the height of the higher one: you walk off an edge, or climb over it

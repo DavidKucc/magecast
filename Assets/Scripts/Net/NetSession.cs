@@ -36,8 +36,8 @@ namespace MageCast
         public const string LobbyScene = "Lobby";
 
         /// <summary>The maps, by scene: what the menu offers, in the order it offers them.</summary>
-        public static readonly string[] ArenaScenes = { "Arena_Blockout", "Arena_Temple", "Arena_Crossing", "Arena_Valley" };
-        public static readonly string[] ArenaTitles = { "Sanctum", "Temple", "Crossing", "Valley" };
+        public static readonly string[] ArenaScenes = { "Arena_Blockout", "Arena_Temple", "Arena_Crossing", "Arena_Valley", "Arena_Ruins" };
+        public static readonly string[] ArenaTitles = { "Sanctum", "Temple", "Crossing", "Valley", "Ruins" };
 
         /// <summary>Which map training and hosting open, remembered between sessions.</summary>
         public static int SelectedArena

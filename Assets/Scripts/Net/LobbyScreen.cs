@@ -22,7 +22,8 @@ namespace MageCast
             "a rune sanctum at dusk: compact, launch pads up to a healing spring",
             "a jungle temple at golden hour: altar, towers, a sunken tomb",
             "a courtyard by a forest: two bridges over a dry riverbed",
-            "a highland valley under snow peaks: ruins, four times the floor"
+            "a highland valley under snow peaks: ruins, four times the floor",
+            "a ruined town square: a sunken lane, a bridge over it, terraces"
         };
 
         static readonly Color Gold = new Color(1f, 0.82f, 0.45f);
